@@ -37,10 +37,13 @@ public class patch_PlayerGraphics
 		On.PlayerGraphics.ctor += BPPlayerGraphics_ctor;
 		On.PlayerGraphics.DrawSprites += BP_DrawSprites;
 		On.PlayerGraphics.InitiateSprites += BP_InitiateSprites;
+
+        On.PlayerGraphics.AddToContainer += PlayerGraphics_AddToContainer;
 		
 		// using (new DetourContext()) { } //NEEDED TO WORK AROUND A PRIORITIES BUG
     }
 
+    
 
     public static void BPPlayerGraphics_ctor(On.PlayerGraphics.orig_ctor orig, PlayerGraphics self, PhysicalObject ow)
     {
@@ -118,33 +121,51 @@ public class patch_PlayerGraphics
 
         //LET'S KEEP TRACK OF OUR BLUSH SPRITE INT. IT COULD CHANGE OR BE DIFFERENT BETWEEN SLUGCATS!
         if (BPOptions.blushEnabled.Value && !BellyPlus.VisualsOnly())
-            PB_InitiateExtraFx(self, sLeaser, rCam, false);
+            PB_InitiateExtraFx(self, sLeaser, rCam);
+
+        
     }
 
 
-
-    public static void PB_InitiateExtraFx(PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, bool stealMark)
+    private static void PlayerGraphics_AddToContainer(On.PlayerGraphics.orig_AddToContainer orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, FContainer newContatiner)
     {
         int playerNum = patch_Player.GetPlayerNum(self.player);
-        int bls = 12; 
+        int bls = bpGraph[playerNum].blSprt;
 
-        if (!stealMark)
+        orig(self, sLeaser, rCam, newContatiner);
+
+        if (BPOptions.blushEnabled.Value && !BellyPlus.VisualsOnly() && sLeaser.sprites.Length > bls)
         {
-            Array.Resize<FSprite>(ref sLeaser.sprites, sLeaser.sprites.Length + 1);
-            bls = sLeaser.sprites.Length - 1;
-            sLeaser.sprites[bls] = new FSprite("Futile_White", true);
+            //MOVING THESE HERE BECAUSE VIGARO SAID SO
+            //WE'LL ADD IT TO OUR OWN CONTAINER SO IT ISN'T IN THE FOREGROUND
+            newContatiner = rCam.ReturnFContainer("Midground");
+            newContatiner.AddChild(sLeaser.sprites[bls]);
+
+            //sLeaser.sprites[bls].MoveToFront(); //MOVE THE FACE OVER FRONT, PLS?
+            sLeaser.sprites[bls].MoveBehindOtherNode(sLeaser.sprites[9]);
         }
+    }
+
+    public static void PB_InitiateExtraFx(PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam) //, bool stealMark)
+    {
+        int playerNum = patch_Player.GetPlayerNum(self.player);
+
+        Array.Resize<FSprite>(ref sLeaser.sprites, sLeaser.sprites.Length + 1);
+        int bls = sLeaser.sprites.Length - 1;
+        sLeaser.sprites[bls] = new FSprite("Futile_White", true);
 
         bpGraph[playerNum].blSprt = bls;
         sLeaser.sprites[bls].shader = rCam.game.rainWorld.Shaders["FlatLightNoisy"];
 
-        //WE'LL ADD IT TO OUR OWN CONTAINER SO IT ISN'T IN THE FOREGROUND
-        FContainer newContatiner = rCam.ReturnFContainer("Midground");
-        newContatiner.AddChild(sLeaser.sprites[bls]);
-
-        //sLeaser.sprites[bls].MoveToFront(); //MOVE THE FACE OVER FRONT, PLS?
-        sLeaser.sprites[bls].MoveBehindOtherNode(sLeaser.sprites[9]);
+        self.AddToContainer(sLeaser, rCam, null);
     }
+
+    public static void JumpstartFX()
+    {
+
+    }
+
+
 
 	
 	//RECALCULATE OUR BASE TAIL SIZE AS IF WE WERE JUST INITIALIZING
@@ -409,7 +430,7 @@ public class patch_PlayerGraphics
 
             //SOMETIMES OUR SPRITE CONTAINER CAN JUST... GO MISSING I GUESS
             if (sLeaser.sprites[bl].container == null)
-                PB_InitiateExtraFx(self, sLeaser, rCam, false);
+                PB_InitiateExtraFx(self, sLeaser, rCam);
 
             sLeaser.sprites[bl].scale = 1.8f;
             sLeaser.sprites[bl].scaleY = 0.8f;
