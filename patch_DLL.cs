@@ -1,0 +1,585 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using RWCustom;
+using UnityEngine;
+
+
+public class patch_DLL
+{
+    //I CAN'T BELEIVE I'M DOING THIS...
+    public static Dictionary<int, BigEel> leviathanBook = new Dictionary<int, BigEel>(0);
+    public static Dictionary<int, Creature> miscBook = new Dictionary<int, Creature>(0);
+
+    public static void Patch()
+	{
+		On.NeedleWormGraphics.ctor += NootGraphics;
+		On.NeedleWormGraphics.GraphSegmentRad += NootRad;
+		
+		On.DaddyLongLegs.Update += DDL_Update;
+		On.DaddyGraphics.DrawSprites += DaddyGraphics_DrawSprites;
+
+		On.Centipede.ctor += Centipede_ctor;
+        On.Centipede.Shock += BPCentipede_Shock; //FOR DRONEMASTER
+        On.Centipede.Die += BPCentipede_Die;
+        //On.CentipedeGraphics.DrawSprites += Centipede_DrawSprites;
+
+        //On.PoleMimicGraphics.DrawSprites += BPPoleMimic_DrawSprites;
+        //On.PoleMimicGraphics.PoleMimicRopeGraphics.DrawSprite += BPPoleMimicRopeGraphics_DrawSprite;
+
+        On.MirosBirdGraphics.DrawSprites += BPMirosBirdGraphics_DrawSprites;
+        On.MirosBird.Act += BPMirosBird_Act;
+        On.MirosBird.ctor += BPMirosBird_ctor;
+        //On.MirosBird.BirdLeg.Update += BPMirosBird_Update;
+        On.MirosBird.BirdLeg.Update += BPMirosBird_Update;
+
+        On.BigSpiderGraphics.ctor += BPBigSpiderGraphics_ctor;
+        On.BigEel.ctor += BPBigEel_ctor;
+        On.BigEel.Swallow += BPBigEel_Swallow;
+
+        //On.PoleMimic.Rad += BP_Rad;
+        On.DropBug.ctor += DropBug_ctor;
+        //On.DropBugGraphics.ctor += DropBugGraphics_ctor;
+        On.DropBugGraphics.InitiateSprites += DropBugGraphics_InitiateSprites;
+        On.DropBugGraphics.DrawSprites += DropBugGraphics_DrawSprites;
+        On.DropBug.MoveTowards += DropBug_MoveTowards;
+        On.DropBug.Update += DropBug_Update;
+
+    }
+
+    
+    public static int GetRef(Creature self)
+    {
+        return self.abstractCreature.ID.RandomSeed;
+    }
+	
+	
+	public static int GetChub(Creature self)
+	{
+		if (CheckFattable(self) == false)
+			return 0; //NO FATTING ALLOWED
+		
+		int critNum = self.abstractCreature.ID.RandomSeed;
+		UnityEngine.Random.seed = critNum;
+		int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
+		if (critChub == 8)
+			return 4;
+		else
+			return 0;
+	}
+	
+	public static bool CheckFattable(Creature crit)
+	{
+		if (crit is Lizard && !BPOptions.fatLiz.Value)
+			return false;
+		if (crit is LanternMouse && !BPOptions.fatMice.Value)
+			return false;
+		if (crit is Scavenger && !BPOptions.fatScavs.Value)
+			return false;
+		if (crit is Cicada && !BPOptions.fatSquids.Value)
+			return false;
+		if (crit is NeedleWorm && !BPOptions.fatNoots.Value)
+			return false;
+		if (crit is Centipede && !BPOptions.fatCentis.Value)
+			return false;
+		if (crit is DaddyLongLegs && !BPOptions.fatDll.Value)
+			return false;
+		if (crit is Vulture && !BPOptions.fatVults.Value)
+			return false;
+		if (crit is MirosBird && !BPOptions.fatMiros.Value)
+			return false;
+		if (crit is DropBug && !BPOptions.fatWigs.Value)
+			return false;
+		if (crit is BigEel && !BPOptions.fatEels.Value)
+			return false;
+		
+		return true;
+	}
+
+
+    public static void CheckIn(Creature self, Dictionary<int, Creature> guestBook)
+	{
+        int critNum = self.abstractCreature.ID.RandomSeed;
+        bool guestExists = false;
+        try
+        {
+            guestBook.Add(critNum, self); //ADD OURSELVES TO THE GUESTBOOK
+        }
+        catch (ArgumentException)
+        {
+            Debug.Log("--ALREADY EXISTS ");
+            guestExists = true;
+        }
+        if (guestExists)
+        {
+            //ALREADY EXISTS
+            guestBook[critNum] = self;
+            //UpdateBellySize(self);  //, BellyPlus.myFoodInStomach[GetRef(self)]
+            if (self is BigEel)
+                FeedBigEel(self as BigEel, BellyPlus.myFoodInStomach[GetRef(self)]);
+            //else if (self is DropBug) //I GUESS THEIR BELLY SIZE IS JUST REMEMBERED AUTOMARICALLY??? HUH...
+            //    UpdateBellySize(self as DropBug, BellyPlus.myFoodInStomach[critNum]);
+            else if (self is DropBug) //BUT THEY HAVE ANOTHER REALLY ANNOYING ISSUE WITH THEIR DICTIONARY VALUES NOT ALWAYS EXISTING >:(
+                BellyPlus.InitializeCreatureMini(critNum); //WE SHOULD DO THIS ANYWAYS
+            return;
+        }
+        BellyPlus.InitializeCreatureMini(critNum);
+
+        if (self is DropBug && CheckFattable(self))
+        {
+            int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
+            if (critChub == 8)
+                BellyPlus.myFoodInStomach[critNum] = 3; //DROPWIGS DON'T GET A 1 TO 1 RATIO
+            //BellyPlus.myFoodInStomach[critNum] = critChub;
+            //UpdateBellySize(self as DropBug, BellyPlus.myFoodInStomach[critNum]);
+        }
+    }
+
+
+
+
+    public static void UpdateBellySize(DropBug self, int amnt)
+    {
+        //if ()
+        (self.graphicsModule as DropBugGraphics).bodyThickness += 0.3f * amnt;
+    }
+
+
+
+    private static void BPBigEel_ctor(On.BigEel.orig_ctor orig, BigEel self, AbstractCreature abstractCreature, World world)
+    {
+		orig(self, abstractCreature, world);
+
+        int critNum = self.abstractCreature.ID.RandomSeed;
+        bool mouseExists = false;
+        try
+        {
+            patch_DLL.leviathanBook.Add(critNum, self); //ADD OURSELVES TO THE GUESTBOOK
+        }
+        catch (ArgumentException)
+        {
+            mouseExists = true;
+        }
+        if (mouseExists)
+        {
+            //ALREADY EXISTS
+			patch_DLL.leviathanBook[critNum] = self;
+            FeedBigEel(self, BellyPlus.myFoodInStomach[GetRef(self)]);
+            return;
+        }
+        BellyPlus.InitializeCreatureMini(critNum);
+		
+		if (BPOptions.debugLogs.Value)
+			Debug.Log("--SPAWNING BIGEEL " + self.bodyChunks[0].rad);
+
+        if (GetChub(self) >= 4 && CheckFattable(self))
+		{
+			BellyPlus.myFoodInStomach[GetRef(self)] += 2;
+            FeedBigEel(self, 2);
+		}
+	}
+
+    private static void BPBigEel_Swallow(On.BigEel.orig_Swallow orig, BigEel self)
+    {
+		//LEVIATHAN FEEEED!
+		for (int i = 0; i < self.clampedObjects.Count; i++)
+		{
+			if (self.clampedObjects[i].chunk.owner is Creature && !(self.clampedObjects[i].chunk.owner as Creature).Template.smallCreature && CheckFattable(self))
+			{
+				BellyPlus.myFoodInStomach[GetRef(self)] += 1;
+                FeedBigEel(self, 1);
+			}
+		}
+		orig(self);
+	}
+	
+	public static void FeedBigEel(BigEel self, int amnt)
+	{
+		//int amnt = BellyPlus.myFoodInStomach[GetRef(self)];
+
+        for (int i = 0; i < self.bodyChunks.Length; i++)
+		{
+			float num = (float)i / (float)(self.bodyChunks.Length - 1);
+			num = (1f - num) * 0.5f + Mathf.Sin(Mathf.Pow(num, 0.5f) * 3.1415927f) * 0.5f;
+			self.bodyChunks[i].rad += Mathf.Lerp(1f, 3f, num) * amnt;   //(10f, 60f, num);
+			if (i == 0)
+				Debug.Log("FEED BIGEEL " + self.bodyChunks[i].rad);
+        }
+	}
+
+
+    private static void BPBigSpiderGraphics_ctor(On.BigSpiderGraphics.orig_ctor orig, BigSpiderGraphics self, PhysicalObject ow)
+    {
+        orig(self, ow);
+
+        if (GetChub(self.bug) >= 4)
+        {
+            self.bodyThickness += 2f;
+        }
+    }
+
+
+    public static void NootGraphics(On.NeedleWormGraphics.orig_ctor orig, NeedleWormGraphics self, PhysicalObject ow)
+	{
+		orig.Invoke(self, ow);
+		
+		if (GetChub(self.worm) >= 4)
+        {
+			if (self.fatness != 1.35f)
+				self.worm.bodyChunks[0].mass *= 1.5f; //TRY NOT TO RUN THIS MULTIPLE TIMES..
+			self.fatness = 1.35f;
+		}
+	}
+	
+	private static float NootRad(On.NeedleWormGraphics.orig_GraphSegmentRad orig, NeedleWormGraphics self, int i)
+	{
+		float result = orig.Invoke(self, i);
+		if (i - self.snout.Length < self.worm.bodyChunks.Length && self.fatness > 1.25f)
+		{
+			float radMod = Mathf.Max(1f, self.fatness);
+			//return self.worm.GetSegmentRadForCollision(i - self.snout.Length) * Mathf.Lerp(0.75f, 1.35f * capMod, self.fatness);
+			result *= radMod;
+		}
+		return result;
+	}
+	
+	
+
+    private static void BPMirosBird_Update(On.MirosBird.BirdLeg.orig_Update orig, MirosBird.BirdLeg self)
+    {
+        orig(self);
+
+        //YEESH, THIS SHOULD REALLY BE AN IL HOOK BUT...
+        if (GetChub(self.bird) >= 4 && !BellyPlus.VisualsOnly())
+        {
+            if (self.footSecurePos != null && self.lastFootSecurePos == null)
+            {
+                self.room.PlaySound(SoundID.Miros_Piston_Ground_Impact, self.Foot.pos, 1.5f, 0.8f);
+                //self.room.InGameNoise(new InGameNoise(self.footSecurePos.Value, 800f, self.bird, 1f));
+            }
+            if (self.footSecurePos != null && self.lastFootSecurePos == null && !Custom.DistLess(self.Foot.pos, self.Foot.lastPos, 60f))
+            {
+                self.room.PlaySound(SoundID.Miros_Piston_Sharp_Impact, self.Foot.pos, 1.5f, 0.75f);
+                //this.SmallSparks(this.Foot.pos, this.Foot.pos);
+            }
+        }
+    }
+
+
+    private static void BPMirosBird_ctor(On.MirosBird.orig_ctor orig, MirosBird self, AbstractCreature abstractCreature, World world)
+    {
+		orig(self, abstractCreature, world);
+
+		if (GetChub(self) >= 4 && !BellyPlus.VisualsOnly())
+		{
+            for (int j = 0; j < self.bodyChunks.Length; j++)
+            {
+                self.bodyChunks[j].mass *= 1.45f;
+            }
+        }
+    }
+
+    public static bool IsPlayerOnscreen(Creature self)
+	{
+		if (self.room != null)
+		{
+			float myPos = self.bodyChunks[0].pos.x;
+			for (int i = 0; i < self.room.game.Players.Count; i++)
+			{
+				if (self.room.game.Players[i].Room.index == self.room.abstractRoom.index
+					&& self.room.game.Players[i].realizedCreature != null
+					&& self.room.game.Players[i].realizedCreature.Consious 
+					&& self.room.game.Players[i].realizedCreature.room != null
+					&& self.room.game.Players[i].realizedCreature.room == self.room
+					&& Mathf.Abs(self.room.game.Players[i].realizedCreature.bodyChunks[0].pos.x - myPos) < (60 * 20)
+				)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	//MAKE THE FAT ONES SLOW DOWN WHEN THEY ARE VISUALLY ON THE SAME SCREEN AS A PLAYER
+    private static void BPMirosBird_Act(On.MirosBird.orig_Act orig, MirosBird self)
+    {
+		orig(self);
+
+		if (GetChub(self) >= 4 && self.Consious && !BellyPlus.VisualsOnly())
+		{
+			//self.mainBodyChunk.vel.x *= 0.6f;
+			if (Mathf.Abs(self.mainBodyChunk.vel.x) > 4 && IsPlayerOnscreen(self))
+                self.mainBodyChunk.vel.x *= 0.8f;
+        }
+    }
+
+    public static bool centiSkipDeath = false;
+    private static void BPCentipede_Shock(On.Centipede.orig_Shock orig, Centipede self, PhysicalObject shockObj)
+    {
+        //Debug.Log("----SUBTR PLR " + (shockObj as Player).slugcatStats.name.value);
+        if (shockObj != null && shockObj is Player && (shockObj as Player).slugcatStats.name.value == "thedronemaster" && (shockObj as Player).playerState.foodInStomach == (shockObj as Player).MaxFoodInStomach)
+		{
+			//IF WE GOT THIS FAR THAT MEANS THE DRONEMASTER WAS FULL WHEN THE SHOCK OCCURRED
+			(shockObj as Player).playerState.foodInStomach--; //SO LETS JUST... UNDO THAT FOR A QUICK SEC
+			BellyPlus.fullBellyOverride = true;
+			centiSkipDeath = true;
+            //Debug.Log("----SUBTR FOOD " + (shockObj as Player).playerState.foodInStomach);
+            //orig.Invoke(self, shockObj); //NOT QUITE
+            self.Shock(shockObj);
+			(shockObj as Player).stun *= BPOptions.fatArmor.Value ? 4 : 2; //BIGGER STUN (PLUS THEY'LL PROBABLY HAVE FAT RESISTANCE)
+        }
+		else
+			orig.Invoke(self, shockObj);
+    }
+
+    private static void BPCentipede_Die(On.Centipede.orig_Die orig, Centipede self)
+    {
+        if(centiSkipDeath)
+			centiSkipDeath = false; //SHRIMPLY DON'T
+		else
+			orig.Invoke(self);
+    }
+
+
+    private static void BPMirosBirdGraphics_DrawSprites(On.MirosBirdGraphics.orig_DrawSprites orig, MirosBirdGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
+
+        if (GetChub(self.bird) >= 4)
+        {
+            sLeaser.sprites[self.BodySprite].element = Futile.atlasManager.GetElementWithName("Cicada8body");
+			//MAKE THEM LOOK PHAT
+            sLeaser.sprites[self.BodySprite].scaleX = 3;
+            sLeaser.sprites[self.BodySprite].scaleY = 2.5f;
+			sLeaser.sprites[self.BodySprite].rotation += 180;
+            
+        }
+    }
+
+    private static void BPPoleMimicRopeGraphics_DrawSprite(On.PoleMimicGraphics.PoleMimicRopeGraphics.orig_DrawSprite orig, PoleMimicGraphics.PoleMimicRopeGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        if (GetChub(self.owner.pole) >= 0) //3)
+        {
+			float extraChonk = 3f;
+			
+			if ((sLeaser.sprites[0] as TriangleMesh).vertices.Length != self.segments.Length * 4)
+            {
+                self.InitiateSprites(sLeaser, rCam);
+
+            }
+            Vector2 vector = self.owner.pole.rootPos - self.owner.pole.stickOutDir * 30f;
+            vector += Custom.DirVec(Vector2.Lerp(self.segments[1].lastPos, self.segments[1].pos, timeStacker), vector) * 1f;
+            float num = 2f;
+            for (int i = 0; i < self.segments.Length; i++)
+            {
+                float num2 = (float)i / (float)(self.segments.Length - 1);
+                Vector2 vector2 = Vector2.Lerp(self.segments[i].lastPos, self.segments[i].pos, timeStacker);
+                Vector2 normalized = (vector - vector2).normalized;
+                Vector2 vector3 = Custom.PerpendicularVector(normalized) ;
+                float num3 = Vector2.Distance(vector, vector2) / 3f * extraChonk;
+                float num4 = self.owner.StemLookLikePole(num2, timeStacker);
+                float num5 = Mathf.Lerp((i % 2 == 0) ? Mathf.Lerp(4f, 1.5f, num2) : Mathf.Lerp(1.4f, 0.75f, num2), 2f, Mathf.Pow(num4, 0.75f));
+                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4, vector - normalized * num3 - vector3 * Mathf.Lerp(num, num5, 0.5f) - camPos);
+                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4 + 1, vector - normalized * num3 + vector3 * Mathf.Lerp(num, num5, 0.5f) - camPos);
+                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 + normalized * num3 - vector3 * num5 - camPos);
+                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + normalized * num3 + vector3 * num5 - camPos);
+                float num6 = (1f + rCam.room.lightAngle.magnitude / 10f) * Mathf.Pow(num4, 1.8f);
+                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4, vector - normalized * num3 - vector3 * (Mathf.Lerp(num, num5, 0.5f) + num6) - camPos);
+                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4 + 1, vector - normalized * num3 + vector3 * (Mathf.Lerp(num, num5, 0.5f) + num6) - camPos);
+                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 + normalized * num3 - vector3 * (num5 + num6) - camPos);
+                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + normalized * num3 + vector3 * (num5 + num6) - camPos);
+                vector = vector2;
+                num = num5;
+            }
+        }
+        else
+            orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
+    }
+
+
+
+    private static void DropBug_ctor(On.DropBug.orig_ctor orig, DropBug self, AbstractCreature abstractCreature, World world)
+    {
+        orig.Invoke(self, abstractCreature, world);
+
+        CheckIn(self, miscBook);
+    }
+
+    public static void DropBugGraphics_ctor(On.DropBugGraphics.orig_ctor orig, DropBugGraphics self, PhysicalObject ow)
+    {
+		orig.Invoke(self, ow);
+
+        //CheckIn(self.bug, miscBook);
+		/*
+		if (GetChub(self.bug) == 4)
+		{
+			self.bodyThickness *= 2.5f;
+			//CEILING MODE MIGHT GET A BIT WIDE...
+			// (1f + Mathf.Lerp(this.lastCeilingMode, this.ceilingMode, timeStacker)) 
+		}
+        */
+    }
+
+
+    private static void DropBugGraphics_InitiateSprites(On.DropBugGraphics.orig_InitiateSprites orig, DropBugGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
+    {
+        orig.Invoke(self, sLeaser, rCam);
+        //Debug.Log("ID CHECK!..." + (self.bug as Creature).abstractCreature.ID.RandomSeed + " - " + (self.bug as DropBug).abstractCreature.ID.RandomSeed);
+        //CheckIn(self.bug, miscBook);
+    }
+
+
+    private static void DropBug_Update(On.DropBug.orig_Update orig, DropBug self, bool eu)
+    {
+        bool ceilingJump = self.fromCeilingJump;
+        orig(self, eu);
+        //IF WE JUST STOPPED A FROMCEILINJUMP AND WE'RE FAT, MAKE A BIG IMPACT
+        if (self.graphicsModule != null && ceilingJump != self.fromCeilingJump && !self.fromCeilingJump && BellyPlus.myFoodInStomach[BellyPlus.GetRef(self)] >= 3)
+        {
+            self.room.PlaySound(SoundID.Lizard_Heavy_Terrain_Impact, self.mainBodyChunk, false, 1, 1);
+            self.room.game.cameras[0].screenShake += 0.5f;
+        }
+    }
+
+    private static void DropBug_MoveTowards(On.DropBug.orig_MoveTowards orig, DropBug self, Vector2 moveTo)
+    {
+        orig(self, moveTo);
+
+        if (self.graphicsModule != null && self.Footing && !BellyPlus.VisualsOnly() && BellyPlus.myFoodInStomach[BellyPlus.GetRef(self)] >= 2)
+        {
+            self.bodyChunks[0].vel *= 0.8f;
+            self.bodyChunks[1].vel *= 0.8f;
+            self.bodyChunks[2].vel *= 0.8f;
+        }
+    }
+
+    private static void DropBugGraphics_DrawSprites(On.DropBugGraphics.orig_DrawSprites orig, DropBugGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        //REMEMBER OUR BODY THICKNESS SO WE CAN RESET IT. WE CAN'T KEEP IT IF WE'RE HANING ON THE CEILING (TOO FAT...)
+        float origThicc = self.bodyThickness;
+        self.bodyThickness = Mathf.Lerp(self.bodyThickness, 1.4f, self.ceilingMode); //TRANSITION TO A NORMAL THICKNESS AS WE ENTER CEILING MODE
+        orig(self, sLeaser, rCam, timeStacker, camPos);
+        //AND THEN REVERT TO OUR REAL SIZE
+        self.bodyThickness = origThicc;
+    }
+
+
+    public static void Centipede_ctor(On.Centipede.orig_ctor orig, Centipede self, AbstractCreature abstractCreature, World world)
+    {
+		bool preMeatCheck = true; // self.CentiState.meatInitated;
+		orig.Invoke(self, abstractCreature, world);
+		
+		if (GetChub(self) == 4)
+		{
+			for (int i = 0; i < self.bodyChunks.Length; i++)
+			{
+				//PHAT
+				self.bodyChunks[i].rad += Mathf.Lerp(1.5f, 2.5f, self.size) / 1.5f; //-2, 3.5
+            }
+			
+			//if (!preMeatCheck && !BellyPlus.VisualsOnly())
+			//{
+			//	if (self.Centiwing) // || self.Small)
+			//		abstractCreature.state.meatLeft += 2;
+			//	else
+			//		abstractCreature.state.meatLeft += 3;
+			//}
+		}
+    }
+	
+	
+	
+	
+	
+	public static void Centipede_DrawSprites(On.CentipedeGraphics.orig_DrawSprites orig, CentipedeGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+		orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
+		
+		if (GetChub(self.centipede) == 4)
+		{
+			for (int i = 0; i < self.owner.bodyChunks.Length; i++)
+			{
+				//PHAT
+				// self.bodyChunks[i].rad += Mathf.Lerp(1.5f, 2.5f, self.size) / 1.5f; //-2/3.5
+				sLeaser.sprites[self.SegmentSprite(i)].scaleY *= 1.5f;
+            }
+		}
+    }
+	
+	
+
+    private static void DaddyGraphics_DrawSprites(On.DaddyGraphics.orig_DrawSprites orig, DaddyGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+		//Debug.Log("DO I EVEN RUN..." + self.daddy.digestingCounter);
+		orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
+		if (BellyPlus.VisualsOnly() || !CheckFattable(self.daddy))
+			return;
+		
+		//if (self.daddy.digestingCounter > 0)
+		if (self.daddy.eatObjects.Count > 0)
+        {
+			//THIS WAS JUST FROM INITIATESPRITES MOVED INTO HERE
+			for (int i = 0; i < self.daddy.bodyChunks.Length; i++)
+			{
+				sLeaser.sprites[self.BodySprite(i)].scale = (self.owner.bodyChunks[i].rad * 1.1f + 2f) / 8f;
+				if (self.daddy.HDmode)
+				{
+					sLeaser.sprites[self.EyeSprite(i, 2)].scale = 0.0625f * self.owner.bodyChunks[i].rad * 2f;
+				}
+			}
+		}
+	}
+
+    public static int GetRef(NeedleWorm self)
+	{
+		return self.abstractCreature.ID.RandomSeed;
+	}
+	
+
+	public static void DDL_Update(On.DaddyLongLegs.orig_Update orig, DaddyLongLegs self, bool eu)
+	{
+		//if (self.digestingCounter > 15)
+		if (self.eatObjects.Count > 0 && !BellyPlus.VisualsOnly() && CheckFattable(self))
+		{
+			for (int i = 0; i < self.bodyChunks.Length; i++)
+			{
+				self.bodyChunks[i].rad += 1/30f;
+			}
+
+            for (int j = 0; j < self.bodyChunkConnections.Length; j++)
+            {
+                self.bodyChunkConnections[j].distance += 1/80f;
+            }
+			
+			//ALRIGHT ALRIGHT, FOR THE MORBID ONES -NOOO THIS IS TOO HARD. WE CAN'T EVEN REFERENCE THE TORSO SPRITES WITHOUT THE LEASER...
+			// if (self.HDmode && self.dummy != null)
+			// {
+				// this.dummy = new DaddyGraphics.HunterDummy(this, this.DummySprite());
+			// }
+
+            //TENTACLE THICCNESS
+            for (int k = 0; k < self.tentacles.Length; k++)
+            {
+                //self.tentacles[k].tChunks
+                for (int l = 0; l < self.tentacles[k].tChunks.Length; l++)
+                {
+					//self.tentacles[k].tChunks[l].rad += 10f;
+                    //OKAY THIS INCREASES LIKE, GRAB RANGE... BUT NOT THE VISUAL SIZE. NOT EXACTLY WHAT WE WANT
+                }
+            }
+        }
+		
+		orig.Invoke(self, eu);
+
+		//if (self.digestingCounter == 1 && self.graphicsModule != null)
+		//	self.graphicsModule.Reset();
+	}
+	
+	
+	public static float BP_Rad(On.PoleMimic.orig_Rad orig, PoleMimic self, int index)
+	{
+		return (orig.Invoke(self, index) * 8f);
+	}
+	
+}
