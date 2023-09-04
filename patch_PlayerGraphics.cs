@@ -29,7 +29,6 @@ public class patch_PlayerGraphics
     {
         bpGraph = new BPgraph[totalPlayerNum];
 		
-		On.PlayerGraphics.Reset += BP_Reset;
 		On.PlayerGraphics.PlayerObjectLooker.HowInterestingIsThisObject += POL_HowInterestingIsThisObject;
         
 		//WE WANT THIS TO RUN LAST, AFTER OTHER MODS, TO CAPTURE ANYTHING THAT SETS TAIL THICKNESS
@@ -76,17 +75,6 @@ public class patch_PlayerGraphics
                 bpGraph[playerNum].checkRad = self.tail[0].rad; //REMEMBER THE SIZE OF OUR FIRST SEGMENT AS A CHECK
         }
     }
-	
-	
-
-    public static void BP_Reset(On.PlayerGraphics.orig_Reset orig, PlayerGraphics self)
-    {
-        orig.Invoke(self);
-        //DON'T KNOW IF THIS COULD HAVE CONSEQUENCES FOR BACKGROUND SCENERY BUT THIS FIXES THE WEIRD BLUSH ISSUES SO I NEED IT
-        if (BPOptions.blushEnabled.Value && !BellyPlus.VisualsOnly())
-            self.BringSpritesToFront();
-    }
-
 
     // public static int GetHeadSprite(Player self)
     // {
@@ -138,11 +126,13 @@ public class patch_PlayerGraphics
         {
             //MOVING THESE HERE BECAUSE VIGARO SAID SO
             //WE'LL ADD IT TO OUR OWN CONTAINER SO IT ISN'T IN THE FOREGROUND
-            newContatiner = rCam.ReturnFContainer("Midground");
+            //-- Has to be in the foreground for the shader to work properly
+            newContatiner = rCam.ReturnFContainer("Foreground");
             newContatiner.AddChild(sLeaser.sprites[bls]);
 
             //sLeaser.sprites[bls].MoveToFront(); //MOVE THE FACE OVER FRONT, PLS?
-            sLeaser.sprites[bls].MoveBehindOtherNode(sLeaser.sprites[9]);
+            //-- Can't move over the face since we're in the wrong container
+            //sLeaser.sprites[bls].MoveBehindOtherNode(sLeaser.sprites[9]);
         }
     }
 
@@ -160,14 +150,6 @@ public class patch_PlayerGraphics
         self.AddToContainer(sLeaser, rCam, null);
     }
 
-    public static void JumpstartFX()
-    {
-
-    }
-
-
-
-	
 	//RECALCULATE OUR BASE TAIL SIZE AS IF WE WERE JUST INITIALIZING
 	public static void TailBaseRefresh(PlayerGraphics self)
     {
@@ -427,10 +409,6 @@ public class patch_PlayerGraphics
         if (exhaustionFxToggle && rCam.cameraNumber == 0)
         {
             int bl = bpGraph[playerNum].blSprt;
-
-            //SOMETIMES OUR SPRITE CONTAINER CAN JUST... GO MISSING I GUESS
-            if (sLeaser.sprites[bl].container == null)
-                PB_InitiateExtraFx(self, sLeaser, rCam);
 
             sLeaser.sprites[bl].scale = 1.8f;
             sLeaser.sprites[bl].scaleY = 0.8f;

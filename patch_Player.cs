@@ -3363,11 +3363,34 @@ public class patch_Player
 		return self.grasps[0] != null && self.grasps[0].grabbed is Creature && ObjIsStuckable(self.grasps[0].grabbed as Creature) && ObjIsStuck(self.grasps[0].grabbed as Creature);
 	}
 
+
+	private static readonly List<Creature> PullingChainRecursivenessHelper = new();
 	//TRUE IF WE ARE STUCK OR GRABBING ONTO A CREATURE THAT IS PULLING SOME OTHER CREATURE
 	public static bool InPullingChain(Creature self)
 	{
 		//return (self.grasps[0] != null && self.grasps[0].grabbed is Player);
-		return IsStuckOrWedged(self) || (IsGraspingSlugcat(self) && InPullingChain(self.grasps[0].grabbed as Creature));
+		if (PullingChainRecursivenessHelper.Contains(self))
+		{
+			Debug.LogWarning("InPullingChain recursiveness warning! Aborting check.");
+			return false;
+		}
+
+		var result = false;
+		var firtRecursiveCall = PullingChainRecursivenessHelper.Count == 0;
+		try
+		{
+			PullingChainRecursivenessHelper.Add(self);
+			result = IsStuckOrWedged(self) || (IsGraspingSlugcat(self) && InPullingChain(self.grasps[0].grabbed as Creature));
+		}
+		finally
+		{
+			if (firtRecursiveCall)
+			{
+				PullingChainRecursivenessHelper.Clear();
+			}
+		}
+
+		return result;
 	}
 
 	public static void PassDownBenifits(Creature target, float strain, int boost, int cap)
@@ -8040,7 +8063,7 @@ public class patch_Player
 
         //OK THIS JOLLY BINCH... GONNA TRICK IT'S PLAYER UPDATE METHOD~ TO FIX LETTING GO OF OUR PARTNER WHEN BOOSTING
         //if (bellyStats[playerNum].isStuck && IsGrabbedByPlayer(self) && self.input[0].jmp) //if (bellyStats[playerNum].pullingOther == true)
-        if (InPullingChain(self) && IsGrabbedByPlayer(self) && self.input[0].jmp)
+        if (IsGrabbedByPlayer(self) && self.input[0].jmp && InPullingChain(self))
 			self.input[1].jmp = true; //HAHAA, TRY THAT ON FOR SIZE >:3
         
 		//FANCY SLUGCATS STOLE OUR GRAPHICS UPDATER! BUT THAT'S OKAY, WE CAN JUST TACK OURS ON THE END...
