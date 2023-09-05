@@ -368,6 +368,7 @@ public class patch_SeedCob
 
         Debug.Log("CORN UPROOTED");
         shrinkStalks = shrinkLimit;
+        self.AbstractCob.Consume(); //WE SHOULD INCLUDE THIS SO IT WON'T GROW BACK
     }
 
 
@@ -475,7 +476,7 @@ public class patch_SeedCob
     public static void BP_Update(On.SeedCob.orig_Update orig, SeedCob self, bool eu)
 	{
         //IF THE CORN IS PULLED TWICE IT'S STALKS NORMAL LENGTH
-        if (self.rootPos != new Vector2(0, 0) && !Custom.DistLess(self.bodyChunks[1].pos, self.rootPos, self.stalkLength + 30f)) //self.stalkLength * 1.5f
+        if (self.rootPos != new Vector2(0, 0) && !Custom.DistLess(self.bodyChunks[1].pos, self.rootPos, self.stalkLength + 28f)) //self.stalkLength * 1.5f
         {
             //STALK BREAK!! 
             SnapStalk(self);

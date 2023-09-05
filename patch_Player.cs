@@ -539,6 +539,13 @@ using NoirCatto;
 
 //1.8.2.1 Fixed an exception log thing in CheckFriendlyFire()  (no lines added except these two)
 
+//-Updated NPCID list to start at 16
+//-Fixed back food breaking in cases where the player would be revived or re-realized
+//-Updated Noircat compatibility with the new Solace merge
+//-Fixed some cases where fatness could dip into the negatives
+//-Greatly increased the maximum warmth possible from fat insulation
+//-Fixed a compatability bug with Outsider that caused them to sink in water after becoming exhausted
+
 /*
 Slime_Cubed: Either works. You can use the former even if you construct hooks manually, but the latter may be more convenient if you have many hooks to other mods that need different priorities 
 
@@ -1736,7 +1743,7 @@ public class patch_Player
 		{
             fallspeed1 = self.bodyChunks[0].vel.y;
             fallspeed2 = self.bodyChunks[1].vel.y;
-			if (self.lungsExhausted && self.airFriction < 0.999f)
+			if (self.lungsExhausted && self.airFriction < 0.999f && self.Submersion == 0)
 			{
                 self.Stun(2);
                 self.input[0].y = -1;
@@ -2409,15 +2416,17 @@ public class patch_Player
 	//WHAT A...
 	public static Player FindPlayerTopInRange(Creature self, float range)
 	{
+		if (self.room == null)
+			return null; 
+		
 		Player closestPlr = null;
 		float closest = range;
 		float fattest = -5;
 		for (int i = 0; i < self.room.game.Players.Count; i++)
 		{
-			if (self.room.game.Players[i].Room.index == self.room.abstractRoom.index
-				&& self.room.game.Players[i].realizedCreature != null
+			if (//self.room.game.Players[i].Room.index == self.room.abstractRoom.index ?? WAS THIS FOR AGAIN??
+				self.room.game.Players[i].realizedCreature != null
 				&& self.room.game.Players[i].realizedCreature != self
-				//&& (self.data.pointPlayerBack || self.room.game.Players[i].pos.abstractNode != self.data.exit) 
 				&& self.room.game.Players[i].realizedCreature.room == self.room
                 && self.room.game.Players[i].realizedCreature.Consious //WE ADDED THIS SO WE DON'T TRY AND FEED US TO OURSELVES
                 && Custom.DistLess(self.bodyChunks[0].pos, self.room.game.Players[i].realizedCreature.bodyChunks[0].pos, range)
@@ -3813,8 +3822,11 @@ public class patch_Player
 			orig.Invoke(self, sub);
 		}
 
+		//DON'T LET NEGATIVE CHUB VALUES BE A THING, SINCE WE CAN'T HAVE NEGATIVE FOOD
+		if (bellyStats[playerNum].myFoodInStomach < 0)
+			bellyStats[playerNum].myFoodInStomach = 0;
 
-		CheckBonusFood(self, false); //NOW TRULY SETS OUR BONUS PIP COUNT
+        CheckBonusFood(self, false); //NOW TRULY SETS OUR BONUS PIP COUNT
 
         UpdateBellySize(self);
 	}
@@ -4556,6 +4568,11 @@ public class patch_Player
 	//MY FOOLISH ATTEMPT TO MAKE SEEDCOBS EDIBLE LIKE MEAT EATERS EATING CORPSES
 	public static void BP_GrabUpdate6(Player self, bool eu)
 	{
+        //SPEARMASTER CAN'T DO THIS
+        bool foodLover = ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("unl-foodlover");
+		if (ModManager.MSC && self.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Spear && !foodLover)
+			return;
+		
 		int playerNum = GetPlayerNum(self);
 		int myGrasp = 0;
 		if (self.input[0].pckp && self.grasps[myGrasp] != null && self.grasps[myGrasp].grabbed is SeedCob seedCob && (seedCob.open > 0.8f) && !seedCob.AbstractCob.dead)
@@ -4810,8 +4827,9 @@ public class patch_Player
 			return null;
 	}
 	
-	public static Player GetHeaviestPlayerOnBack(Player self)
+	public static Player GetHeaviestPlayerOnBack(Player slug)
 	{
+        /*
 		float heaviestWeight = 0;
 		Player heaviestPlayer = null;
 		Player checkPlr = null;
@@ -4847,8 +4865,23 @@ public class patch_Player
 			}
 			//NORMALLY WE'D RETURN HERE
 		}
-		
-		return heaviestPlayer;
+		*/
+
+        //TIME FOR A MAKEOVER
+        Player heaviestPlayer = slug;
+        float heaviestWeight = GetChubFloatValue(slug) + GetOverstuffed(slug);
+		//LOOP THROUGH ANY SLUGCATS ON OUR BACK
+        while (slug != null && slug.slugOnBack != null && slug.slugOnBack.slugcat != null)
+        {
+            slug = slug.slugOnBack.slugcat;  //IS... THIS LEGAL?
+            if ((GetChubFloatValue(slug) + GetOverstuffed(slug)) >= heaviestWeight)
+            {
+                heaviestWeight = GetChubFloatValue(slug) + GetOverstuffed(slug);
+                heaviestPlayer = slug;
+            }
+        }
+
+        return heaviestPlayer;
 	}
 
 	public static bool Player_CanIPickThisUp(On.Player.orig_CanIPickThisUp orig, Player self, PhysicalObject obj)
@@ -5847,21 +5880,44 @@ public class patch_Player
 		if (bellyStats[GetPlayerNum(player)].miscTimer > 0)
 			return; //TOO MUCH MEOWING! WAIT A BIT
 
-        //float pitch = NoirCatto.NoirCatto.NoirDeets.GetValue(player, NoirCatto.NoirCatto.NoirDataCtor).MeowPitch;
-        //float pitch = 0.9f + (UnityEngine.Random.value * 0.2f);
-        float pitch = Mathf.Max(1f - (player.bodyChunks[1].mass - NoirCatto.NoirCatto.DefaultFirstChunkMass) * 0.65f, 0.15f) - 0.1f;
+		if (BellyPlus.noircatEnabled)
+			PlayNoircattoFiles(player, alt);
+		else
+			PlaySolaceFiles(player, alt);
+    }
+
+    public static void PlayNoircattoFiles(Player player, bool alt)
+    {
+		float mass = NoirCatto.NoirCatto.DefaultFirstChunkMass;
+		SoundID sound = alt ? NoirCatto.NoirCatto.Meow2SND : NoirCatto.NoirCatto.MeowFrustratedSND;
+        PlayNoirMeow(player, alt, mass, sound);
+    }
+
+    public static void PlaySolaceFiles(Player player, bool alt)
+    {
+		float mass = TheFriend.NoirThings.NoirCatto.DefaultFirstChunkMass;
+        SoundID sound = alt ? TheFriend.NoirThings.NoirCatto.Meow2SND : TheFriend.NoirThings.NoirCatto.MeowFrustratedSND;
+        PlayNoirMeow(player, alt, mass, sound);
+    }
+
+    public static void PlayNoirMeow(Player player, bool alt, float bodyMass, SoundID sound)
+    {
+        float pitch = Mathf.Max(1f - (player.bodyChunks[1].mass - bodyMass) * 0.65f, 0.15f) - 0.1f;
         pitch += (UnityEngine.Random.value * 0.2f);
         if (alt)
-		{
-            player.room?.PlaySound(NoirCatto.NoirCatto.Meow2SND, player.firstChunk, false, 0.9f, pitch + 0.1f);
-            //Debug.Log("MEOW! " + pitch);
+        {
+            player.room?.PlaySound(sound, player.firstChunk, false, 0.9f, pitch + 0.1f);
         }
-		else
-		{
-            player.room?.PlaySound(NoirCatto.NoirCatto.MeowFrustratedSND, player.firstChunk, false, 0.7f, pitch * 0.6f);
+        else
+        {
+            player.room?.PlaySound(sound, player.firstChunk, false, 0.7f, pitch * 0.6f);
         }
+
         bellyStats[GetPlayerNum(player)].miscTimer = 40;
     }
+
+
+
 
 
     //WHY ARE YOU WAY UP HERE?? - OH, IT'S BECAUSE WE'RE HOPING WE CAN STILL REFERENCE YOU AGAIN IN LIKE 3 FRAMES...
@@ -6170,7 +6226,7 @@ public class patch_Player
 					self.bodyChunks[0].pos.y = self.bodyChunks[1].pos.y - 5f;
 				}
                 Debug.Log("BOOST SLUG! " + self.slugcatStats.name.value);
-                if (BellyPlus.noircatEnabled && self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < ((crashVel - 5f) / 10f))
+                if (self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < ((crashVel - 5f) / 10f))
                     DoNoirSounds(self, true);
             }
 			//ONLY DO THE JOLT IF OUR HEAD IS IN A TUNNEL 
@@ -6182,8 +6238,17 @@ public class patch_Player
 			{
                 self.room.PlaySound(BPEnums.BPSoundID.Fwump2, self.mainBodyChunk, false, Mathf.Min(crashVel / 20f, 0.7f), 1.1f);
             }
-				
-		}
+
+            //DISMOUNT IF WE'RE ON SOMEONE SHOULDERS
+            if (self.onBack != null)
+            {
+                self.onBack.slugOnBack.DropSlug();
+                self.input[0].x = (int)bellyStats[playerNum].stuckVector.x;
+                self.input[0].y = (int)bellyStats[playerNum].stuckVector.y;
+				RedirectStuckage(self, true, eu);
+                bellyStats[playerNum].stuckStrain += 10; //JUST TO KEEP US WEDGED
+            }
+        }
 
 
 		if ((vertStuck || wedgedInFront || wedgedBehind))
@@ -6483,7 +6548,13 @@ public class patch_Player
 
         //DON'T ENTER SHORTCUTS WHILE STUCK (OR WHILE PULLING SOMEONE WHO IS STUCK!)
         if (IsStuck(self) || IsGraspingStuckCreature(self))
-			self.shortcutDelay = (Math.Max(self.shortcutDelay, 2));
+		{
+            self.shortcutDelay = (Math.Max(self.shortcutDelay, 2));
+			//HEY IF WE'VE BEEN CAPTURED BY A PREDATOR THAT IS STRUGGLING TO PULL US THROUGH A GAP, WE SHOULD TRY AND FIX THAT
+			if (self.dangerGraspTime > 30)
+				ObjGainLoosenProg(self, 0.05f);
+        }
+			
 		//Debug.Log("-----MY INPUT!: " + playerNum + " " + (self.bodyMode == Player.BodyModeIndex.Stand) + "-" + (self.input[0].x != 0) + "-" + (bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther) + "-" + (self.animationFrame > 0) + "-" + (self.slowMovementStun < 8));
 		//Debug.Log("-----MY INPUT2!: " + playerNum );
 		//Debug.Log("-----DEBUG!: " + bellyStats[playerNum].myFlipValX + " " + bellyStats[playerNum].inPipeStatus + " " + self.bodyMode + " " + +self.room.MiddleOfTile(self.bodyChunks[1].pos).x + " " + self.bodyChunks[1].pos.x);
@@ -6640,9 +6711,10 @@ public class patch_Player
 		if (self.room != null && self.room.blizzard)
 		{
 			float stuffing = (GetChubFloatValue(self) / 8f) + (GetOverstuffed(self) / 8f);
-			float warmth = RainWorldGame.DefaultHeatSourceWarmth * Mathf.Clamp(stuffing, 0f, 1f);
-			self.Hypothermia -= Mathf.Lerp(warmth, 0f, self.HypothermiaExposure);
-		}
+			float warmth = RainWorldGame.DefaultHeatSourceWarmth * Mathf.Clamp(stuffing, 0f, 5f);
+			//self.Hypothermia -= Mathf.Lerp(warmth, 0f, self.HypothermiaExposure); //WITH THIS MATH, A FULL STRENGTH BLIZARD IS UNEFFECTED BY OUR FATNESS AT ALL. BUT LANTERNS WORK THIS WAY TOO SO WHATEVER
+            self.Hypothermia -= Mathf.Lerp(warmth, 0f, (self.HypothermiaExposure / 2f)); //FORGET IT. HALF EFFECTIVENESS IN FULL BLIZARD INSTEAD OF NO EFFECTIVENESS
+        }
 
 		//IF WE'RE SUBMERGED MAKE US SLICK (AND WASH OFF PREVIOUS SLICKNESS)
 		if (self.bodyChunks[1].submersion > 0.5)
@@ -6980,6 +7052,15 @@ public class patch_Player
 					bellyStats[playerNum].verticalStuck = true;
 				}
 			}
+
+			//IF WE'RE ON SOMEONE BACK, IT SHOULD ALWAYS BE THIS
+			if (self.onBack != null)
+			{
+                if (self.onBack.input[0].x != 0)
+                    bellyStats[playerNum].myFlipValX = self.onBack.input[0].x;
+                if (self.onBack.input[0].y != 0)
+                    bellyStats[playerNum].myFlipValY = self.onBack.input[0].y;
+            }
 			
 			//IF WE'RE CORRIDOR-FLIPPING, IT SHOULD BE THE OPPOSITE OF THE NONZERO NUMBER
 			else if (self.corridorTurnDir != null)
@@ -7650,7 +7731,7 @@ public class patch_Player
 				else
 					bellyStats[playerNum].myFlipValY *= -1;
 				//UNIQUE INTERACTION WITH NOIRCAT!
-                if (BellyPlus.noircatEnabled && self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < 0.2f)
+                if (self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < 0.2f)
 					DoNoirSounds(self, false);
 			}
 			if (bellyStats[playerNum].pushingOther)
@@ -8152,7 +8233,7 @@ public class patch_Player
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("-----LAUNCH!!!: " + (launchSpeed * popMag));
 
-        if (BellyPlus.noircatEnabled && self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < ((launchSpeed * popMag) - 10f) / 10f)
+        if (self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < ((launchSpeed * popMag) - 10f) / 10f)
             DoNoirSounds(self, true);
 
         //IF WE'RE BEING TUGGED (BY A SLUGCAT) RELEASE US 

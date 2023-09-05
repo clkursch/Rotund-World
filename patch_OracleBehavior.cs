@@ -14,14 +14,16 @@ public class patch_OracleBehavior
 		
 		On.SSOracleBehavior.SSSleepoverBehavior.Update += BP_Sleepover_Update;
         On.SSOracleBehavior.SSSleepoverBehavior.ctor += BP_Sleepover_ctor;
-        //On.SSOracleBehavior.SSSleepoverBehavior.ctor += SSSleepoverBehavior_ctor;
+        On.SSOracleBehavior.SSOracleMeetPurple.Update += BP_SSOracleMeetPurple_Update;
+		//On.SSOracleBehavior.SSSleepoverBehavior.ctor += SSSleepoverBehavior_ctor;
 	}
-	
-	//SS = SUPER STRUCTURE (DEFAULT 5P)
-	//SL = SHORE LINE (DEFAULT MOON)
-	//DM = (FUNCTIONING MOON)
-	//ST = (ROTTING PEBBLES)
-	//CL = (CRIPPLED 5P)
+
+
+    //SS = SUPER STRUCTURE (DEFAULT 5P)
+    //SL = SHORE LINE (DEFAULT MOON)
+    //DM = (FUNCTIONING MOON)
+    //ST = (ROTTING PEBBLES)
+    //CL = (CRIPPLED 5P)
 
     private static void BP_Sleepover_ctor(On.SSOracleBehavior.SSSleepoverBehavior.orig_ctor orig, SSOracleBehavior.SSSleepoverBehavior self, SSOracleBehavior owner)
     {
@@ -118,7 +120,16 @@ public class patch_OracleBehavior
 			//if (self.id == Conversation.ID.Pebbles_White && !self.owner.playerEnteredWithMark)
 			//	self.owner.playerEnteredWithMark = true; //JUST PRETEND, SO WE DON'T REPEAT THE SAME OPENER. IT'S FINE.
 			//I THINK IT'S MESSING UP THE PLAYER'S GAINED KARMA, SO LETS NOT DO THAT...
-			if (self.owner.oracle.ID != Oracle.OracleID.SS)
+
+			//SOME PEBBLES SPECIFIC STUFF
+			if (ModManager.MSC && self.owner.oracle.room.game.GetStorySession.saveStateNumber == MoreSlugcatsEnums.SlugcatStatsName.Spear && self.owner.oracle.ID == Oracle.OracleID.SS)
+			{
+				Debug.Log("PEBS DIALOG " + self.owner.action);
+				//THIS IS THE ONLY DIALOGUE PEBBLES SHOULD EVER GIVE SPEARMASTER
+				if (self.owner.action == MoreSlugcatsEnums.SSOracleBehaviorAction.MeetPurple_InspectPearl)
+                    self.events.Add(new Conversation.TextEvent(self, 0, self.Translate("Suns, your messenger is quite large..."), 0));
+			}
+			else if (self.owner.oracle.ID != Oracle.OracleID.SS)
 				self.events.Add(new Conversation.TextEvent(self, 0, self.Translate("My, what a well-fed little creature you are..."), 0));
 			else
 				self.events.Add(new Conversation.TextEvent(self, 0, self.Translate("My, you are much... Rounder than my records would have me assume."), 0));
@@ -567,4 +578,63 @@ public class patch_OracleBehavior
 		else if (stuckCounter > (secondTry + 200) && !patch_Player.IsStuck(self.player))
 			stuckCounter = secondTry - 50;
 	}
+
+
+
+    //SPECIFIC TO SPEARMASTER 5P DIALOGUE WITH MARK
+    private static void BP_SSOracleMeetPurple_Update(On.SSOracleBehavior.SSOracleMeetPurple.orig_Update orig, SSOracleBehavior.SSOracleMeetPurple self)
+    {
+        if (self.player == null || self.oracle.room == null)
+        {
+            stuckCounter = 1;
+            return;
+        }
+
+        FindFatterPlayer(self.owner);
+
+        orig(self);
+
+		int secondTry = -100; //RIGHT TO THE SECOND PHASE
+
+        if (self.player.room == self.oracle.room && patch_Player.IsStuck(self.player))
+        {
+            self.owner.inActionCounter--;
+            stuckCounter++;
+
+            if (stuckCounter == secondTry + 150)
+            {
+                //self.oracle.room.PlaySound(SoundID.SS_AI_Give_The_Mark_Telekenisis, 0f, 1f, 1f);
+                self.oracle.room.PlaySound(SoundID.Broken_Anti_Gravity_Switch_On, 0f, 1.3f, 1f);
+                self.movementBehavior = SSOracleBehavior.MovementBehavior.Idle;
+            }
+            else if (stuckCounter == secondTry + 275)
+            {
+                self.owner.killFac = 0f;
+                self.oracle.room.PlaySound(SoundID.Gate_Pillows_In_Place, 0f, 1f, 1f);
+                self.player.room.PlaySound(SoundID.Slugcat_Normal_Jump, self.player.mainBodyChunk.pos, 3f, 0.6f);
+            }
+
+
+
+            //LOOPING ACTIONS
+
+            else if (stuckCounter > secondTry + 200 && stuckCounter < secondTry + 275)
+            {
+                self.owner.killFac += 0.015f; //THIS SHOULDN'T KILL UNLESS HE'S ACTUALLY MAD AT US
+            }
+            else if (stuckCounter > secondTry + 275)
+            {
+                patch_Player.ObjGainBoostStrain(self.player, 0, 15, 20);
+                patch_Player.ObjGainStuckStrain(self.player, 8f);
+                patch_Player.ObjSetFwumpFlag(self.player, 3);
+                patch_Player.ObjGainLoosenProg(self.player, 1 / 1000f);
+                // patch_Player.ObjSetNoStuck(self.player, 30);
+                (self.oracle.graphicsModule as OracleGraphics).halo.connectionsFireChance = 8f;
+            }
+
+            //IF THEY'RE SOMEHOW STILL STUCK, START GETTING MAD AGAIN
+            if (stuckCounter > secondTry + 400)
+                self.owner.inActionCounter++;
+        }
+    }
 }

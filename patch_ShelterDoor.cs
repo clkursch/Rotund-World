@@ -58,8 +58,14 @@ public class patch_ShelterDoor
                         //STORE OUR LONG TERM FOOD VALUE FOR LATER
                         int myID = thisRoom.game.Players[i].ID.number;
                         int myFood = patch_Player.bellyStats[myID].myFoodInStomach;
-                        int extraFoodCount = (myFood - player.MaxFoodInStomach);
+                        int extraFoodCount = myFood - player.MaxFoodInStomach;
                         int hibernateCost = player.slugcatStats.foodToHibernate;
+                        //SPECIAL EXCEPTIONS FOR INDIVIDUAL FOOD BARS MOD
+                        if (BellyPlus.individualFoodEnabled)
+                        {
+                            extraFoodCount = myFood - SlugcatStats.SlugcatFoodMeter((player.abstractCreature.world.game.Players[0].state as PlayerState).slugcatCharacter).x;
+                            hibernateCost = SlugcatStats.SlugcatFoodMeter((player.abstractCreature.world.game.Players[0].state as PlayerState).slugcatCharacter).y;
+                        }
 
                         Debug.Log("-PLAYER FOOD PIPS: " + myID + " - " + myFood + " MAX " + player.MaxFoodInStomach + " EXTRA " + extraFoodCount + " TO HIBERNATE " + player.slugcatStats.foodToHibernate + " BONUS " + BellyPlus.bonusFood);
                         if (extraFoodCount > 0)
@@ -256,7 +262,6 @@ public class patch_ShelterDoor
                     if ((thisRoom.abstractRoom.entities[j] as AbstractPhysicalObject).realizedObject != null && (thisRoom.abstractRoom.entities[j] as AbstractPhysicalObject).realizedObject is SeedCob myCobb)
                     {
                         //BUT LIKE DO ALL THE STUFF FIRST
-                        Debug.Log("FOUND A CORN");
                         if (!myCobb.AbstractCob.dead)
                         {
                             if (myCobb.open >= 1)
@@ -264,7 +269,8 @@ public class patch_ShelterDoor
                             else if (!myCobb.AbstractCob.opened)
                                 BellyPlus.StoredCorn++;
                         }
-                            
+                        Debug.Log("FOUND A CORN " + BellyPlus.StoredCorn + " - " + BellyPlus.StoredStumps);
+
                         //IF IT'S DEAD IT WILL JUST GET DESTROYED WITHOUT BEING SAVED
                         thisRoom.abstractRoom.entities[j].Destroy();
                         thisRoom.abstractRoom.entities.RemoveAt(j);
