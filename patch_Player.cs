@@ -1730,6 +1730,10 @@ public class patch_Player
                 }
             }
         }
+		
+		//WINGCAT GETS HANDLED A BIT DIFFERENTLY
+		if (self.slugcatStats.name.value == "MMWingCat")
+			WingcatUpdate(self, eu);
     }
 
     public static float fallspeed1 = 0;
@@ -1752,6 +1756,60 @@ public class patch_Player
         }
 
         orig.Invoke(self);
+    }
+	
+	
+	public static void WingcatUpdate(Player self, bool eu)
+	{
+
+        MMWingCat.WingSlugcatClass.WingSlugcat cat = MMWingCat.WingSlugcatClass.GetCat(self);
+		if (cat.flightmode)
+		{
+			Player fattest = GetHeaviestOnStack(self, true);
+			float runMod = bellyStats[GetPlayerNum(fattest)].runSpeedMod - Mathf.Max((GetChubFloatValue(fattest) / 40f), 0);
+            float reduction = Mathf.Pow(runMod, 1.5f);
+			
+			for (int i = 0; i < self.bodyChunks.Length; i++)
+			{
+                //self.bodyChunks[i].vel.x *= reduction;
+                self.bodyChunks[i].vel.x *= runMod;
+				//LOSE ALTITUDE
+				if (self.bodyChunks[i].vel.y > 0)
+					self.bodyChunks[i].vel.y *= runMod * Mathf.Min((1.5f - GetExhaustionMod(self, 60)), 1f);
+                //if (self.bodyChunks[i].vel.y >= -2)
+                //    self.bodyChunks[i].vel.y -= Mathf.Lerp(5.5f, 0f, reduction);
+			}
+			
+			//DRAIN STAMINA IF WE'RE STRUGGLING
+			if (runMod <= 0.9)
+			{
+				if (self.input[0].jmp)
+					MakeStrainSparks(self, 2);
+				if (!self.lungsExhausted)
+					bellyStats[GetPlayerNum(self)].corridorExhaustion += ((eu && runMod > 0.5) || !self.input[0].jmp) ? 1 : 2;
+			}
+
+            if (self.lungsExhausted && self.Submersion == 0)
+            {
+                self.Stun(2);
+                self.input[0].y = 0;
+                self.input[0].jmp = false;
+                cat.flightmode = false;
+                self.room.PlaySound(SoundID.Slugcat_Normal_Jump, self.mainBodyChunk.pos, 1f, 0.6f);
+            }
+        }
+		else if (self.lungsExhausted && self.Submersion == 0)
+		{
+            cat.flightmode = false;
+            cat.hovermode = false;
+            
+			if (self.bodyChunks[1].ContactPoint.y != -1)
+			{
+                //self.input[0].y = 0; //WE CAN'T DO THAT, WE'LL FALL PAST POLES
+                self.input[0].jmp = false;
+                MakeStrainSparks(self, 1);
+			}
+        }
     }
 
 
@@ -2357,9 +2415,11 @@ public class patch_Player
 			if (showLogs)
 				Debug.Log("-----LIZARD TO CATCH UP!): " + tileSeed);
 		}
-		
-		
-		return -4f + (tileSeed /= 2f); //f(x)
+
+        //if (showLogs)
+        //    Debug.Log("-----ORIG GAP SIZE!): " + (tileSeed /= 2f));
+		//float extra = (self is Player player && player.playerState.playerNumber == 0) ? BPOptions.gapVariance.Value : 1f;
+        return -4f + (tileSeed /= 2f) * BPOptions.gapVariance.Value;
 	}
 	
 	
@@ -3372,34 +3432,11 @@ public class patch_Player
 		return self.grasps[0] != null && self.grasps[0].grabbed is Creature && ObjIsStuckable(self.grasps[0].grabbed as Creature) && ObjIsStuck(self.grasps[0].grabbed as Creature);
 	}
 
-
-	private static readonly List<Creature> PullingChainRecursivenessHelper = new();
 	//TRUE IF WE ARE STUCK OR GRABBING ONTO A CREATURE THAT IS PULLING SOME OTHER CREATURE
 	public static bool InPullingChain(Creature self)
 	{
 		//return (self.grasps[0] != null && self.grasps[0].grabbed is Player);
-		if (PullingChainRecursivenessHelper.Contains(self))
-		{
-			Debug.LogWarning("InPullingChain recursiveness warning! Aborting check.");
-			return false;
-		}
-
-		var result = false;
-		var firtRecursiveCall = PullingChainRecursivenessHelper.Count == 0;
-		try
-		{
-			PullingChainRecursivenessHelper.Add(self);
-			result = IsStuckOrWedged(self) || (IsGraspingSlugcat(self) && InPullingChain(self.grasps[0].grabbed as Creature));
-		}
-		finally
-		{
-			if (firtRecursiveCall)
-			{
-				PullingChainRecursivenessHelper.Clear();
-			}
-		}
-
-		return result;
+		return IsStuckOrWedged(self) || (IsGraspingSlugcat(self) && InPullingChain(self.grasps[0].grabbed as Creature));
 	}
 
 	public static void PassDownBenifits(Creature target, float strain, int boost, int cap)
@@ -4827,47 +4864,15 @@ public class patch_Player
 			return null;
 	}
 	
-	public static Player GetHeaviestPlayerOnBack(Player slug)
+	public static Player GetHeaviestPlayerOnBack(Player self)
 	{
-        /*
-		float heaviestWeight = 0;
-		Player heaviestPlayer = null;
-		Player checkPlr = null;
-		//I'M SURE THERES A WAY TO LOOP THIS CORRECTLY BUT I'M TOO STUPID AND LAZY FOR THAT SO I'M JUST GONNA CHECK 4 TIMES
-		if (self.slugOnBack != null && self.slugOnBack.slugcat != null)
-		{
-			checkPlr = self.slugOnBack.slugcat;
-            //if ((GetChubFloatValue(checkPlr) + GetOverstuffed(checkPlr)) >= heaviestWeight)
-			//WE DON'T NEED TO CHECK IF THIS IS TRUE OR NOT. IT WILL BE TRUE BECAUSE THIS IS THE FIRST PLAYER WE CHECK
-            heaviestWeight = GetChubFloatValue(checkPlr) + GetOverstuffed(checkPlr);
-            heaviestPlayer = checkPlr;
-            //NEXT PLAYER
-            if (checkPlr.slugOnBack != null && checkPlr.slugOnBack.slugcat != null)
-			{
-				checkPlr = checkPlr.slugOnBack.slugcat; //IS... THIS LEGAL?
-				if ((GetChubFloatValue(checkPlr) + GetOverstuffed(checkPlr)) >= heaviestWeight)
-				{
-					heaviestWeight = GetChubFloatValue(checkPlr) + GetOverstuffed(checkPlr);
-					heaviestPlayer = checkPlr;
-				}
-				//NEXT PLAYER
-				if (checkPlr.slugOnBack != null && checkPlr.slugOnBack.slugcat != null)
-				{
-					checkPlr = checkPlr.slugOnBack.slugcat; //IS... THIS LEGAL?
-					if ((GetChubFloatValue(checkPlr) + GetOverstuffed(checkPlr)) >= heaviestWeight)
-					{
-						heaviestWeight = GetChubFloatValue(checkPlr) + GetOverstuffed(checkPlr);
-						heaviestPlayer = checkPlr;
-						//THAT WAS THE LAST PLAYER, SO WE SHOULD HAVE AN ANSWER NOW
-					}
-				}
-				
-			}
-			//NORMALLY WE'D RETURN HERE
-		}
-		*/
-
         //TIME FOR A MAKEOVER
+		return GetHeaviestOnStack(self, false);
+	}
+	
+	public static Player GetHeaviestOnStack(Player self, bool includeSelf)
+	{
+		Player slug = self;
         Player heaviestPlayer = slug;
         float heaviestWeight = GetChubFloatValue(slug) + GetOverstuffed(slug);
 		//LOOP THROUGH ANY SLUGCATS ON OUR BACK
@@ -4880,9 +4885,14 @@ public class patch_Player
                 heaviestPlayer = slug;
             }
         }
+		
+		//IF THE ANSWER WAS OURSELF, RETURN NULL I GUESS
+		if (heaviestPlayer == self && !includeSelf)
+			heaviestPlayer = null;
 
         return heaviestPlayer;
 	}
+	
 
 	public static bool Player_CanIPickThisUp(On.Player.orig_CanIPickThisUp orig, Player self, PhysicalObject obj)
 	{
@@ -8144,7 +8154,7 @@ public class patch_Player
 
         //OK THIS JOLLY BINCH... GONNA TRICK IT'S PLAYER UPDATE METHOD~ TO FIX LETTING GO OF OUR PARTNER WHEN BOOSTING
         //if (bellyStats[playerNum].isStuck && IsGrabbedByPlayer(self) && self.input[0].jmp) //if (bellyStats[playerNum].pullingOther == true)
-        if (IsGrabbedByPlayer(self) && self.input[0].jmp && InPullingChain(self))
+        if (InPullingChain(self) && IsGrabbedByPlayer(self) && self.input[0].jmp)
 			self.input[1].jmp = true; //HAHAA, TRY THAT ON FOR SIZE >:3
         
 		//FANCY SLUGCATS STOLE OUR GRAPHICS UPDATER! BUT THAT'S OKAY, WE CAN JUST TACK OURS ON THE END...

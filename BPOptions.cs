@@ -30,6 +30,7 @@ public class BPOptions : OptionInterface
         BPOptions.bpDifficulty = this.config.Bind<float>("bpDifficulty", 0f, new ConfigAcceptableRange<float>(-5f, 5f));
         BPOptions.sfxVol = this.config.Bind<float>("sfxVol", 0.1f, new ConfigAcceptableRange<float>(0f, 0.4f));
         BPOptions.startThresh = this.config.Bind<int>("startThresh", 2, new ConfigAcceptableRange<int>(-4, 8));//(0, 4)
+		BPOptions.gapVariance = this.config.Bind<float>("gapVariance", 1.0f, new ConfigAcceptableRange<float>(0.5f, 1.75f));
         BPOptions.jokeContent1 = this.config.Bind<bool>("jokeContent1", true);
 		
 		BPOptions.fatP1 = this.config.Bind<bool>("fatP1", true);
@@ -67,6 +68,7 @@ public class BPOptions : OptionInterface
     public static Configurable<float> bpDifficulty;
     public static Configurable<float> sfxVol;
     public static Configurable<int> startThresh;
+	public static Configurable<float> gapVariance;
     public static Configurable<bool> detachNeedles;
     public static Configurable<bool> visualsOnly;
     public static Configurable<bool> jokeContent1;
@@ -206,6 +208,11 @@ public class BPOptions : OptionInterface
 		*/
 
 
+        string dscVisuals = BPTranslate("Removes all gameplay changes from the mod except visual ones");
+        this.chkBoxVisOnly = new OpCheckBox(BPOptions.visualsOnly, new Vector2(15f + 425, lineCount));
+        Tabs[0].AddItems(this.chkBoxVisOnly, new OpLabel(45f + 425, lineCount, BPTranslate("Visuals Only")) { bumpBehav = this.chkBoxVisOnly.bumpBehav, description = dscVisuals });
+        this.chkBoxVisOnly.description = dscVisuals;
+        //chkBoxVisOnly.Hidden = true;
 
 
 
@@ -221,11 +228,15 @@ public class BPOptions : OptionInterface
         threshSlide.description = dscThresh;
 
 
-        string dscVisuals = BPTranslate("Removes all gameplay changes from the mod except visual ones");
-        this.chkBoxVisOnly = new OpCheckBox(BPOptions.visualsOnly, new Vector2(15f + indenting + 50, lineCount));
-        Tabs[0].AddItems(this.chkBoxVisOnly, new OpLabel(45f + indenting + 50, lineCount, BPTranslate("Visuals Only")) { bumpBehav = this.chkBoxVisOnly.bumpBehav, description = dscVisuals });
-        this.chkBoxVisOnly.description = dscVisuals;
-        //chkBoxVisOnly.Hidden = true;
+        OpFloatSlider varianceSlide = new OpFloatSlider(BPOptions.gapVariance, new Vector2(350f, lineCount - 0), 150, 1, false);
+        dscThresh = BPTranslate("Determines how wide the range of gap sizes can be. Wider variety makes easy gaps easier and harder gaps harder");
+        Tabs[0].AddItems(varianceSlide, new OpLabel(varianceSlide.pos.x + 25f, lineCount - 15, BPTranslate("Pipe size variety")) { bumpBehav = varianceSlide.bumpBehav, description = dscThresh });
+        Tabs[0].AddItems(new OpLabel(varianceSlide.pos.x - 45f, lineCount + 5, BPTranslate("Similar")) { description = BPTranslate("Gap sizes will be similar to each other") });
+        Tabs[0].AddItems(new OpLabel(varianceSlide.pos.x + 160f, lineCount + 5, BPTranslate("Diverse")) { description = BPTranslate("Gap sizes will vary widely") });
+        varianceSlide.description = dscThresh;
+
+
+        
 
 
         //Pipes are less snug and easier to wiggle through, even when very fat
