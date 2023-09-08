@@ -546,6 +546,10 @@ using NoirCatto;
 //-Greatly increased the maximum warmth possible from fat insulation
 //-Fixed a compatability bug with Outsider that caused them to sink in water after becoming exhausted
 
+//External weight ignored if player fatness disabled
+//Version control, for real maybe?
+//Evergreen rolling
+
 /*
 Slime_Cubed: Either works. You can use the former even if you construct hooks manually, but the latter may be more convenient if you have many hooks to other mods that need different priorities 
 
@@ -2858,7 +2862,18 @@ public class patch_Player
 
     public static void Player_SwallowObject(On.Player.orig_SwallowObject orig, Player self, int grasp)
     {
-        if (grasp >= 0 && self.grasps[grasp] != null)
+        bool skipCheck = false;
+		int playerNumber = self.playerState.playerNumber;
+		if ((playerNumber == 0 && BPOptions.fatP1.Value == false) ||
+			(playerNumber == 1 && BPOptions.fatP2.Value == false) ||
+			(playerNumber == 2 && BPOptions.fatP3.Value == false) ||
+			(playerNumber == 3 && BPOptions.fatP4.Value == false)
+			|| BellyPlus.VisualsOnly())
+		{
+			skipCheck = true;
+		}
+		
+		if (grasp >= 0 && self.grasps[grasp] != null && !skipCheck)
         {
             PhysicalObject item = self.grasps[grasp].grabbed;
             CheckExternal(self, item);
@@ -6901,7 +6916,22 @@ public class patch_Player
 				self.grabbedBy[0].grabber.ReleaseGrasp(0);
 				// self.grabbedBy[0].grabber.Stun(Random.Range(8, 16));
 		}
-	}
+
+        //EVERGREEN ROLLING
+        if (ChunkyEvergreen(self))
+        {
+            if (self.bodyMode == Player.BodyModeIndex.Crawl && self.input[0].jmp && self.input[0].IntVec == new IntVector2(0, -1) && self.gourmandAttackNegateTime <= 0)
+            {
+                self.rollCounter = 8;
+                self.rollDirection = self.flipDirection;
+                self.stopRollingCounter = 0;
+                self.canJump = 0;
+                self.wantToJump = 0;
+				self.animation = Player.AnimationIndex.Roll;
+				self.input[1].jmp = true; //PRETEND WE WERE ALWAYS HOLDING THIS DOWN
+            }
+        }
+    }
 
 
 
@@ -8059,7 +8089,8 @@ public class patch_Player
 		//THAT JUST WASN'T RELIABLE ENOUGH, AND/OR DOESN'T WORK IN THE OLD VERSIONS. TRY THIS INSTEAD
 		if (!BellyPlus.versionCheck && self.graphicsModule != null && self.room.game.cameras[0].hud != null)
 		{
-			if (RainWorld.GAME_VERSION_STRING == "v1.9.01" || RainWorld.GAME_VERSION_STRING == "v1.9.02" || RainWorld.GAME_VERSION_STRING == "v1.9.03")
+			string myVersion = Custom.rainWorld.options.lastGameVersion; //RainWorld.GAME_VERSION_STRING -THIS IS A CONST, IT WILL ONLY EVER BE MY VERSION OF THE GAME
+			if (myVersion == "v1.9.01" || myVersion == "v1.9.02" || myVersion == "v1.9.03")
 				self.room.game.cameras[0].hud.textPrompt.AddMessage(self.room.game.rainWorld.inGameTranslator.Translate("Rotund World Warning - Outdated game version will crash on hibernation! Use version v1.9.04 or higher"), 90, 1000, false, false);
 			BellyPlus.versionCheck = true;
 		}
@@ -9083,13 +9114,14 @@ public class patch_Player
 			}
 
 			float runspeedMult = bellyStats[playerNum].runSpeedMod;
-			//IF WE'VE GOT A CHONKY PLAYER PIGGYBACKING...
-			if (GetPlayerOnBack(self) != null)
-				runspeedMult *= bellyStats[GetPlayerNum(GetHeaviestPlayerOnBack(self))].runSpeedMod - 0.05f; 
-			
-			//GREATLY REDUCE THESE PENALTIES IF JUMPING FROM A BEAM TIP!
-			//if (self.animation == Player.AnimationIndex.BeamTip)
-			if(bellyStats[playerNum].weightless > 0)
+            //IF WE'VE GOT A CHONKY PLAYER PIGGYBACKING...
+            //if (GetPlayerOnBack(self) != null)
+            //runspeedMult *= bellyStats[GetPlayerNum(GetHeaviestPlayerOnBack(self))].runSpeedMod - 0.05f; 
+            runspeedMult *= bellyStats[GetPlayerNum(GetHeaviestOnStack(self, true))].runSpeedMod - 0.05f;
+
+            //GREATLY REDUCE THESE PENALTIES IF JUMPING FROM A BEAM TIP!
+            //if (self.animation == Player.AnimationIndex.BeamTip)
+            if (bellyStats[playerNum].weightless > 0)
 			{
 				//runspeedMult = Mathf.Lerp(runspeedMult, 1.0f, 0.85f);
 				runspeedMult = 1.0f; //OVERRIDE WEIGHT PENALTY
