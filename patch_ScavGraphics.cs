@@ -47,7 +47,7 @@ public class patch_ScavengerGraphics
 
         int myCrit = patch_Scavenger.GetRef(self.scavenger);
 
-        if (BellyPlus.pullingOther[myCrit] && self.scavenger.grasps[0].grabbed != null && self.scavenger.grasps[0].grabbed is Player)
+        if (BellyPlus.pullingOther[myCrit] && self.scavenger.grasps[0] != null && self.scavenger.grasps[0].grabbed != null && self.scavenger.grasps[0].grabbed is Player)
         {
             Limb myHand = self.hands[0];
             myHand.mode = Limb.Mode.HuntAbsolutePosition;

@@ -84,7 +84,7 @@ namespace Expedition
                 this.flashTimer--;
 
 
-            if (this.game.cameras[0].room.shelterDoor != null) // && this.game.cameras[0].room.shelterDoor.IsClosing)
+            if (this.game?.cameras[0].room?.shelterDoor != null)
 			{
                 this.UpdateDescription();
                 //CHECK IF THERE'S CORN IN OUR SHELTER

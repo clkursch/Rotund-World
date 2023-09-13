@@ -7,6 +7,16 @@ public class patch_SlugcatHand
     public static void Patch()
     {
         On.SlugcatHand.EngageInMovement += SlugcatHand_EngageInMovement;
+        //On.Player.JollyPointUpdate += Player_JollyPointUpdate;
+        On.Player.JollyPointUpdate += Player_JollyPointUpdate;
+    }
+
+    private static void Player_JollyPointUpdate(On.Player.orig_JollyPointUpdate orig, Player self)
+    {
+        //-- Not actually pointing, just reusing the input, so it is fair to not call orig in this case
+        if (patch_Player.bellyStats[patch_Player.GetPlayerNum(self)].tuching)
+            return;
+        orig(self);
     }
 	
 	
@@ -177,6 +187,46 @@ public class patch_SlugcatHand
 			self.huntSpeed = 10f;
 			return false;
 		}
+		
+		
+		//RUBS
+        if (myPlayer.jollyButtonDown && BPOptions.blushEnabled.Value)
+        {
+            Player myHelper = patch_Player.FindPlayerInRange(myPlayer);
+            if (myHelper != null && patch_Player.GetChubValue(myHelper) > 2)
+            {
+                //-- Only rub with the appropriate hand
+                var tuchingHand = (myPlayer.bodyChunks[0].pos - myHelper.bodyChunks[1].pos).x < 0 ? 1 : 0;
+                if (self.limbNumber == tuchingHand)
+                {
+                    self.mode = Limb.Mode.HuntAbsolutePosition;
+                    self.huntSpeed = 2f; //20f
+                    Vector2 armDir = myPlayer.PointDir();
+					self.absoluteHuntPos = myHelper.bodyChunks[1].pos - (Custom.DirVec(myPlayer.bodyChunks[0].pos, myHelper.bodyChunks[1].pos) * (myHelper.isSlugpup || myHelper.playerState.isPup ? 1.4f : 1)) + (armDir * 5f); // * (8f - reach);
+					
+					myPlayer.graphicsModule.BringSpritesToFront();
+					patch_Player.bellyStats[patch_Player.GetPlayerNum(myHelper)].tuchShift = armDir * 2f;
+
+                    patch_Player.ObjFeatherHeat(myPlayer, (1 + (UnityEngine.Random.value < 0.5f ? 1 : 0)) * 2, 800);
+                    if (armDir != new Vector2(0, 0))
+                    {
+                        patch_Player.ObjFeatherHeat(myHelper, 4, 800);
+                    }
+
+                    if ((self.owner as PlayerGraphics).blink <= 0 && UnityEngine.Random.value < 0.0125)
+                        myPlayer.Blink(UnityEngine.Random.Range(40, 80));
+
+                    patch_Player.bellyStats[patch_Player.GetPlayerNum(myPlayer)].tuching = true;
+                    //UHH AND THEN RETURN BECAUSE THE ORIGINAL BREAKS AFTER IT RUNS. 
+                    return false;
+                }
+            }
+            else
+            {
+                patch_Player.bellyStats[patch_Player.GetPlayerNum(myPlayer)].tuching = false;
+            }
+        }
+		
 
 		//RUN THE ORIGINAL, I GUESS
 		return orig.Invoke(self);

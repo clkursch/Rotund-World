@@ -193,8 +193,8 @@ public class patch_Misc
     private static void BPHardmodePlayer_Update(On.HardmodeStart.HardmodePlayer.orig_Update orig, HardmodeStart.HardmodePlayer self)
     {
 		orig.Invoke(self);
-		//UPDATE OUR FOOD VALUE AFTER HUNTER JUMPS ONSCREEN
-		patch_Player.bellyStats[self.playerNumber].myFoodInStomach = self.Player.playerState.foodInStomach;
+		if (self.Player != null) //APPARENTLY THIS CAN BE NULL HERE
+			patch_Player.bellyStats[self.playerNumber].myFoodInStomach = self.Player.playerState.foodInStomach; //UPDATE OUR FOOD VALUE AFTER HUNTER JUMPS ONSCREEN
     }
 	
 	

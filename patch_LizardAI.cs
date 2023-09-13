@@ -122,7 +122,7 @@ public class patch_LizardAI
 		}
 		
 		//DON'T RUN THIS IF WE AREN'T IN THE ROOM
-		else if (self.behavior == LizardAI.Behavior.FollowFriend && self.lizard.graphicsModule != null && patch_Player.IsStuckOrWedged(self.friendTracker.friend as Player) && self.friendTracker.friend.room != null)
+		else if (self.behavior == LizardAI.Behavior.FollowFriend && self.friendTracker.friend != null && self.lizard.graphicsModule != null && patch_Player.IsStuckOrWedged(self.friendTracker.friend as Player) && self.friendTracker.friend.room != null)
 		{
 			//if (self.obstacleTracker != null)
 			//    self.obstacleTracker.EraseObstacleObject(self.friendTracker.friend);
@@ -182,15 +182,16 @@ public class patch_LizardAI
 
 				WorldCoordinate myDest = myFriend.room.GetWorldCoordinate(myFriend.bodyChunks[1].pos + (stuckPos * 100));
 				self.creature.abstractAI.SetDestination(myDest);
-				// self.friendTracker.tempFriendDest = myDest;
 				
 				//AIM OUR FACE AT OUR PARTNER
-				(self.lizard.graphicsModule as LizardGraphics).head.vel += Custom.DirVec(self.lizard.mainBodyChunk.pos, myFriend.bodyChunks[0].pos) * 10f;
+				if (self.lizard.graphicsModule != null)
+					(self.lizard.graphicsModule as LizardGraphics).head.vel += Custom.DirVec(self.lizard.mainBodyChunk.pos, myFriend.bodyChunks[0].pos) * 10f;
 
 				if (self.lizard.tongue != null
 					&& self.lizard.tongue.Ready
 					&& self.lizard.grasps[0] == null
-					&& Custom.DistLess(self.creature.realizedCreature.mainBodyChunk.pos, self.focusCreature.representedCreature.realizedCreature.mainBodyChunk.pos, self.lizard.lizardParams.tongueAttackRange)
+					&& myFriend != null
+                    && Custom.DistLess(self.creature.realizedCreature.mainBodyChunk.pos, myFriend.mainBodyChunk.pos, self.lizard.lizardParams.tongueAttackRange)
 					&& (self.lizard.Submersion < 0.5f) && UnityEngine.Random.value < self.lizard.lizardParams.tongueChance * 0.5f //0.05f
 					&& self.focusCreature.VisualContact)
 				{

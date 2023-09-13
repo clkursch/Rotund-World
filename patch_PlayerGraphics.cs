@@ -38,11 +38,8 @@ public class patch_PlayerGraphics
 		On.PlayerGraphics.InitiateSprites += BP_InitiateSprites;
 
         On.PlayerGraphics.AddToContainer += PlayerGraphics_AddToContainer;
-		
-		// using (new DetourContext()) { } //NEEDED TO WORK AROUND A PRIORITIES BUG
+        On.PlayerGraphics.Update += PlayerGraphics_Update;
     }
-
-    
 
     public static void BPPlayerGraphics_ctor(On.PlayerGraphics.orig_ctor orig, PlayerGraphics self, PhysicalObject ow)
     {
@@ -201,7 +198,7 @@ public class patch_PlayerGraphics
         //OKAY NEVERMIND I AM REALLY BAD AT MATH. WE'LL JUST GET THE TAIL SIZE ON INITIALIZING AND USE THAT AS A BASE EACH TIME.
 
         //BEECAT BREAKS OUR TAIL! AND HAS THEIR OWN CHUBBY TAIL THAT GROWS ANYWAYS
-        if (self.player.slugcatStats.name.value == "bee")
+        if (self.player?.slugcatStats?.name.value == "bee")
             return;
 		
 		
@@ -218,7 +215,7 @@ public class patch_PlayerGraphics
         {
 			//Debug.Log("TAIL THICC!: " + self.tail.Length + " i: " + i);
             //OKAY WE HAVE A BETTER WAY TO DO THAT NOW      -    IT'S NOT APPLECAT. IT'S FOR THE GUIDE
-            float tailThickMult = (self.player.slugcatStats.name.value == "Guide") ? tailThickChartB[newChubVal] : tailThickChartA[newChubVal];
+            float tailThickMult = (self.player?.slugcatStats?.name.value == "Guide") ? tailThickChartB[newChubVal] : tailThickChartA[newChubVal];
             self.tail[i].rad = bpGraph[playerNum].tailBase[i] * tailThickMult + bonusChubVal;
             if (i == 0)
                 bpGraph[playerNum].checkRad = self.tail[0].rad; //REMEMBER THE SIZE OF OUR FIRST SEGMENT AS A CHECK
@@ -366,12 +363,8 @@ public class patch_PlayerGraphics
 
         //MORE STRETCH AND SQUISHING
         float frc = patch_Player.GetSquishForce(self.player);
-        if ( patch_Player.ObjBeingPushed(self.player) > 0)
+        if (patch_Player.ObjBeingPushed(self.player) > 0 && patch_Player.IsStuck(self.player))
 		{
-            //float boostPerc = Mathf.InverseLerp(10, 18, patch_Player.GetBoostStrain(self.player)) * (patch_Player.ObjBeingPushed(self.player) / 3f);
-            //sLeaser.sprites[hp].scaleX *= Mathf.Lerp(1f, 1.35f, boostPerc);
-            //sLeaser.sprites[hp].scaleY *= Mathf.Lerp(1f, 0.65f, boostPerc);
-
             //ROTATE OUR TORSO FOR A BETTER LOOKING SQUISH
             if (!patch_Player.IsVerticalStuck(self.player))
             {
@@ -406,7 +399,7 @@ public class patch_PlayerGraphics
         bool exhaustionFxToggle = BPOptions.blushEnabled.Value && !(self.player.isNPC && self.player.isSlugpup) && !BellyPlus.VisualsOnly();
         float heatVal = 0;
         
-        if (exhaustionFxToggle && rCam.cameraNumber == 0)
+        if (exhaustionFxToggle && rCam.cameraNumber == 0 && sLeaser.sprites.Length > bpGraph[playerNum].blSprt)
         {
             int bl = bpGraph[playerNum].blSprt;
 
@@ -613,10 +606,15 @@ public class patch_PlayerGraphics
             //sLeaser.sprites[bl].alpha += 0.5f;
         }
     }
-	
-	
-	
-	public static bool InspectGraphics(PlayerGraphics self)
+
+    public static void PlayerGraphics_Update(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)
+    {
+        orig(self);
+        //TUMMY RUBS
+        self.drawPositions[1, 0] += patch_Player.bellyStats[patch_Player.GetPlayerNum(self.player)].tuchShift;
+    }
+
+    public static bool InspectGraphics(PlayerGraphics self)
     {
         int playerNum = patch_Player.GetPlayerNum(self.player);
 		return bpGraph[playerNum].verified;

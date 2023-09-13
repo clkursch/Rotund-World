@@ -939,7 +939,7 @@ public class patch_Lizard
 					//MOVED TAIL WAGGLE INTO THE GRAPHICS MODULE
 					
 					//MICE ONLY
-					if (self is LanternMouse && !BellyPlus.lungsExhausted[lizNum])
+					if (self is LanternMouse && !BellyPlus.lungsExhausted[lizNum] && self.graphicsModule != null)
 					{
 						//NO TAIL WAGGLE. MICE GOT TEENY TAILS
 						self.bodyChunks[0].vel.y = 0;
@@ -999,7 +999,7 @@ public class patch_Lizard
 					//MOVED TAIL WAGGLE TO GRAPHICS MODULE
 					
 					//MICE ONLY
-					if (self is LanternMouse && !BellyPlus.lungsExhausted[lizNum])
+					if (self is LanternMouse && !BellyPlus.lungsExhausted[lizNum] && self.graphicsModule != null)
 					{
 						float wornOut = 1 - GetExhaustionMod(self, 60);
 						if (BellyPlus.beingPushed[lizNum] < 1 && BellyPlus.myFlipValY[lizNum] < 0)

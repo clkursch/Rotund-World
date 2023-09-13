@@ -13,6 +13,7 @@ using static MonoMod.Cil.RuntimeILReferenceBag.FastDelegateInvokers;
 using BepInEx;
 using DressMySlugcat;
 using NoirCatto;
+using System.Linq;
 
 
 // --fix using snails to sneak through
@@ -550,6 +551,27 @@ using NoirCatto;
 //Version control, for real maybe?
 //Evergreen rolling
 
+//Check pearlpups spawn sometimes seeming to cause an issue with PlayerNumber being out of the 100 range
+//crash from tail drips fix. make sure they still appear correctly
+//A blush crash fix. make sure it didn't break anything 
+//Does hunter hardmode really break on startup?
+//Fixed saint's wrecking ball feature ignoring friendly fire settings
+/*
+https://guardian.vigaro.xyz/organizations/rain-world/issues/8968/?project=2&query=exception_source%3ACoopLeash&referrer=issue-stream&sort=freq&statsPeriod=14d&stream_index=3
+https://guardian.vigaro.xyz/organizations/rain-world/issues/9495/events/b3b0f7bafcbb4ecab20c279c4f76edab/?project=2
+https://guardian.vigaro.xyz/organizations/rain-world/issues/9383/?project=2&query=exception_source%3ABellyPlus+willowwisp.bellyplus%3A1.8.5&referrer=issue-stream&sort=freq&statsPeriod=14d&stream_index=15
+https://guardian.vigaro.xyz/organizations/rain-world/issues/9834/?project=2&query=exception_source%3ABellyPlus+willowwisp.bellyplus%3A1.8.5&referrer=issue-stream&sort=freq&statsPeriod=14d&stream_index=12
+https://guardian.vigaro.xyz/organizations/rain-world/issues/9541/events/?project=2&referrer=issue-stream&sort=freq&statsPeriod=14d&stream_index=6
+https://guardian.vigaro.xyz/organizations/rain-world/issues/9377/events/e1d16adbcca74f61ab15b21d6434eb3d/?project=2
+https://guardian.vigaro.xyz/organizations/rain-world/issues/9777/?project=2&query=exception_source%3ABellyPlus+willowwisp.bellyplus%3A1.8.5+error.value%3A%2ABPPlayer_Update%2A&referrer=issue-stream&sort=freq&statsPeriod=14d&stream_index=8
+https://guardian.vigaro.xyz/organizations/rain-world/issues/9885/events/97d216744bae428284d3eaca8c59d1ba/?project=2
+https://guardian.vigaro.xyz/organizations/rain-world/issues/9835/?project=2&query=exception_source%3ABellyPlus+willowwisp.bellyplus%3A1.8.5+error.value%3A%2ABPPlayer_Update%2A&referrer=issue-stream&sort=freq&statsPeriod=14d&stream_index=5
+*/
+//corner icons stay
+//fix riv wallbounce
+//no more squish when not stuck
+//rubs
+
 /*
 Slime_Cubed: Either works. You can use the former even if you construct hooks manually, but the latter may be more convenient if you have many hooks to other mods that need different priorities 
 
@@ -649,6 +671,8 @@ public class patch_Player
 		public int weightless;		//soft boolean timer - ignores weight speed penalties while active
 		public int eatCorn;
 		public int externalMass;
+		public Vector2 tuchShift;
+        public bool tuching;
         public PhysicalObject forceEatTarget;
 		public ChunkSoundEmitter squeezeLoop;
 		public ChunkSoundEmitter stuckLoop;
@@ -658,7 +682,7 @@ public class patch_Player
 	public static BellyState[] bellyStats;
 
 	//public static int totalPlayerNum = 4; //ARMORY MOD, YOU ARE A LIFESAVER - JUST KIDDING, YOU ONLY BARELY WORKED
-	public static int totalPlayerNum = 100; //LETS GIVE THIS A TRY I GUESS
+	public static int totalPlayerNum = 500; //LETS GIVE THIS A TRY I GUESS
 	public static float partialPip = 0; //SOMETHING TO KEEP TRACK INBETWEEN
 
 	public static AbstractCreature npcPartner;
@@ -806,7 +830,8 @@ public class patch_Player
 		{
 			Debug.Log("ILLEGAL SPAWN! CANCEL THE STARTUP " + playerNumber);
 			UpdateBellySize(player); //STILL DO THIS THOUGH. THIS WEIRD CLONE MAY WANT IT
-			bellyStats[playerNumber].foodOnBack.ReplaceOwner(player);
+			if (bellyStats[playerNumber].foodOnBack != null)
+				bellyStats[playerNumber].foodOnBack.ReplaceOwner(player);
             return;
 		}
 
@@ -878,6 +903,8 @@ public class patch_Player
             weightless = 0,
 			eatCorn = 0,
 			externalMass = 0,
+			tuchShift = new(0, 0),
+			tuching = false,
             squeezeLoop = null,
 			stuckLoop = null,
 			foodOnBack = new FoodOnBack(player)
@@ -1701,7 +1728,7 @@ public class patch_Player
 
 
         //BULLY A CHUNKY OUTSIDER >:3c
-        if (self.slugcatStats.name.value == "Outsider")
+        if (self.slugcatStats?.name?.value == "Outsider")
         {
             //Debug.Log("IM AN OUTSIDER!! ");
             //if (self.gravity < 0.9f && self.gravity < self.room.gravity)
@@ -2556,12 +2583,7 @@ public class patch_Player
 	
 	public static BodyPart GetHead(Player self) //lol
 	{
-		// return self.graphicsModule.bodyParts[6].pos;
-		//int headInt = 2 + (self.graphicsModule as PlayerGraphics).tail.Length;
-		//int headInt = patch_PlayerGraphics.GetHeadSprite(self);
-		//return headInt;
 		return (self.graphicsModule as PlayerGraphics).head;
-
     }
 
 
@@ -2669,6 +2691,12 @@ public class patch_Player
 			bellyStats[GetPlayerNum(obj as Player)].myHeat += amnt;
 		else
 			BellyPlus.myHeat[GetRef(obj)] += amnt;
+	}
+	
+	public static void ObjFeatherHeat(Player obj, int amnt, int max)
+	{
+		if (patch_Player.GetHeat(obj) < max)
+			bellyStats[GetPlayerNum(obj)].myHeat += amnt;
 	}
 	
 	public static int ObjGetHeat(Creature obj)
@@ -2844,9 +2872,19 @@ public class patch_Player
 	public static Vector2 ObjGetHeadPos(Creature obj)
 	{
 		if (obj is Player)
-			return GetHead(obj as Player).pos;//(obj as Player).graphicsModule.head.pos;
+		{
+			if ((obj as Player).graphicsModule != null)
+				return GetHead(obj as Player).pos;//(obj as Player).graphicsModule.head.pos;
+			else
+				return obj.bodyChunks[0].pos;
+		}
 		else if (obj is LanternMouse)
-			return obj.graphicsModule.bodyParts[4].pos;
+		{
+			if ((obj as LanternMouse).graphicsModule != null)
+				return obj.graphicsModule.bodyParts[4].pos;
+			else
+				return obj.bodyChunks[0].pos;
+		}
 		else if (obj is Scavenger)
 			return obj.bodyChunks[2].pos; //SCAVS HEAD IS CHUNK[2] I THINK
 		else //if (obj is Lizard || obj is Scavenger)
@@ -2890,6 +2928,9 @@ public class patch_Player
 	
 	public static void CheckExternal(Player self, PhysicalObject item)
 	{
+		if (item == null)
+			return;
+
 		int playerNum = GetPlayerNum(self);
 		if (item is Player player)
 		{
@@ -2922,6 +2963,24 @@ public class patch_Player
 		}
 		orig(self);
     }
+	
+	//MORE MOD FRIENDLY WAY TO HANDLE TAIL MOVEMENT
+	public static void WagTailSegment(Player self, int segment, Vector2 vel)
+	{
+		if (self.graphicsModule == null)
+			return;
+
+		int i = 0;
+		foreach (var bodyPart in self.graphicsModule.bodyParts.OfType<TailSegment>())
+		{
+			if (i == segment)
+			{
+				bodyPart.vel += vel;
+				break;
+			}
+			i++;
+		}
+	}
 
 
     //WEIGHTINESS (SLUGCAT VERSION ONLY!)
@@ -3928,7 +3987,7 @@ public class patch_Player
 			(self.graphicsModule as PlayerGraphics).swallowing = 5 * Math.Min(GetOverstuffed(self), 4); //20;
 		}
 		
-		if (bellyStats[playerNum].myFoodInStomach >= self.slugcatStats.maxFood && add > 0 && self.room != null && self.room.game.cameras[0].hud.foodMeter != null && !BellyPlus.VisualsOnly())
+		if (bellyStats[playerNum].myFoodInStomach >= self.slugcatStats.maxFood && add > 0 && self.room != null && self.room.game.cameras[0].hud != null && self.room.game.cameras[0].hud.foodMeter != null && !BellyPlus.VisualsOnly())
 		{
 			//SHOW THE PIPS TOO
 			self.room.game.cameras[0].hud.foodMeter.refuseCounter = 20; //THIS BRIEFLY FORCES THE HUD TO SHOW UP
@@ -3967,7 +4026,7 @@ public class patch_Player
 	//DON'T HURL OTHER SLUGCATS ACROSS THE MAP
 	public static void Player_ThrowObject(On.Player.orig_ThrowObject orig, Player self, int grasp, bool eu)
 	{
-		if (BellyPlus.VisualsOnly())
+		if (BellyPlus.VisualsOnly() || self.grasps[grasp] == null)
 		{
 			orig.Invoke(self, grasp, eu);
 			return;
@@ -4408,7 +4467,7 @@ public class patch_Player
     {
 		//SLUGONBACK UPDATE IS RUN HERE, BUT INCRIMENT CHECKS ARE DECIED AFTER
 		//NEVER ALLOW US TO STOW OUR PARTNER TO OUR BACK IF THEY ARE STUCK - OR PULLING!!
-		if (ModManager.CoopAvailable && self.grasps[0] != null && self.grasps[0].grabbed != null && self.grasps[0].grabbed is Player)
+		if (ModManager.CoopAvailable && self.slugOnBack != null && self.grasps[0] != null && self.grasps[0].grabbed != null && self.grasps[0].grabbed is Player)
 		{
 			Player myPartner = self.grasps[0].grabbed as Player;
 			if (myPartner != null && IsCramped(myPartner) || IsGraspingSlugcat(myPartner))
@@ -5183,7 +5242,7 @@ public class patch_Player
         //CHECK FOR THE WRECKING BALL COMBO
         if (BPOptions.slugSlams.Value && self.tongue != null)
 		{
-			if (self.tongue.Attached && Mathf.Abs(initVel.x) > 6f && otherObject is Creature && !(otherObject as Creature).dead && (otherObject as Creature).abstractCreature.creatureTemplate.smallCreature == false)
+			if (self.tongue.Attached && Mathf.Abs(initVel.x) > 6f && otherObject is Creature && !(otherObject as Creature).dead && self.SlugSlamConditions(otherObject) && (otherObject as Creature).abstractCreature.creatureTemplate.smallCreature == false)
 			{
 				//IS IT GOURM OR SOME OTHER FATTY
 				Player wreckingBall = GetHeaviestPlayerOnBack(self);
@@ -6291,20 +6350,25 @@ public class patch_Player
 			if (!vertStuck)
 			{
 				//RE- TAIL STUFF
-				for (int i = 0; i < 3; i++)
+				int i = 0;
+				foreach (var bodyPart in self.graphicsModule.bodyParts.OfType<TailSegment>())
 				{
-					self.graphicsModule.bodyParts[i].vel.y += velMag * (4f * i);
+					bodyPart.vel.y += velMag * (4f * i);
+					i++;
 				}
-                GetHead(self).vel.y -= velMag * 10f; //HEAD
+                if (self.graphicsModule != null)
+					GetHead(self).vel.y -= velMag * 10f; //HEAD
 				self.bodyChunks[0].vel.y -= velMag * 6f;
 				self.bodyChunks[1].vel.y += velMag * 6f;
 			}
 			else
 			{
 				//RE- TAIL STUFF
-				for (int i = 0; i < 4; i++)
+				int i = 0;
+				foreach (var bodyPart in self.graphicsModule.bodyParts.OfType<TailSegment>())
 				{
-					self.graphicsModule.bodyParts[i].vel.y = velMag * (4f * i * -bellyStats[playerNum].myFlipValY);
+					bodyPart.vel.y = velMag * (4f * i * -bellyStats[playerNum].myFlipValY);
+					i++;
 				}
 			}
 			// Debug.Log("-----BWOMP! JUST GOT STUCK " + velMag);
@@ -6361,7 +6425,6 @@ public class patch_Player
 			if (Math.Abs(pushBack) > 15f)
 				pushBack = 0; //SOMETHINGS GONE HORRIBLY WRONG
 
-			
 			//if (self.input[0].x != 0 || bellyStats[playerNum].assistedSqueezing)
 			if (myInputVec.x == bellyStats[playerNum].stuckVector.x || (bellyStats[playerNum].assistedSqueezing && myInputVec.x != -bellyStats[playerNum].stuckVector.x) || self.Stunned)
 			{
@@ -6377,21 +6440,16 @@ public class patch_Player
 					float wornOut = 1 - GetExhaustionMod(self, 80);
 					if (bellyStats[playerNum].beingPushed < 1) //DON'T RAISE TAIL FOR ASSISTED SQUEEZING
 					{
-						self.graphicsModule.bodyParts[1].vel.x += Mathf.Sqrt(bellyStats[playerNum].stuckStrain / 30f) * -bellyStats[playerNum].myFlipValX; //TAIL OUT
-						self.graphicsModule.bodyParts[1].vel.y += (GetCappedBoostStrain(self) / 4f) * (1f - GetExhaustionMod(self, 80)); // * -bellyStats[playerNum].myFlipValX;
+						WagTailSegment(self, 1, new Vector2( Mathf.Sqrt(bellyStats[playerNum].stuckStrain / 30f) * -bellyStats[playerNum].myFlipValX, 0)); //TAIL OUT
+						WagTailSegment(self, 1, new Vector2(0, GetCappedBoostStrain(self) / 4f) * (1f - GetExhaustionMod(self, 80)));
 					}
 					if (inPipe || (!inPipe && topInCorridor)) //SO WE DON'T SLIDE UP WALLS WHEN BOOSTING
                     {
-						//self.bodyChunks[0].vel.y += Mathf.Min(Mathf.Sqrt(bellyStats[playerNum].stuckStrain / 30f), 4f - 8f * GetExhaustionMod(self, 50)); //SNOUT UP
-						//self.bodyChunks[0].vel.y += Mathf.Min(Mathf.Sqrt(bellyStats[playerNum].boostStrain / 10f), 3f - 3.0f * GetExhaustionMod(self, 50)); //SNOUT UP
 						//self.graphicsModule.bodyParts[6].vel.y += Mathf.Min(Mathf.Sqrt(bellyStats[playerNum].boostStrain / 10f), 0.1f - 0.2f * GetExhaustionMod(self, 50)); //SNOUT UP
 						//THIS DOESN'T PAIR WELL WITH THE STRETCHED TORSO...
 					}
 					self.bodyChunks[0].vel.y = 0;
-					self.graphicsModule.bodyParts[3].vel.y += (0.5f) * bellyStats[playerNum].myFlipValY * wornOut;
-					//self.graphicsModule.bodyParts[6].vel.x += (bellyStats[playerNum].stuckStrain / 1f) * bellyStats[playerNum].myFlipValX;
-					//self.graphicsModule.bodyParts[6].vel.y += (bellyStats[playerNum].stuckStrain / 1f);
-
+					WagTailSegment(self, 3, new Vector2(0, 0.5f * bellyStats[playerNum].myFlipValY * wornOut));
 				}
 
 				if (bellyStats[playerNum].stuckStrain > (squeezeThresh + ((squeezeThresh > 300 && !(bellyStats[playerNum].boostStrain >= 18 || self.lungsExhausted)) ? 15 : 0)))
@@ -6448,16 +6506,17 @@ public class patch_Player
 					float wornOut = 1 - GetExhaustionMod(self, 60);
 					if (bellyStats[playerNum].beingPushed < 1 && bellyStats[playerNum].myFlipValY < 0)
 					{
-						self.graphicsModule.bodyParts[1].vel.y += Mathf.Sqrt(bellyStats[playerNum].stuckStrain / 30f) * -bellyStats[playerNum].myFlipValY * wornOut; //TAIL OUT
-						self.graphicsModule.bodyParts[1].vel.y += (GetCappedBoostStrain(self)) * -bellyStats[playerNum].myFlipValY * wornOut;
+						WagTailSegment(self, 1, new Vector2(0, Mathf.Sqrt(bellyStats[playerNum].stuckStrain / 30f) * -bellyStats[playerNum].myFlipValY * wornOut)); //TAIL OUT
+						WagTailSegment(self, 1, new Vector2(0, GetCappedBoostStrain(self) * -bellyStats[playerNum].myFlipValY * wornOut));
 					}
 					else if (bellyStats[playerNum].myFlipValY > 0)
 					{
-						self.graphicsModule.bodyParts[1].vel.x += (GetCappedBoostStrain(self) / 2) * bellyStats[playerNum].myFlipValX * wornOut;
+						WagTailSegment(self, 1, new Vector2((GetCappedBoostStrain(self) / 2) * bellyStats[playerNum].myFlipValX * wornOut, 0));
 						if (inPipe)
 							self.bodyChunks[0].pos.x = self.bodyChunks[1].pos.x; //KEEP THE HEAD LEVEL SO IT DOESNT SQUEEZE OUT DIAGONALLY
 					}
-                    GetHead(self).vel.y += (Mathf.Min(Mathf.Sqrt(bellyStats[playerNum].stuckStrain / 30f), 6f) + (GetCappedBoostStrain(self) / 2f)) * bellyStats[playerNum].myFlipValY * wornOut; //SNOUT OUT
+					if (self.graphicsModule != null)
+						GetHead(self).vel.y += (Mathf.Min(Mathf.Sqrt(bellyStats[playerNum].stuckStrain / 30f), 6f) + (GetCappedBoostStrain(self) / 2f)) * bellyStats[playerNum].myFlipValY * wornOut; //SNOUT OUT
 				}
 
 				if (bellyStats[playerNum].stuckStrain > (squeezeThresh + ((squeezeThresh > 300 && !(bellyStats[playerNum].boostStrain >= 18 || self.lungsExhausted)) ? 15 : 0)))
@@ -6774,7 +6833,7 @@ public class patch_Player
 				ObjGainBoostStrain(self, 0, Mathf.CeilToInt(3 * (1.0f - Mathf.Min((bellyStats[playerNum].wiggleCount) / (5f), 1f))), 15);
 				bellyStats[playerNum].wiggleCount += (bellyStats[playerNum].wiggleCount < 5) ? 2 : 1;
 				//TAIL WAGGLE
-				self.graphicsModule.bodyParts[1].vel += self.input[0].IntVec.ToVector2() * 3f;
+				WagTailSegment(self, 1, self.input[0].IntVec.ToVector2() * 3f); //self.graphicsModule.bodyParts[1].vel += self.input[0].IntVec.ToVector2() * 3f;
 			}
 
 			if (wigInp != 0)
@@ -6837,7 +6896,7 @@ public class patch_Player
 				self.touchedNoInputCounter = 12; //SO SCAVS WILL CHILL TF OUT
 				//WE INCREASE STRAIN DIRECTLY HERE BECAUSE THE MOVEMENT UPDATE ISN'T RUNNING WHILE GRABBED
 				bellyStats[playerNum].squeezeStrain = Math.Min(bellyStats[playerNum].squeezeStrain + 1, 60);
-				if (IsGrabbedByPlayer(self))
+				if (IsGrabbedByPlayer(self) && self.graphicsModule != null)
 					self.grabbedBy[0].grabber.graphicsModule.BringSpritesToFront(); //SO WE CAN SEE THEIR HANDS :)
 				if (self.LickedByPlayer != null && bellyStats[playerNum].isStuck)
                 {
@@ -6892,16 +6951,16 @@ public class patch_Player
 				self.room.AddObject(new WaterDrip(pos3, new Vector2(0, 1), false));
 			}
 
-			//MAYBE SOME TAIL DRIPS TOO
-			for (int i = 0; i < 4; i++)
-			{
-				if (UnityEngine.Random.value < 0.08f)
-				{
-					Vector2 pos3 = self.graphicsModule.bodyParts[i].pos + new Vector2(Mathf.Lerp(-4f, 4f, UnityEngine.Random.value), 2f + Mathf.Lerp(-2f, 2f, UnityEngine.Random.value));
-					self.room.AddObject(new WaterDrip(pos3, new Vector2(0, 1), false));
-				}
-			}
-		}
+            //MAYBE SOME TAIL DRIPS TOO
+            foreach (var bodyPart in self.graphicsModule.bodyParts.OfType<TailSegment>()) //for (int i = 0; i < 4; i++)
+            {
+                if (UnityEngine.Random.value < 0.08f)
+                {
+                    Vector2 pos3 = bodyPart.pos + new Vector2(Mathf.Lerp(-4f, 4f, UnityEngine.Random.value), 2f + Mathf.Lerp(-2f, 2f, UnityEngine.Random.value));
+                    self.room.AddObject(new WaterDrip(pos3, new Vector2(0, 1), false));
+                }
+            }
+        }
 		
 		
 		//CHECK FOR ATTEMPTS TO STRUGGLE OUT OF DANGER
@@ -7431,7 +7490,7 @@ public class patch_Player
 							ObjGainBoostStrain(myObject, 1, 1, 10);
                             ObjGainSquishForce(myObject, 1, 5);
                             ObjGainLoosenProg(myObject, 0.0003f * (ObjIsSlick(self) ? 3f : 1f));
-							if (UnityEngine.Random.value < 0.2f)
+							if (UnityEngine.Random.value < 0.2f && self.graphicsModule != null)
 							{
 								Vector2 pos = GetHead(self).pos;
 								self.room.AddObject(new StrainSpark(pos, new Vector2(self.input[0].x, 0) + Custom.DegToVec((360f * UnityEngine.Random.value) + 0f) * 6f * UnityEngine.Random.value, 15f, Color.white));
@@ -7751,13 +7810,15 @@ public class patch_Player
 				bellyStats[playerNum].boostBeef = 0;
 
 			//EXTRA STRAIN PARTICALS!
-			Vector2 pos = GetHead(self).pos;
-			float lifetime = 5f;
-			self.room.AddObject(new ExplosionSpikes(self.room, pos, 8, 8f, lifetime, 5.0f, strainMag, new Color(1f, 1f, 1f, 0.5f)));
-			//STRAIN SOUND WHEN RUNNING LOW ON STAMINA
-			self.room.PlaySound(SoundID.Slugcat_Normal_Jump, self.mainBodyChunk.pos, GetExhaustionMod(self, 60) / 1f, 0.6f);
-
-			//self.slowMovementStun += 15;
+			if (self.graphicsModule != null)
+			{
+				Vector2 pos = GetHead(self).pos;
+				float lifetime = 5f;
+				self.room.AddObject(new ExplosionSpikes(self.room, pos, 8, 8f, lifetime, 5.0f, strainMag, new Color(1f, 1f, 1f, 0.5f)));
+				//STRAIN SOUND WHEN RUNNING LOW ON STAMINA
+				self.room.PlaySound(SoundID.Slugcat_Normal_Jump, self.mainBodyChunk.pos, GetExhaustionMod(self, 60) / 1f, 0.6f);
+			}
+			
 			bellyStats[playerNum].boostCounter = 15;
 
 			if (bellyStats[playerNum].isStuck)
@@ -7854,13 +7915,14 @@ public class patch_Player
 					self.room.PlaySound(SoundID.Swollen_Water_Nut_Terrain_Impact, self.mainBodyChunk, false, 1.0f, 1f); //Tube_Worm_Shoot_Tongue
 			}
 
-
-			for (int n = 0; n < 3; n++) //STRAIN DRIPS
+			if (self.graphicsModule != null)
 			{
-				Vector2 pos3 = GetHead(self).pos;
-				float xvel = bellyStats[playerNum].isStuck ? 4 : 2;
-				//self.room.AddObject(new WaterDrip(pos3, new Vector2((float)self.flipDirection * xvel, Mathf.Lerp(-2f, 6f, UnityEngine.Random.value)), false));
-				self.room.AddObject(new StrainSpark(pos3, new Vector2((float)self.flipDirection * xvel, Mathf.Lerp(-2f, 6f, UnityEngine.Random.value)), 20f, Color.white));
+				for (int n = 0; n < 3; n++) //STRAIN DRIPS
+				{
+					Vector2 pos3 = GetHead(self).pos;
+					float xvel = bellyStats[playerNum].isStuck ? 4 : 2;
+					self.room.AddObject(new StrainSpark(pos3, new Vector2((float)self.flipDirection * xvel, Mathf.Lerp(-2f, 6f, UnityEngine.Random.value)), 20f, Color.white));
+				}
 			}
 		}
 	}
@@ -7961,7 +8023,7 @@ public class patch_Player
 		}
 		
 		//BRING BACK THIS CLASSIC JOLLYCOOP FEATURE THAT IS VERY MUCH NEEDED IN CO-OP
-		if (!IsStuckOrWedged(self) && self.input[0].jmp && !self.input[1].jmp && self.grabbedBy?.Count > 0)
+		if (self.input[0].jmp && !self.input[1].jmp && self.grabbedBy?.Count > 0 && !IsStuckOrWedged(self) && !InPullingChain(self))
 		{
 			for (int graspIndex = self.grabbedBy.Count - 1; graspIndex >= 0; graspIndex--)
 			{
@@ -8190,10 +8252,10 @@ public class patch_Player
         
 		//FANCY SLUGCATS STOLE OUR GRAPHICS UPDATER! BUT THAT'S OKAY, WE CAN JUST TACK OURS ON THE END...
 		//if (BellyPlus.fancySlugsEnabled)
-  //      {
+		//{
 		//	if (self.enteringShortCut != null && self.graphicsModule != null)
 		//		self.graphicsModule.DrawSprites(); //HMMM, THIS IS A DELEMA...
-  //      }
+		//}
 	}
 	
 	
@@ -8478,7 +8540,7 @@ public class patch_Player
 							ObjGainStuckStrain(myPartner as Creature, 0.35f);
 
 						//IF STANDING, DIG OUR HEELS INTO THE TUG
-						if (self.bodyMode != Player.BodyModeIndex.CorridorClimb && self.standing)
+						if (self.bodyMode != Player.BodyModeIndex.CorridorClimb && self.standing && self.graphicsModule != null)
 						{
 							float pushVal = ((self.grasps[0].grabbedChunk.pos.x + (3 * bellyStats[playerNum].myFlipValX)) - self.bodyChunks[1].pos.x) / 20f;
 							//DON'T DIG OUR HEELS IN IF THAT WOULD KICK THEM IN THE FACE
@@ -8490,7 +8552,8 @@ public class patch_Player
 							self.bodyChunks[0].vel.y += str;
 							 //Debug.Log("-----TUG!!! " + pushVal);
 
-                            self.graphicsModule.bodyParts[1].vel.y += (GetCappedBoostStrain(self) / 6f); // * -bellyStats[playerNum].myFlipValX;
+                            // self.graphicsModule.bodyParts[1].vel.y += (GetCappedBoostStrain(self) / 6f); // * -bellyStats[playerNum].myFlipValX;
+							WagTailSegment(self, 1, new Vector2(0, GetCappedBoostStrain(self) / 6f));
                             GetHead(self).vel.x += GetCappedBoostStrain(self) * bellyStats[playerNum].myFlipValX;
 						}
 					}
@@ -9434,8 +9497,11 @@ public class patch_Player
 			this.spear = null;
 			this.interactionLocked = true;
 			this.owner.noPickUpOnRelease = 20;
-			this.owner.room.PlaySound(SoundID.Slugcat_Pick_Up_Spear, this.owner.mainBodyChunk);
-			this.owner.room.PlaySound(SoundID.Scavenger_Knuckle_Hit_Ground, this.owner.mainBodyChunk);
+			if (this.owner.room != null)
+			{
+				this.owner.room.PlaySound(SoundID.Slugcat_Pick_Up_Spear, this.owner.mainBodyChunk);
+				this.owner.room.PlaySound(SoundID.Scavenger_Knuckle_Hit_Ground, this.owner.mainBodyChunk);
+			}
 			if (this.abstractStick != null)
 			{
 				this.abstractStick.Deactivate();
