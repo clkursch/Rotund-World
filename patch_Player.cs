@@ -572,6 +572,8 @@ https://guardian.vigaro.xyz/organizations/rain-world/issues/9835/?project=2&quer
 //no more squish when not stuck
 //rubs
 
+//better feeding animation
+
 /*
 Slime_Cubed: Either works. You can use the former even if you construct hooks manually, but the latter may be more convenient if you have many hooks to other mods that need different priorities 
 
@@ -615,6 +617,7 @@ public class patch_Player
 		// public bool wasSqueezing;	//relic of the past...
 		public bool assistedSqueezing;
 		public bool pushingOther;
+		public Creature pushingCreature;
 		public bool pullingOther;
 		public int targetStuck;
 		public bool isStuck;            //True if our hips are pressed against an entrance to a narrow space
@@ -845,6 +848,7 @@ public class patch_Player
 			isSqueezing = false,
 			assistedSqueezing = false,
 			pushingOther = false,
+			pushingCreature = null,
 			pullingOther = false,
 			targetStuck = 0,
 			isStuck = false,
@@ -4429,11 +4433,7 @@ public class patch_Player
                 self.bodyChunks[0].vel.x += 1f * (self.bodyChunks[0].pos.x < myFriend.bodyChunks[0].pos.x ? 1 : -1);
 				myFriend.bodyChunks[0].vel.x -= 1f * (self.bodyChunks[0].pos.x < myFriend.bodyChunks[0].pos.x ? 1 : -1);
                 //MOVE OUR HANDS TOWARDS THEM -NOT EVEN CLOSE BUT WHATEVER IT'S MOVEMENT
-                if (self.graphicsModule != null && (self.graphicsModule as PlayerGraphics).hands.Length >= 2)
-                {
-                    (self.graphicsModule as PlayerGraphics).hands[0].absoluteHuntPos = myFriend.bodyChunks[0].pos - Custom.DirVec(self.bodyChunks[0].pos, myFriend.bodyChunks[0].pos) * 8f;
-                    (self.graphicsModule as PlayerGraphics).hands[1].absoluteHuntPos = myFriend.bodyChunks[0].pos - Custom.DirVec(self.bodyChunks[0].pos, myFriend.bodyChunks[0].pos) * 8f;
-                }
+                //WE MOVED THIS TO PATCH_SLUGCATHANDS WHERE IT BELONGS
 
                 return true;
 			}
@@ -4897,7 +4897,7 @@ public class patch_Player
 		//HOPEFULLY BYPASSES JOLLYCOOP THING....
 		if (obj is Player && obj != self && !(obj as Player).dead && IsStuckOrWedged(obj as Player))
 		{
-			return Player.ObjectGrabability.TwoHands;
+			return Player.ObjectGrabability.BigOneHand;
 		}
 		else if (obj is Lizard && !(obj as Lizard).dead && patch_Lizard.IsStuck(obj as Lizard))
         {
@@ -4970,7 +4970,7 @@ public class patch_Player
 
 	public static bool Player_CanIPickThisUp(On.Player.orig_CanIPickThisUp orig, Player self, PhysicalObject obj)
 	{
-		if (BellyPlus.VisualsOnly())
+		if (BellyPlus.VisualsOnly() || self.room == null)
 		{
 			return orig.Invoke(self, obj);
 		}
@@ -6340,7 +6340,7 @@ public class patch_Player
 
 
 		//STUCK BWOMP!
-		if (bellyStats[playerNum].fwumpDelay == 1)
+		if (bellyStats[playerNum].fwumpDelay == 1 && self.graphicsModule != null)
         {
 			//THE SLUGCAT'S TAIL WILL GO INVISIBLE IF CRASHVEL IS NEGATIVE
 			float velMag = 0.0f + Mathf.Sqrt(crashVel);
@@ -7396,37 +7396,81 @@ public class patch_Player
 	//PUSHING AND STRAINING
 	public static void BPUUpdatePass5(Player self, int playerNum)
     {
+		//----- MOVING SOME OF THE PUSHING CHECKS FROM SLUGCATHANDS IN HERE WHERE THEY BELONG-----
+		
+		//OKAY NO DON'T DO THIS IF WE'RE PIGGYBACKED. THAT MAKES WEIRD THINGS HAPPEN
+		if (IsPiggyBacked(self))
+			return;
+		
 		//----- CHECK IF WE'RE PUSHING ANOTHER CREATURE.------
+		// if (bellyStats[playerNum].pushingOther || bellyStats[playerNum].holdJump > 5)
+		// {
+		
+
+		Player myPartner = FindPlayerInRange(self);
+		LanternMouse mousePartner = patch_LanternMouse.FindMouseInRange(self);
+		Cicada cicadaPartner = patch_Cicada.FindCicadaInRange(self);
+		Yeek yeekPartner = patch_Yeek.FindYeekInRange(self);
+		Lizard lizardPartner = FindLizardInRange(self, 0, 2);
+		Scavenger scavPartner = patch_Scavenger.FindScavInRange(self);
+		
+		//DON'T HELP LIZARDS THAT ARE TRYING TO EAT YOUR FRIENDS
+        if (lizardPartner != null)
+        {
+            if (lizardPartner.grasps[0] != null && lizardPartner.grasps[0].grabbed is Player)
+                lizardPartner = null; //NOT VALID IF THE LIZARD IS CARRYING OUR FRIEND
+        }
+
+		Creature myObject = null;
+		if (myPartner != null)
+			myObject = (myPartner as Creature);
+		else if (mousePartner != null)
+			myObject = (mousePartner as Creature);
+		else if (cicadaPartner != null)
+			myObject = (cicadaPartner as Creature);
+		else if (yeekPartner != null)
+			myObject = (yeekPartner as Creature);
+		else if (scavPartner != null)
+			myObject = (scavPartner as Creature);
+		else if (lizardPartner != null)
+		{
+			myObject = (lizardPartner as Creature);
+		}
+		
+		//RESET BEFORE EACH CALCULATION IS RUN
+        bellyStats[playerNum].pushingOther = false;
+		
+		
+		if (myObject != null
+			&& (IsStuckOrWedged(myObject) || ObjIsPushingOther(myObject)) 
+			&& (!(myObject is Player) || !IsGraspingSlugcat(self))
+			&& (self.corridorTurnDir == null) //SO WE DON'T DO THAT WEIRD BUG WHERE WE FLING THEM FORWARD WHILE FLIPPING
+		)
+		{
+			bellyStats[playerNum].pushingCreature = myObject; //FOR OUR HANDS TO REFERENCE
+			bool vertStuck = ObjIsVerticalStuck(myObject);
+			if (!vertStuck && self.input[0].x == ObjGetXFlipDirection(myObject)
+				|| (vertStuck && self.input[0].y == ObjGetYFlipDirection(myObject))
+				|| self.simulateHoldJumpButton > 0 || self.isNPC)
+            {
+				//Debug.Log("-----PUSHING PLAYER!: " + vertStuck); //+ self.input[0].y + "_" + GetYFlipDirection(myObject));
+                ObjPushedOn(myObject);
+				bellyStats[playerNum].pushingOther = true; // PushedOther(self);
+            }
+		}
+		else
+			bellyStats[playerNum].pushingCreature = null;
+		
+		
+
+		
+		//------MOVING THE SHIFT HERE------
 		if (bellyStats[playerNum].pushingOther || bellyStats[playerNum].holdJump > 5)
 		{
 			self.forceSleepCounter = 0; //STOP FALLING ASLEEP!
 			self.sleepCurlUp = 0;
 			self.initSlideCounter = 0; //SO WE DON'T PIVOT-DASH THE WRONG WAY WHEN TRYING TO RAM
-
-            Player myPartner = FindPlayerInRange(self);
-			LanternMouse mousePartner = patch_LanternMouse.FindMouseInRange(self);
-			Cicada cicadaPartner = patch_Cicada.FindCicadaInRange(self);
-			Yeek yeekPartner = patch_Yeek.FindYeekInRange(self);
-			Lizard lizardPartner = FindLizardInRange(self, 0, 2);
-			Scavenger scavPartner = patch_Scavenger.FindScavInRange(self);
-
-			Creature myObject = null;
-			if (myPartner != null)
-				myObject = (myPartner as Creature);
-			else if (mousePartner != null)
-				myObject = (mousePartner as Creature);
-			else if (cicadaPartner != null)
-				myObject = (cicadaPartner as Creature);
-			else if (yeekPartner != null)
-				myObject = (yeekPartner as Creature);
-			else if (scavPartner != null)
-				myObject = (scavPartner as Creature);
-			else if (lizardPartner != null)
-			{
-				myObject = (lizardPartner as Creature);
-			}
-
-
+			
 			if (myObject != null)
 			{
 				bool horzPushLine = ObjIsPushingOrPullingOther(myObject) && self.input[0].x != 0 && self.input[0].x == ObjGetXFlipDirection(myObject);
@@ -7839,29 +7883,23 @@ public class patch_Player
 			{
 				boostAmnt += Math.Max(GetChubValue(self), 0);
 				//UNIVERSAL!!
-				Player myPartner = FindPlayerInRange(self);
-				LanternMouse mousePartner = patch_LanternMouse.FindMouseInRange(self);
-				Cicada cicadaPartner = patch_Cicada.FindCicadaInRange(self);
-				Yeek yeekPartner = patch_Yeek.FindYeekInRange(self);
-				Lizard lizardPartner = FindLizardInRange(self, 0, 2);
+				//Player myPartner = FindPlayerInRange(self);
+				//LanternMouse mousePartner = patch_LanternMouse.FindMouseInRange(self);
+				//Cicada cicadaPartner = patch_Cicada.FindCicadaInRange(self);
+				//Yeek yeekPartner = patch_Yeek.FindYeekInRange(self);
+				//Lizard lizardPartner = FindLizardInRange(self, 0, 2);
 				
-				Creature myObject = null;
-				if (myPartner != null)
+				//Creature myObject = null;
+
+
+				if (myObject is Player)
                 {
-					myObject = (myPartner as Creature);
-					boostAmnt *= 1 + (1 - GetSweetSpotPerc(myPartner));
-					loosenAmnt *= 1 + 2f * (1 - GetSweetSpotPerc(myPartner));
+					boostAmnt *= 1 + (1 - GetSweetSpotPerc(myObject as Player));
+					loosenAmnt *= 1 + 2f * (1 - GetSweetSpotPerc(myObject as Player));
 				}
-				else if (mousePartner != null)
-					myObject = (mousePartner as Creature);
-				else if (cicadaPartner != null)
-					myObject = (cicadaPartner as Creature);
-				else if (yeekPartner != null)
-					myObject = (yeekPartner as Creature);
-				else if (lizardPartner != null)
+				else if (myObject is Lizard)
 				{
-                    myObject = (lizardPartner as Creature);
-					if (!patch_Lizard.IsTamed(lizardPartner))
+					if (!patch_Lizard.IsTamed(myObject as Lizard))
 					{
 						boostAmnt *= 2f; //BIG ADRENALINE BOOST IF WE ARE PLAYING WITH DANGER
                         loosenAmnt *= 3f;

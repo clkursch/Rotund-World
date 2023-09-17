@@ -23,7 +23,7 @@ public class patch_PlayerGraphics
         public bool verified;
     }
     public static BPgraph[] bpGraph;
-    public static int totalPlayerNum = 100;
+    public static int totalPlayerNum = 500;
 
     public static void Patch()
     {

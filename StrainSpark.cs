@@ -30,7 +30,7 @@ public class StrainSpark : CosmeticSprite
 		this.vel += Custom.DegToVec(this.dir) * UnityEngine.Random.value * 2f;
 		this.dir += Mathf.Lerp(-17f, 17f, UnityEngine.Random.value);
 		this.graphic = !this.graphic;
-		if (this.room.GetTile(this.pos).Terrain == Room.Tile.TerrainType.Solid)
+		if (this.room?.GetTile(this.pos).Terrain == Room.Tile.TerrainType.Solid)
 		{
 			if (this.room.GetTile(this.lastPos).Terrain != Room.Tile.TerrainType.Solid)
 			{
