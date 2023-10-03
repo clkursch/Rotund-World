@@ -208,9 +208,9 @@ public class BPOptions : OptionInterface
 		*/
 
 
-        string dscVisuals = BPTranslate("Removes all gameplay changes from the mod except visual ones");
+        string dscVisuals = BPTranslate("Removes all gameplay changes except visual ones");
         this.chkBoxVisOnly = new OpCheckBox(BPOptions.visualsOnly, new Vector2(15f + 425, lineCount));
-        Tabs[0].AddItems(this.chkBoxVisOnly, new OpLabel(45f + 425, lineCount, BPTranslate("Visuals Only")) { bumpBehav = this.chkBoxVisOnly.bumpBehav, description = dscVisuals });
+        Tabs[0].AddItems(this.chkBoxVisOnly, new OpLabel(45f + 425, lineCount, BPTranslate("Visuals only")) { bumpBehav = this.chkBoxVisOnly.bumpBehav, description = dscVisuals });
         this.chkBoxVisOnly.description = dscVisuals;
         //chkBoxVisOnly.Hidden = true;
 

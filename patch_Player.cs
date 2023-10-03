@@ -573,6 +573,7 @@ https://guardian.vigaro.xyz/organizations/rain-world/issues/9835/?project=2&quer
 //rubs
 
 //better feeding animation
+//Improved interaction with stick-together teleports
 
 /*
 Slime_Cubed: Either works. You can use the former even if you construct hooks manually, but the latter may be more convenient if you have many hooks to other mods that need different priorities 
@@ -3813,8 +3814,8 @@ public class patch_Player
 		{
             //WE CAN STILL MAKE THE SOUND THO
             if (self.FoodInStomach >= self.slugcatStats.maxFood && self.abstractCreature.world.game.IsStorySession)
-                if (self.room != null && self.room.game.cameras[0].hud.foodMeter != null)
-                    self.room.PlaySound(SoundID.HUD_Food_Meter_Fill_Quarter_Plop, self.mainBodyChunk);
+                if (self.room?.game?.cameras[0]?.hud?.foodMeter != null)
+                    self.PlayHUDSound(SoundID.HUD_Food_Meter_Fill_Quarter_Plop);
 
             orig.Invoke(self, add);
 			return;
@@ -3850,8 +3851,8 @@ public class patch_Player
 					BellyPlus.bonusHudPip += newAdd * 2; //EVERY PIP PAST FULL IS TWO QUARTER-PIPS OF BONUS FOOD
 			}
 
-			if (self.room != null && self.room.game.cameras[0].hud.foodMeter != null) // && BellyPlus.bonusFood < MaxBonusFood(self))
-				self.room.PlaySound(SoundID.HUD_Food_Meter_Fill_Quarter_Plop, self.mainBodyChunk);
+			if (self.room?.game?.cameras[0]?.hud?.foodMeter != null) // && BellyPlus.bonusFood < MaxBonusFood(self))
+				self.PlayHUDSound(SoundID.HUD_Food_Meter_Fill_Quarter_Plop);
 
 		}
 		//NO LONGER AN ELSE
@@ -3899,10 +3900,10 @@ public class patch_Player
 			BellyPlus.bonusHudPip -= 2; //THIS IS IMMEDIATELY UNDONE NOW, IIRC. SO POINTLESS
 			if (BPOptions.debugLogs.Value)
 				Debug.Log("----SUBTRACTING BONUS PIPS INSTEAD! " + BellyPlus.bonusHudPip);
-			if (self.room != null && self.room.game.cameras[0].hud.foodMeter != null)
+			if (self.room?.game?.cameras[0]?.hud?.foodMeter != null)
 			{
 				//THIS WON'T PLAY ON IT'S OWN, SINCE OUR BELLY SIZE ISN'T CHANGING
-				self.room.PlaySound(SoundID.HUD_Food_Meter_Deplete_Plop_A, self.mainBodyChunk); 
+				self.PlayHUDSound(SoundID.HUD_Food_Meter_Deplete_Plop_A); 
 				self.room.game.cameras[0].hud.foodMeter.refuseCounter = 20; //THIS BRIEFLY FORCES THE HUD TO SHOW UP
 			}
 
@@ -6244,12 +6245,16 @@ public class patch_Player
 				crashVel = Mathf.Abs((self.bodyChunks[1].vel).x);
 			}
 
-			//CHECK IF THIS IS THE SAME GAP WE'VE ALREADY TRIED (SO WE DON'T CHEEZE PROGRESS) //WAIT THIS DOESN'T MATTER WE SHOULD DO THIS EVERY TIME
-			//bool sameGap = false;
-			//if (self.room.MiddleOfTile(self.bodyChunks[1].pos) == bellyStats[playerNum].stuckCoords)
-			//	sameGap = true;
+			//INTERACTION WITH STICK TOGETHER! IF WE GET STUCK VIA TELEPORT, MAKE IT AN AUTOPILOT! FINALLY A USE FOR THIS THING...
+			if (self.enteringShortCut != null)
+				bellyStats[playerNum].autoPilot = new IntVector2((int)bellyStats[playerNum].stuckVector.x, (int)bellyStats[playerNum].stuckVector.y);
 
-			bellyStats[playerNum].stuckCoords = self.room.MiddleOfTile(self.bodyChunks[1].pos);
+            //CHECK IF THIS IS THE SAME GAP WE'VE ALREADY TRIED (SO WE DON'T CHEEZE PROGRESS) //WAIT THIS DOESN'T MATTER WE SHOULD DO THIS EVERY TIME
+            //bool sameGap = false;
+            //if (self.room.MiddleOfTile(self.bodyChunks[1].pos) == bellyStats[playerNum].stuckCoords)
+            //	sameGap = true;
+
+            bellyStats[playerNum].stuckCoords = self.room.MiddleOfTile(self.bodyChunks[1].pos);
 			bellyStats[playerNum].stuckStrain += 10; //TO START THEM OFF
 			if (BPOptions.debugLogs.Value)
 				Debug.Log("NEW PLAYER STUCK VECTOR! " + bellyStats[playerNum].stuckVector + " ----BASE TILE SIZE: " + preTileSize + " ADJ: " + tileSize + "---- ADJ CHUB:" + myChub);
@@ -8168,7 +8173,7 @@ public class patch_Player
 			self.timeSinceSpawned++;
 		
 		//MAKE SURE OUR GRAPHICS ARENT BEING STOLEN
-		if (self.timeSinceSpawned == 60 && self.graphicsModule != null && patch_PlayerGraphics.InspectGraphics(self.graphicsModule as PlayerGraphics) == false && self.room != null && self.room.game.cameras[0].hud != null)
+		if (self.timeSinceSpawned == 60 && !self.isNPC && self.graphicsModule != null && patch_PlayerGraphics.InspectGraphics(self.graphicsModule as PlayerGraphics) == false && self.room != null && self.room.game.cameras[0].hud != null)
 			self.room.game.cameras[0].hud.textPrompt.AddMessage(self.room.game.rainWorld.inGameTranslator.Translate("Rotund World Warning - This mod's graphics module was overwritten by another active mod. Visual changes may not take affect."), 90, 1000, false, false);
 
 		//CHECK EXTERNALS
