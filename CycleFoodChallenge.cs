@@ -48,7 +48,7 @@ namespace Expedition
 			if (ExpeditionGame.activeUnlocks.Contains("bur-rotund"))
 				num -= 3;
 
-			if (ModManager.MSC && !(ExpeditionGame.activeUnlocks.Contains("unl-foodlover") || (ModManager.JollyCoop && Custom.rainWorld.options.JollyPlayerCount > 1)) 
+			if (ModManager.MSC && !(ExpeditionGame.activeUnlocks.Contains("unl-foodlover") || BPOptions.foodLoverPerk.Value || (ModManager.JollyCoop && Custom.rainWorld.options.JollyPlayerCount > 1)) 
 				&& (ExpeditionData.slugcatPlayer == MoreSlugcatsEnums.SlugcatStatsName.Spear || ExpeditionData.slugcatPlayer == MoreSlugcatsEnums.SlugcatStatsName.Saint))
 			{
 				num /= 2;

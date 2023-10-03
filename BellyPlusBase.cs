@@ -582,6 +582,13 @@ public class BellyPlus : BaseUnityPlugin
 			BellyPlus.myChubValue[kvp.Key] = kvp.Value;
 		}
 		
+		//DON'T UNFAT OUR LIZARDS PLEASE
+		foreach (KeyValuePair<int, Creature> kvp in BellyPlus.tempGuestBook)
+		{
+			patch_Lizard.ObjUpdateBellySize(kvp.Value);
+		}
+		
+		
 		BellyPlus.tempMyFoodInStomach.Clear();
 		BellyPlus.tempMyChubValue.Clear();
 		BellyPlus.tempGuestBook.Clear();

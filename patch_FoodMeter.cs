@@ -118,7 +118,7 @@ public class patch_FoodMeter
 		if (BellyPlus.VisualsOnly())
 			return;
 		
-		if (self.meter.hud.owner.GetOwnerType() == HUD.HUD.OwnerType.SleepScreen || self.meter.hud.owner.GetOwnerType() == HUD.HUD.OwnerType.CharacterSelect)
+		if (self.meter.hud?.owner?.GetOwnerType() == HUD.HUD.OwnerType.SleepScreen || self.meter.hud?.owner?.GetOwnerType() == HUD.HUD.OwnerType.CharacterSelect)
         {
 
 			if (self.meter.hud.owner.GetOwnerType() == HUD.HUD.OwnerType.CharacterSelect)
@@ -449,7 +449,7 @@ public class patch_FoodMeter
 	{
         //MOVING THIS CHECK UP HERE BECAUSE IT SHOULD ALWAYS CHECK IN CASE OUR PREVIOUS TICK HAD VISIBLE FOOD PIPS!
         //EVERY ONCE IN A WHILE, FLIP ALL OF OUR PIPS BACK OFF IN CASE SOME WEIRDNESS WITH THE HP-BAR MOD LEFT US WITH FLOATING PIPS PAST OUR ACTUAL METER
-        if (self.owner.visibleCounter == 1)
+        if (self.owner.visibleCounter == 1 && bonusCircles != null)
         {
             Debug.Log("RESET ALL PIPS! ");
             //for (int j = 0; j < BellyPlus.MaxBonusPips; j++)

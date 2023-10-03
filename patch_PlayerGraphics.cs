@@ -198,7 +198,7 @@ public class patch_PlayerGraphics
         //OKAY NEVERMIND I AM REALLY BAD AT MATH. WE'LL JUST GET THE TAIL SIZE ON INITIALIZING AND USE THAT AS A BASE EACH TIME.
 
         //BEECAT BREAKS OUR TAIL! AND HAS THEIR OWN CHUBBY TAIL THAT GROWS ANYWAYS
-        if (self.player?.slugcatStats?.name.value == "bee")
+        if (self.player?.slugcatStats?.name?.value == "bee")
             return;
 		
 		
@@ -215,7 +215,7 @@ public class patch_PlayerGraphics
         {
 			//Debug.Log("TAIL THICC!: " + self.tail.Length + " i: " + i);
             //OKAY WE HAVE A BETTER WAY TO DO THAT NOW      -    IT'S NOT APPLECAT. IT'S FOR THE GUIDE
-            float tailThickMult = (self.player?.slugcatStats?.name.value == "Guide") ? tailThickChartB[newChubVal] : tailThickChartA[newChubVal];
+            float tailThickMult = (self.player?.slugcatStats?.name?.value == "Guide") ? tailThickChartB[newChubVal] : tailThickChartA[newChubVal];
             self.tail[i].rad = bpGraph[playerNum].tailBase[i] * tailThickMult + bonusChubVal;
             if (i == 0)
                 bpGraph[playerNum].checkRad = self.tail[0].rad; //REMEMBER THE SIZE OF OUR FIRST SEGMENT AS A CHECK

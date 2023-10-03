@@ -574,6 +574,11 @@ https://guardian.vigaro.xyz/organizations/rain-world/issues/9835/?project=2&quer
 
 //better feeding animation
 //Improved interaction with stick-together teleports
+//getting stuck while piggybacking activates autopilot
+//Adjusted the gap size scaling to take randomness into account
+//food lover perk
+//detachable popcorn
+//Don't unfat the lizards
 
 /*
 Slime_Cubed: Either works. You can use the former even if you construct hooks manually, but the latter may be more convenient if you have many hooks to other mods that need different priorities 
@@ -1593,11 +1598,15 @@ public class patch_Player
 			return orig(self, testObj);
 	}
 	
+	public static bool IsFoodLover()
+	{
+		return BPOptions.foodLoverPerk.Value || (ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("unl-foodlover"));
+	}
 	
 	public static int SlugcatStats_NourishmentOfObjectEaten(On.SlugcatStats.orig_NourishmentOfObjectEaten orig, SlugcatStats.Name slugcatIndex, IPlayerEdible eatenobject)
 	{
 		//FOOD LOVER PERK! SURVIVOR GETS MAX FOOD VALUE FROM ALL EDIBLE OBJECTS SO LETS JUST DO IT THAT WAY
-		if (ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("unl-foodlover"))
+		if (IsFoodLover())
 			slugcatIndex = SlugcatStats.Name.White;
 		
 		int result = orig.Invoke(slugcatIndex, eatenobject);
@@ -1633,7 +1642,7 @@ public class patch_Player
 	//THERE ARE A NUMBER OF OTHER FACTORS INVOLVED TAT MAKE THIS TRICKY. SO RATHER THAN RETURN TRUE WHEN NEEDED, WE'LL PRETEND WE'RE HUNTER WHEN NEEDED
 	private static bool BPPlayer_CanEatMeat(On.Player.orig_CanEatMeat orig, Player self, Creature crit)
 	{
-		if (ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("unl-foodlover"))
+		if (IsFoodLover())
 		{
 			SlugcatStats.Name origClass = self.SlugCatClass;
             SlugcatStats.Name origName = self.slugcatStats.name;
@@ -1779,7 +1788,7 @@ public class patch_Player
     public static void BPPlayer_UpdateMSC(On.Player.orig_UpdateMSC orig, Player self)
     {
 		//MORE OUTSIDER BULLYING
-        if (self.slugcatStats.name.value == "Outsider" && !BellyPlus.VisualsOnly())
+        if (self.slugcatStats?.name?.value == "Outsider" && !BellyPlus.VisualsOnly())
 		{
             fallspeed1 = self.bodyChunks[0].vel.y;
             fallspeed2 = self.bodyChunks[1].vel.y;
@@ -4087,7 +4096,7 @@ public class patch_Player
 		}
 		
 		SlugcatStats.Name origClass = self.SlugCatClass;
-		bool foodLover = ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("unl-foodlover");
+		bool foodLover = IsFoodLover();
 		if (foodLover)
 		{
 			if (SlugcatStats.SlugcatCanMaul(self.SlugCatClass))
@@ -4648,7 +4657,7 @@ public class patch_Player
 						|| (self.room.game.session is ArenaGameSession && self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.gameType == MoreSlugcatsEnums.GameTypeID.Challenge && self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.challengeMeta.ascended)) 
 						&& self.grasps[num3].grabbed is Fly && self.eatCounter < 1
 						&& !bellyStats[GetPlayerNum(self)].frFed //FORCE FEEDING US 
-                        && !(ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("unl-foodlover"))) //SKIP IF FOOD-LOVER IS ENABLED! SAIMNT CAN EAT EM
+                        && !IsFoodLover()) //SKIP IF FOOD-LOVER IS ENABLED! SAIMNT CAN EAT EM
 					{
                         //ORIG WILL HANDLE THIS NEXT TICK
                         if (self.room.game.IsArenaSession)
@@ -4681,8 +4690,7 @@ public class patch_Player
 	public static void BP_GrabUpdate6(Player self, bool eu)
 	{
         //SPEARMASTER CAN'T DO THIS
-        bool foodLover = ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("unl-foodlover");
-		if (ModManager.MSC && self.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Spear && !foodLover)
+		if (BPOptions.detachablePopcorn.Value == false || (ModManager.MSC && self.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Spear && !IsFoodLover()))
 			return;
 		
 		int playerNum = GetPlayerNum(self);
@@ -4904,7 +4912,7 @@ public class patch_Player
         {
 			return Player.ObjectGrabability.TwoHands;
 		}
-		else if (obj is SeedCob && !self.isNPC)
+		else if (obj is SeedCob && BPOptions.detachablePopcorn.Value && !self.isNPC)
         {
 			return Player.ObjectGrabability.TwoHands;
 		}
@@ -6182,11 +6190,12 @@ public class patch_Player
 
 		float tileSize = (myChub + GetTileSizeMod(self, tilePosMod, myInputVec, 0, inPipe, self.submerged, false));
 		float preTileSize = tileSize;
-
+		
+		float diff = BPOptions.bpDifficulty.Value - (Mathf.Max(0, BPOptions.gapVariance.Value - 1) * 5f); //SCALE GAP TIGHTNESS BY VARIANCE SLIGHTLY
         //AND THEN THIS ONES FOR THE DIFFICULTY MODIFIER. BUT LETS LEAVE THE FIRST 5 STACKS OF THIS ALONE...
         if (tileSize > 3)
-			tileSize = 3 + ((tileSize - 3) * (1 + (BPOptions.bpDifficulty.Value / 10f)));
-		tileSize -= Mathf.Lerp(3, 0, (5 + BPOptions.bpDifficulty.Value) /5f); // -3 - 0  from easiest to default. HARDER DOESNT INCREASE IT I GUESS
+			tileSize = 3 + ((tileSize - 3) * (1 + (diff / 10f)));
+		tileSize -= Mathf.Lerp(3, 0, (5 + diff) /5f); // -3 - 0  from easiest to default. HARDER DOESNT INCREASE IT I GUESS
 		
 		//SLIGHT BLOAT IF WE JUST ATE. +1 REGARDLESS OF MODIFIERS
 		if (bellyStats[playerNum].bloated && GetChubValue(self) >= -2)
@@ -6336,6 +6345,7 @@ public class patch_Player
                 self.input[0].y = (int)bellyStats[playerNum].stuckVector.y;
 				RedirectStuckage(self, true, eu);
                 bellyStats[playerNum].stuckStrain += 10; //JUST TO KEEP US WEDGED
+				bellyStats[playerNum].autoPilot = new IntVector2((int)bellyStats[playerNum].stuckVector.x, (int)bellyStats[playerNum].stuckVector.y);
             }
         }
 
@@ -6793,6 +6803,7 @@ public class patch_Player
 			//self.bodyChunks[1].pos -= new Vector2(0f, 10f); //UNDO THE CHANGE THEY GAVE
 			bellyStats[playerNum].stuckStrain += 10; //JUST TO KEEP US WEDGED
 			RedirectStuckage(self, true, eu);
+			bellyStats[playerNum].autoPilot = new IntVector2((int)bellyStats[playerNum].stuckVector.x, (int)bellyStats[playerNum].stuckVector.y);
         }
 		
 		
@@ -6946,7 +6957,7 @@ public class patch_Player
 			}
 		}
 		
-		if (bellyStats[playerNum].slicked > 0 && self.bodyChunks[1].submersion < 0.5f && !IsPiggyBacked(self))
+		if (bellyStats[playerNum].slicked > 0 && self.bodyChunks[1].submersion < 0.5f && !IsPiggyBacked(self) && self.graphicsModule != null)
         {
 			//BODY DRIPS
 			if (UnityEngine.Random.value < 0.25f)
@@ -9597,8 +9608,11 @@ public class patch_Player
 			this.ChangeOverlap(false);
 			this.interactionLocked = true;
 			this.owner.noPickUpOnRelease = 20;
-			this.owner.room.PlaySound(SoundID.Slugcat_Stash_Spear_On_Back, this.owner.mainBodyChunk); //
-			this.owner.room.PlaySound(SoundID.Scavenger_Knuckle_Hit_Ground, this.owner.mainBodyChunk);
+			if (this.owner.room != null)
+			{
+				this.owner.room.PlaySound(SoundID.Slugcat_Stash_Spear_On_Back, this.owner.mainBodyChunk);
+				this.owner.room.PlaySound(SoundID.Scavenger_Knuckle_Hit_Ground, this.owner.mainBodyChunk);
+			}
 			if (this.spear is PlayerCarryableItem) //FLASHY
 				(this.spear as PlayerCarryableItem).Blink();
 			if (this.abstractStick != null)

@@ -22,6 +22,8 @@ public class BPOptions : OptionInterface
         BPOptions.slugSlams = this.config.Bind<bool>("slugSlams", false);
         //BPOptions.dietNeedles = this.config.Bind<bool>("dietNeedles", false);
         BPOptions.detachNeedles = this.config.Bind<bool>("detachNeedles", false);
+		BPOptions.detachablePopcorn = this.config.Bind<bool>("detachablePopcorn", true);
+		BPOptions.foodLoverPerk = this.config.Bind<bool>("foodLoverPerk", false);
         BPOptions.visualsOnly = this.config.Bind<bool>("visualsOnly", false);
 
         BPOptions.debugTools = this.config.Bind<bool>("debugTools", false);
@@ -72,6 +74,8 @@ public class BPOptions : OptionInterface
     public static Configurable<bool> detachNeedles;
     public static Configurable<bool> visualsOnly;
     public static Configurable<bool> jokeContent1;
+	public static Configurable<bool> detachablePopcorn;
+	public static Configurable<bool> foodLoverPerk;
 	
 	public static Configurable<bool> fatP1;
 	public static Configurable<bool> fatP2;
@@ -265,18 +269,12 @@ public class BPOptions : OptionInterface
         OpCheckBox chkBox6 = new OpCheckBox(BPOptions.easilyWinded, new Vector2(15f, lineCount));
         Tabs[0].AddItems(chkBox6, new OpLabel(45f, lineCount, BPTranslate("Easily Winded")) { bumpBehav = chkBox6.bumpBehav, description = dsc6 });
         chkBox6.description = dsc6;
-
-        if (ModManager.MSC)
-        {
-            string dscSlams = BPTranslate("All slugcats can do Gourmand's body slam, if fat enough") + " (" + BPTranslate("an audio queue will play" + ")");
-            this.chkBoxslugSlams = new OpCheckBox(BPOptions.slugSlams, new Vector2(15f + indenting, lineCount));
-            Tabs[0].AddItems(this.chkBoxslugSlams, new OpLabel(45f + indenting, lineCount, BPTranslate("Slug Slams")) { bumpBehav = this.chkBoxslugSlams.bumpBehav, description = dscSlams });
-            this.chkBoxslugSlams.description = dscSlams;
-        }
-        else
-        {
-            BPOptions.slugSlams.Value = false;
-        }
+		
+		OpCheckBox mpBox1;
+        string dscCorn = BPTranslate("Popcorn plants can be torn from their stems");
+		mpBox1 = new OpCheckBox(BPOptions.detachablePopcorn, new Vector2(15f + indenting, lineCount));
+		Tabs[0].AddItems(mpBox1, new OpLabel(45f + indenting, lineCount, BPTranslate("Detachable Popcorn Plants")) { bumpBehav = mpBox1.bumpBehav, description = dscCorn });
+		mpBox1.description = dscCorn;
 
 
 
@@ -291,15 +289,11 @@ public class BPOptions : OptionInterface
 
 
 
-        if (ModManager.MSC)
-        {
-            //string dscNeedles = BPTranslate("Spearmaster's needles will gain less food when your belly is full");
-            //Diet Needles
-            string dscNeedles = BPTranslate("When Spearmaster is full, switching hands (double tap grab) will detatch your needles");
-            this.chkBoxNeedles = new OpCheckBox(BPOptions.detachNeedles, new Vector2(15f + indenting, lineCount));
-            Tabs[0].AddItems(this.chkBoxNeedles, new OpLabel(45f + indenting, lineCount, BPTranslate("Detachable Needles")) { bumpBehav = this.chkBoxNeedles.bumpBehav, description = dscNeedles });
-            this.chkBoxNeedles.description = dscNeedles;
-        }
+        OpCheckBox mpBox2;
+        string dscFood = BPTranslate("Allows the player to eat all food types for their full value");
+		mpBox2 = new OpCheckBox(BPOptions.foodLoverPerk, new Vector2(15f + indenting, lineCount));
+		Tabs[0].AddItems(mpBox2, new OpLabel(45f + indenting, lineCount, BPTranslate("Food Lover")) { bumpBehav = mpBox2.bumpBehav, description = dscFood });
+		mpBox2.description = dscFood;
 
 
         lineCount -= 40;
@@ -308,6 +302,19 @@ public class BPOptions : OptionInterface
         OpCheckBox chkBox7 = new OpCheckBox(BPOptions.extraTime, new Vector2(15f, lineCount));
         Tabs[0].AddItems(chkBox7, new OpLabel(45f, lineCount, BPTranslate("Extra Cycle Time")) { bumpBehav = chkBox7.bumpBehav, description = dsc7 });
         chkBox7.description = dsc7;
+		
+		
+		if (ModManager.MSC)
+        {
+            string dscSlams = BPTranslate("All slugcats can do Gourmand's body slam, if fat enough") + " (" + BPTranslate("an audio queue will play" + ")");
+            this.chkBoxslugSlams = new OpCheckBox(BPOptions.slugSlams, new Vector2(15f + indenting, lineCount));
+            Tabs[0].AddItems(this.chkBoxslugSlams, new OpLabel(45f + indenting, lineCount, BPTranslate("Slug Slams")) { bumpBehav = this.chkBoxslugSlams.bumpBehav, description = dscSlams });
+            this.chkBoxslugSlams.description = dscSlams;
+        }
+        else
+        {
+            BPOptions.slugSlams.Value = false;
+        }
 
 
         lineCount -= 40;
@@ -316,6 +323,18 @@ public class BPOptions : OptionInterface
         OpCheckBox chkBoxHints = new OpCheckBox(BPOptions.hudHints, new Vector2(15f, lineCount));
         Tabs[0].AddItems(chkBoxHints, new OpLabel(45f, lineCount, BPTranslate("Hud Hints")) { bumpBehav = chkBoxHints.bumpBehav, description = dscHints });
         chkBoxHints.description = dscHints;
+		
+		
+		if (ModManager.MSC)
+        {
+            //string dscNeedles = BPTranslate("Spearmaster's needles will gain less food when your belly is full");
+            //Diet Needles
+            string dscNeedles = BPTranslate("When Spearmaster is full, switching hands (double tap grab) will detatch your needles");
+            this.chkBoxNeedles = new OpCheckBox(BPOptions.detachNeedles, new Vector2(15f + indenting, lineCount));
+            Tabs[0].AddItems(this.chkBoxNeedles, new OpLabel(45f + indenting, lineCount, BPTranslate("Detachable Needles")) { bumpBehav = this.chkBoxNeedles.bumpBehav, description = dscNeedles });
+            this.chkBoxNeedles.description = dscNeedles;
+        }
+		
 
         myBoxes = new OpCheckBox[8];
         myBoxes[0] = chkBox5;

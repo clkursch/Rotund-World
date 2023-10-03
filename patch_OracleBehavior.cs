@@ -166,7 +166,7 @@ public class patch_OracleBehavior
 			FindFatterPlayer(self);
 		
 		//IF WE'RE TRYING TO GIVE THEM MARK, TUG THEM
-		if (self.action == SSOracleBehavior.Action.General_GiveMark)
+		if (self.action == SSOracleBehavior.Action.General_GiveMark && self.player != null)
 		{
 			if (self.inActionCounter > 40 && patch_Player.IsStuck(self.player))
 			{
