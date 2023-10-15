@@ -1777,7 +1777,7 @@ public class patch_Player
         }
 		
 		//WINGCAT GETS HANDLED A BIT DIFFERENTLY
-		if (self.slugcatStats.name.value == "MMWingCat")
+		if (self.slugcatStats?.name?.value == "MMWingCat")
 			WingcatUpdate(self, eu);
     }
 
@@ -3503,28 +3503,41 @@ public class patch_Player
 		return bellyStats[GetPlayerNum(self)].pullingOther;
 	}
 
-	//THIS IS A LIE NOW
-	public static bool IsGraspingSlugcat(Creature self)
+	public static Creature GetGraspedCreature(Creature self)
 	{
-		//return (self.grasps[0] != null && self.grasps[0].grabbed is Player);
-		return self.grasps[0] != null && self.grasps[0].grabbed is Creature && ObjIsStuckable(self.grasps[0].grabbed as Creature);
+        for (int j = self.grasps.Length - 1; j >= 0; j--) //CHECK BOTH GRASPS, DUMMY
+        {
+            if (self.grasps[j] != null && self.grasps[j].grabbed is Creature crit && !crit.dead)
+               return crit;
+        }
+		return null;
 	}
+
+	//THIS IS A LIE NOW
+	public static bool IsGraspingStuckable(Creature self)
+	{
+		//return self.grasps[0] != null && self.grasps[0].grabbed is Creature && ObjIsStuckable(self.grasps[0].grabbed as Creature);
+		Creature myCrit = GetGraspedCreature(self);
+        return myCrit != null && ObjIsStuckable(myCrit);
+    }
 
 	public static bool IsGraspingActualSlugcat(Creature self)
 	{
-		return self.grasps[0] != null && self.grasps[0].grabbed is Player;
+        Creature myCrit = GetGraspedCreature(self);
+        return myCrit != null && myCrit is Player;
 	}
 
 	public static bool IsGraspingStuckCreature(Creature self)
 	{
-		return self.grasps[0] != null && self.grasps[0].grabbed is Creature && ObjIsStuckable(self.grasps[0].grabbed as Creature) && ObjIsStuck(self.grasps[0].grabbed as Creature);
+        Creature myCrit = GetGraspedCreature(self);
+        return myCrit != null && ObjIsStuckable(myCrit) && ObjIsStuck(myCrit);
 	}
 
 	//TRUE IF WE ARE STUCK OR GRABBING ONTO A CREATURE THAT IS PULLING SOME OTHER CREATURE
 	public static bool InPullingChain(Creature self)
 	{
-		//return (self.grasps[0] != null && self.grasps[0].grabbed is Player);
-		return IsStuckOrWedged(self) || (IsGraspingSlugcat(self) && InPullingChain(self.grasps[0].grabbed as Creature));
+        Creature myCrit = GetGraspedCreature(self);
+        return IsStuckOrWedged(self) || (IsGraspingStuckable(self) && InPullingChain(myCrit));
 	}
 
 	public static void PassDownBenifits(Creature target, float strain, int boost, int cap)
@@ -3534,10 +3547,11 @@ public class patch_Player
 			ObjGainStuckStrain(target, strain);
 			ObjGainBoostStrain(target, 0, boost, cap);
 		}
-		else if (IsGraspingSlugcat(target))
+		else if (IsGraspingStuckable(target))
         {
 			ObjGainBoostStrain(target, 0, boost / 2, cap);
-			PassDownBenifits(target.grasps[0].grabbed as Creature, strain, boost, cap);
+            Creature myCrit = GetGraspedCreature(target);
+            PassDownBenifits(myCrit, strain, boost, cap);
 		}
 	}
 
@@ -4400,10 +4414,20 @@ public class patch_Player
 			}
 			
 			Player myFriend = patch_Player.FindPlayerTopInRange(self, 90f);
-			
-			if (myFriend != null && obj != null
-				&& !(IsCramped(myFriend) && PipeStatus(myFriend) == PipeStatus(self))) //NO YOU CAN'T FEED THEM FROM BEHIND...
+			bool fromBehind = false;
+			//THIS IS A MORE RELIABLE WAY TO MAKE SURE WE DON'T FEED PLAYERS FROM BEHIND
+			if (myFriend != null && obj != null && IsCramped(myFriend))
 			{
+				//Vector2 frStuckVec = bellyStats[GetPlayerNum(myFriend)].stuckVector;
+				if (!IsVerticalStuck(myFriend))
+					fromBehind = (self.bodyChunks[0].pos.x < myFriend.bodyChunks[0].pos.x) == (myFriend.flipDirection > 0);
+				else
+                    fromBehind = (self.bodyChunks[0].pos.y < myFriend.bodyChunks[0].pos.y) == (myFriend.bodyChunks[0].pos.y > myFriend.bodyChunks[1].pos.y);
+            }
+			
+			if (myFriend != null && obj != null && !fromBehind) //CHECK FROMBEHIND INSTEAD. THE OTHER ONE IS FLAWED
+                //&& !(IsCramped(myFriend) && PipeStatus(myFriend) == PipeStatus(self))) //NO YOU CAN'T FEED THEM FROM BEHIND...
+            {
 				//self.wantToGrab = 0; //WILL ATTEMPT TO REGRAB VIA BUFFER IF WE GRAB AND THROW TOO QUICKLY
 				self.wantToPickUp = 0; //DON'T CONFUSE THIS WITH wantToGrab
 				self.dontGrabStuff = 15; //THESE MIGHT NOT BE NEEDED NOW THAT WE FIXED IT 
@@ -4450,7 +4474,7 @@ public class patch_Player
 				//THINGS
 			else //WE STOPPED HOLDING THE KEYS, CANCEL THE STUFF
 			{
-                //Debug.Log("--ENDING frFeed " + self.input[0].thrw + " - " + self.input[0].pckp + " - " + bellyStats[GetPlayerNum(myFriend)].frFed);
+                Debug.Log("--ENDING frFeed " + self.input[0].thrw + " - " + self.input[0].pckp + " - " + bellyStats[GetPlayerNum(myFriend)].frFed);
                 bellyStats[playerNum].frFeed = null;
 				bellyStats[GetPlayerNum(myFriend)].frFed = false; //THIS SHOULD TURN OFF BY ITSELF I THINK
 				
@@ -4477,10 +4501,10 @@ public class patch_Player
     {
 		//SLUGONBACK UPDATE IS RUN HERE, BUT INCRIMENT CHECKS ARE DECIED AFTER
 		//NEVER ALLOW US TO STOW OUR PARTNER TO OUR BACK IF THEY ARE STUCK - OR PULLING!!
-		if (ModManager.CoopAvailable && self.slugOnBack != null && self.grasps[0] != null && self.grasps[0].grabbed != null && self.grasps[0].grabbed is Player)
+		if (self.slugOnBack != null)
 		{
-			Player myPartner = self.grasps[0].grabbed as Player;
-			if (myPartner != null && IsCramped(myPartner) || IsGraspingSlugcat(myPartner))
+			Creature myCrit = GetGraspedCreature(self);
+			if (myCrit != null && myCrit is Player myPartner && (IsCramped(myPartner) || IsGraspingStuckable(myPartner)))
 				self.slugOnBack.increment = false;
 		}
 	}
@@ -4897,31 +4921,6 @@ public class patch_Player
         }
 	}
 	
-
-    public static Player.ObjectGrabability Player_Grabability(On.Player.orig_Grabability orig, Player self, PhysicalObject obj)
-	{
-		if (BellyPlus.VisualsOnly())
-			return orig.Invoke(self, obj);
-		
-		//HOPEFULLY BYPASSES JOLLYCOOP THING....
-		if (obj is Player && obj != self && !(obj as Player).dead && IsStuckOrWedged(obj as Player))
-		{
-			return Player.ObjectGrabability.BigOneHand;
-		}
-		else if (obj is Lizard && !(obj as Lizard).dead && patch_Lizard.IsStuck(obj as Lizard))
-        {
-			return Player.ObjectGrabability.TwoHands;
-		}
-		else if (obj is SeedCob && BPOptions.detachablePopcorn.Value && !self.isNPC)
-        {
-			return Player.ObjectGrabability.TwoHands;
-		}
-		else
-		{
-			return orig.Invoke(self, obj);
-		}
-	}
-	
 	
 	//FOR JUMPING OFF OF POLES INTO PIPES BELOW
 	public static void DeadFall(Player self)
@@ -4977,6 +4976,31 @@ public class patch_Player
 	}
 	
 
+	public static Player.ObjectGrabability Player_Grabability(On.Player.orig_Grabability orig, Player self, PhysicalObject obj)
+	{
+		if (BellyPlus.VisualsOnly())
+			return orig.Invoke(self, obj);
+		
+		//HOPEFULLY BYPASSES JOLLYCOOP THING....
+		if (obj is Player && obj != self && !(obj as Player).dead && IsStuckOrWedged(obj as Player))
+		{
+			return Player.ObjectGrabability.BigOneHand;
+		}
+		else if (obj is Lizard && !(obj as Lizard).dead && patch_Lizard.IsStuck(obj as Lizard))
+        {
+			return Player.ObjectGrabability.TwoHands;
+		}
+		else if (obj is SeedCob && BPOptions.detachablePopcorn.Value && !self.isNPC)
+        {
+			return Player.ObjectGrabability.TwoHands;
+		}
+		else
+		{
+			return orig.Invoke(self, obj);
+		}
+	}
+	
+	
 	public static bool Player_CanIPickThisUp(On.Player.orig_CanIPickThisUp orig, Player self, PhysicalObject obj)
 	{
 		if (BellyPlus.VisualsOnly() || self.room == null)
@@ -5008,7 +5032,7 @@ public class patch_Player
 		if (isPlayer && (IsStuckOrWedged(obj as Creature) || InPullingChain(obj as Player)) && (obj as Player).dead == false )
 		{
 			//Debug.Log("CAN I PICK THIS UP? " + (!bellyStats[playerNum].pushingOther && !IsPushingOther(obj as Player) && !IsGrabbedByPlayer(obj as Player)) + " - " + self.Grabability(obj));
-			if (!bellyStats[playerNum].pushingOther && !IsPushingOther(obj as Player) && !IsGrabbedByPlayer(obj as Player)) //IDK MAN - && Custom.DistLess(self.bodyChunks[0].pos, player.bodyChunks[0].pos, 20f))
+			if (!bellyStats[playerNum].pushingOther && !IsPushingOther(obj as Player) && !IsGrabbedByPlayer(obj as Player) && self.FreeHand() != -1) //IDK MAN - && Custom.DistLess(self.bodyChunks[0].pos, player.bodyChunks[0].pos, 20f))
 				return true;
 			else
 				return false;
@@ -5033,9 +5057,30 @@ public class patch_Player
 			return;
 		}
 		
-		if ((obj is Player ) && (obj as Creature).Consious) //!(obj as Creature).Stunned)
+		if ((obj is Player targPlayer) && (obj as Creature).Consious) //!(obj as Creature).Stunned)
 		{
-			
+			//OKAY WE CAN'T JUST GRAB THEM WITH AN OCCUPIED HAND... TRY THIS INSTEAD
+			//NOPE THIS CAN'T WORK, WE NEVER CALL THIS IF FREE HAND IS -1
+			//Debug.Log("FREE HAND "+ self.FreeHand());
+			//if (self.FreeHand() == -1)
+			//{
+			//	PhysicalObject myItem;
+			//	if (self.grasps[0] != null && self.grasps[0].grabbed is PhysicalObject)
+			//	{
+            //        myItem = self.grasps[0].grabbed;
+            //        self.ReleaseGrasp(0); //DROP OUR FIRST GRASP 
+            //        Debug.Log("TAKE MY ITEM " + targPlayer.FreeHand());
+            //        targPlayer.SlugcatGrab(myItem, targPlayer.FreeHand()); //MAKE THEM TAKE IT (IF THEY CAN)
+            //    }
+            //}
+
+			//SET OUR HELD ITEM INTO OUR OFF-HAND SO THAT THROWING WILL THROW THE PLAYER FIRST
+			if (self.FreeHand() == 1 && graspUsed == 1)
+			{
+				self.SwitchGrasps(0, 1);
+				graspUsed = 0;
+            }
+
 			bellyStats[GetPlayerNum(self)].targetStuck = 40; //SO WE DON'T LET GO RIGHT AWAY
 
 			//12-10-22 JOLLYCOOP HANDLES THESE CASES BY REPLACING THE ORIGINAL SO WE DON'T GO LIMP. LETS TRY AND FOLLOW IN THOSE FOOTSTEPS...
@@ -5482,6 +5527,7 @@ public class patch_Player
 		if (otherObject is Player && !self.isSlugpup && !IsCramped(otherObject as Player) && (otherObject as Player).Consious
 			&& (GetOverstuffed(otherObject as Player) > 4 || ((otherObject as Player).isGourmand && GetChubValue(otherObject as Player) >= 3))// && self.flipDirection == (otherObject as Player).flipDirection
 			&& ((otherObject as Player).rollCounter > 0 || (otherObject as Player).bodyMode == Player.BodyModeIndex.Crawl || (otherObject as Player).bodyMode == Player.BodyModeIndex.Stand)
+			&& !IsPushingOther(otherObject as Player)
 			&& self.standing && self.bodyChunks[1].ContactPoint.y == -1 && self.input[0].x != 0 //self.input[0].x == (otherObject as Player).flipDirection
 			&& !self.IsTileSolid(0, self.input[0].x * 2, 0)
 		)
@@ -6323,7 +6369,7 @@ public class patch_Player
 					self.bodyChunks[0].pos.x = self.bodyChunks[1].pos.x;
 					self.bodyChunks[0].pos.y = self.bodyChunks[1].pos.y - 5f;
 				}
-                Debug.Log("BOOST SLUG! " + self.slugcatStats.name.value);
+                
                 if (self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < ((crashVel - 5f) / 10f))
                     DoNoirSounds(self, true);
             }
@@ -7203,7 +7249,7 @@ public class patch_Player
 				//HOLDING CORPSES WEIGHS US DOWN WHICH CAN BE USED TO CHEAT!
                 if (specialMode)
 				{
-                    if (self.grasps[0] != null && self.HeavyCarry(self.grasps[0].grabbed))
+                    if ((self.grasps[0] != null && self.HeavyCarry(self.grasps[0].grabbed)) || (self.grasps[1] != null && self.HeavyCarry(self.grasps[1].grabbed)))
                          gravMod = specialMode ? 1.0f : 0f;//FOR FIXING HEAVY CORPSES BEING ABLE TO VERY SLOWLY PULL US DOWN THROUGH GAPS
                 }
 				
@@ -7459,7 +7505,7 @@ public class patch_Player
 		
 		if (myObject != null
 			&& (IsStuckOrWedged(myObject) || ObjIsPushingOther(myObject)) 
-			&& (!(myObject is Player) || !IsGraspingSlugcat(self))
+			&& (!(myObject is Player) || !IsGraspingStuckable(self))
 			&& (self.corridorTurnDir == null) //SO WE DON'T DO THAT WEIRD BUG WHERE WE FLING THEM FORWARD WHILE FLIPPING
 		)
 		{
@@ -7949,15 +7995,18 @@ public class patch_Player
 			}
 			else if (bellyStats[playerNum].pullingOther && self.grasps[0] != null)
 			{
-				boostAmnt += Math.Max(GetChubValue(self), 0);
-				Creature myGrasped = self.grasps[0].grabbed as Creature;
-				if (myGrasped is Player)
+                Creature myGrasped = GetGraspedCreature(self);
+				if (myGrasped != null)
 				{
-					boostAmnt *= 1 + (1 - GetSweetSpotPerc(myGrasped as Player));
-					loosenAmnt *= 1 + 2f * (1 - GetSweetSpotPerc(myGrasped as Player));
-				}
-				PassDownBenifits(myGrasped, boostAmnt / 2f, 10, 14);
-				ObjGainLoosenProg(myGrasped, (loosenAmnt / 4000f) * (ObjIsSlick(myGrasped) ? 3f : 1f));
+                    boostAmnt += Math.Max(GetChubValue(self), 0);
+                    if (myGrasped is Player)
+                    {
+                        boostAmnt *= 1 + (1 - GetSweetSpotPerc(myGrasped as Player));
+                        loosenAmnt *= 1 + 2f * (1 - GetSweetSpotPerc(myGrasped as Player));
+                    }
+                    PassDownBenifits(myGrasped, boostAmnt / 2f, 10, 14);
+                    ObjGainLoosenProg(myGrasped, (loosenAmnt / 4000f) * (ObjIsSlick(myGrasped) ? 3f : 1f));
+                }
 			}
 			if (IsWedged(self, playerNum))
 			{
@@ -8195,7 +8244,7 @@ public class patch_Player
             self.objectInStomach.RealizeInRoom();
             CheckExternal(self, self.objectInStomach.realizedObject);
             //THEN PUT IT BACK
-            self.objectInStomach.realizedObject.RemoveFromRoom();
+            self.objectInStomach.realizedObject.RemoveFromRoom(); //ONE OF THESE IS NULL SOMEHOW??
             self.objectInStomach.Abstractize(self.abstractCreature.pos);
             self.objectInStomach.Room.RemoveEntity(self.objectInStomach);
         }
@@ -8546,10 +8595,19 @@ public class patch_Player
 
 		//INCREASED DRAG RESISTANCE ON TUGGING OUR PARTNERS
 		bellyStats[playerNum].pullingOther = false;
-		if (self.grasps[0] != null && ObjIsStuckable(self.grasps[0].grabbed as Creature) && !(self.grasps[0].grabbed as Creature).dead) //&& self.HeavyCarry(self.grasps[0].grabbed)
-		{
+        int myGrasp = -1;
+        //CHECK BOTH GRASPS, DUMMY
+        for (int j = self.grasps.Length - 1; j >= 0; j--)
+        {
+            if (self.grasps[j] != null && self.grasps[j].grabbed is Creature crit && !crit.dead)
+                myGrasp = j;
+        }
+
+        //if (self.grasps[0] != null && ObjIsStuckable(self.grasps[0].grabbed as Creature) && !(self.grasps[0].grabbed as Creature).dead) //&& self.HeavyCarry(self.grasps[0].grabbed)
+        if (myGrasp != -1 && self.grasps[myGrasp].grabbed is Creature myPartner && ObjIsStuckable(myPartner) && !myPartner.dead)
+        {
 			// Player myPartner = self.grasps[0].grabbed as Player;
-			Creature myPartner = self.grasps[0].grabbed as Creature;
+			//Creature myPartner = self.grasps[0].grabbed as Creature;
 
 			if (ObjIsStuck(myPartner) || InPullingChain(myPartner))
 			{
@@ -8557,7 +8615,7 @@ public class patch_Player
 				bool chainLink = InPullingChain(myPartner) && !ObjIsStuck(myPartner);
 
 				if (self.room.aimap.getAItile(self.mainBodyChunk.pos).narrowSpace)
-					self.grasps[0].grabbedChunk.vel += self.input[0].IntVec.ToVector2().normalized * bellyStats[playerNum].myCooridorSpeed * 1f / Mathf.Max(0.75f, self.grasps[0].grabbed.TotalMass);
+					self.grasps[myGrasp].grabbedChunk.vel += self.input[0].IntVec.ToVector2().normalized * bellyStats[playerNum].myCooridorSpeed * 1f / Mathf.Max(0.75f, self.grasps[myGrasp].grabbed.TotalMass);
 				
 				//DON'T CLIMB POLES! WAIT...
 				self.noGrabCounter = 2;
@@ -8568,11 +8626,11 @@ public class patch_Player
 				{
 					//HALT ME AS WELL AS MY PARTNER
 					//12-3-22 MAYBE WE'LL TRY REPLACING THIS WITH SOMETHING MORE REASONABLE...
-					self.grasps[0].grabbedChunk.vel /= 2f; //MAYBE EXCEPT THIS ONE
+					self.grasps[myGrasp].grabbedChunk.vel /= 2f; //MAYBE EXCEPT THIS ONE
 
 					//bool matchingShoveDir = (ObjIsVerticalStuck(myPartner as Creature) && self.input[0].y == ObjGetYFlipDirection(myPartner as Creature)) || (!ObjIsVerticalStuck(myPartner as Creature) && self.input[0].x == ObjGetXFlipDirection(myPartner as Creature));
-					bool matchingShoveDir = (!chainLink && ObjIsVerticalStuck(myPartner as Creature) && self.input[0].y == ObjGetYFlipDirection(myPartner as Creature))
-						|| (!chainLink && !ObjIsVerticalStuck(myPartner as Creature) && self.input[0].x == ObjGetXFlipDirection(myPartner as Creature))
+					bool matchingShoveDir = (!chainLink && ObjIsVerticalStuck(myPartner) && self.input[0].y == ObjGetYFlipDirection(myPartner))
+						|| (!chainLink && !ObjIsVerticalStuck(myPartner) && self.input[0].x == ObjGetXFlipDirection(myPartner))
 						|| (chainLink && (self.bodyChunks[1].ContactPoint.y < 0) && self.input[0].IntVec != new IntVector2(0, 0))
 						|| (chainLink && self.input[0].y == -1) //IF WE'RE DANGLING, WE MUST PULL DOWN TO PULL
 						|| (self.isNPC);
@@ -8581,22 +8639,22 @@ public class patch_Player
 					if (matchingShoveDir)
                     {
 						bellyStats[playerNum].pullingOther = true;
-						(self.graphicsModule as PlayerGraphics).LookAtObject(myPartner); //LOOK AT IT
+						if (self.graphicsModule != null)
+							(self.graphicsModule as PlayerGraphics).LookAtObject(myPartner); //LOOK AT IT
 						if (!self.lungsExhausted) //GIVE THEM THAT BOOST IF WE'RE PULLING THEM WHILE THEY'RE STUCK
                         {
-							ObjGainStuckStrain(myPartner as Creature, 1);
+							ObjGainStuckStrain(myPartner, 1);
 							ObjGainBoostStrain(myPartner, 0, 2, 8 + (ObjBeingPushed(myPartner) > 0 ? 2 : 0));
 						}
-							
 
 						//PASS FORWARD PULLING LINE BENEFITS
 						if (bellyStats[playerNum].beingPushed > 0)
-							ObjGainStuckStrain(myPartner as Creature, 0.35f);
+							ObjGainStuckStrain(myPartner, 0.35f);
 
 						//IF STANDING, DIG OUR HEELS INTO THE TUG
 						if (self.bodyMode != Player.BodyModeIndex.CorridorClimb && self.standing && self.graphicsModule != null)
 						{
-							float pushVal = ((self.grasps[0].grabbedChunk.pos.x + (3 * bellyStats[playerNum].myFlipValX)) - self.bodyChunks[1].pos.x) / 20f;
+							float pushVal = ((self.grasps[myGrasp].grabbedChunk.pos.x + (3 * bellyStats[playerNum].myFlipValX)) - self.bodyChunks[1].pos.x) / 20f;
 							//DON'T DIG OUR HEELS IN IF THAT WOULD KICK THEM IN THE FACE
 							if (Mathf.Abs(self.bodyChunks[1].pos.y - myPartner.bodyChunks[0].pos.y) > 10)
 								self.bodyChunks[1].vel.x = pushVal;
@@ -8635,7 +8693,7 @@ public class patch_Player
                 {
 					if (ObjIsStuckable(myPartner as Creature) && myPartner is Player && !((myPartner as Player).isNPC && (myPartner as Player).isSlugpup)) // && !(myPartner is LanternMouse) && !(myPartner is Cicada) && !(myPartner is Player && (myPartner as Player).isNPC &&  (myPartner as Player).isSlugpup))
 					{
-						self.ReleaseGrasp(0); //GENTLY release them
+						self.ReleaseGrasp(myGrasp); //GENTLY release them
 					}
 				}
 			}

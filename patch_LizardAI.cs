@@ -190,7 +190,7 @@ public class patch_LizardAI
 				if (self.lizard.tongue != null
 					&& self.lizard.tongue.Ready
 					&& self.lizard.grasps[0] == null
-					&& myFriend != null
+					&& myFriend != null && self.focusCreature != null
                     && Custom.DistLess(self.creature.realizedCreature.mainBodyChunk.pos, myFriend.mainBodyChunk.pos, self.lizard.lizardParams.tongueAttackRange)
 					&& (self.lizard.Submersion < 0.5f) && UnityEngine.Random.value < self.lizard.lizardParams.tongueChance * 0.5f //0.05f
 					&& self.focusCreature.VisualContact)
