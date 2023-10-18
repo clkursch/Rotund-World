@@ -682,6 +682,7 @@ public class patch_Player
 		public int externalMass;
 		public Vector2 tuchShift;
         public bool tuching;
+		public int ignoreSpears;
         public PhysicalObject forceEatTarget;
 		public ChunkSoundEmitter squeezeLoop;
 		public ChunkSoundEmitter stuckLoop;
@@ -726,6 +727,7 @@ public class patch_Player
 		On.Player.ObjectEaten += Player_ObjectEaten;
 		On.Player.Grabability += Player_Grabability;
 		On.Player.CanIPickThisUp += Player_CanIPickThisUp; //TO UNDO SOME STUFF THAT JOLLY CO-OP DOES
+        On.Player.ReleaseObject += Player_ReleaseObject;
 
 		On.Player.MovementUpdate += Player_MovementUpdate;
 		IL.Player.MovementUpdate += BPPlayer_MovementUpdate;
@@ -915,6 +917,7 @@ public class patch_Player
 			externalMass = 0,
 			tuchShift = new(0, 0),
 			tuching = false,
+			ignoreSpears = 0,
             squeezeLoop = null,
 			stuckLoop = null,
 			foodOnBack = new FoodOnBack(player)
@@ -4076,7 +4079,8 @@ public class patch_Player
 		{
 			orig.Invoke(self, grasp, eu); //ORIGINAL
 		}
-	}
+        bellyStats[GetPlayerNum(self)].ignoreSpears = 0; //END ANY REMAINING TIME ON IGNORING SPEAR PICKUPS
+    }
 
 
 	//I THINK THIS ACTUALLY NEEDS TO BE HANDLED IN THE MAIN ADDFOOD, BECAUSE THERE ARE OTHER WAYS TO GAIN FOOD
@@ -4392,7 +4396,7 @@ public class patch_Player
 		int playerNum = GetPlayerNum(self);
 		
 		//FIRST TAP
-		if (self.input[0].thrw && !self.input[1].thrw && self.input[0].pckp)
+		if (IsFeedPressed(self))
 		{
             if (BPOptions.debugLogs.Value)
 				Debug.Log("--TRY AND FEED A PLAYER! ");
@@ -4456,7 +4460,7 @@ public class patch_Player
 			Player myFriend = bellyStats[playerNum].frFeed;
             //Debug.Log("--continue frFeed " + self.input[0].thrw + " - " + self.input[0].pckp + " - " + bellyStats[GetPlayerNum(myFriend)].frFed);
 
-            if (self.input[0].thrw && self.input[0].pckp && bellyStats[GetPlayerNum(myFriend)].frFed)
+            if (IsFeedHeld(self) && bellyStats[GetPlayerNum(myFriend)].frFed)
 			{
 				bellyStats[GetPlayerNum(myFriend)].frFed = true;
 				myFriend.swallowAndRegurgitateCounter = 75;
@@ -4552,8 +4556,9 @@ public class patch_Player
 		}
 
 
-		//CHECK FOR THE BACK FOOD STOWE
-		if (BPOptions.backFoodStorage.Value && self.input[0].pckp && !self.input[1].pckp) // && self.switchHandsProcess == 0f)
+        //CHECK FOR THE BACK FOOD STOWE
+        bool backFoodBtn = IsBackFoodPressed(self);
+        if (BPOptions.backFoodStorage.Value && bellyStats[playerNum].foodOnBack != null && ((self.input[0].pckp && !self.input[1].pckp && self.pickUpCandidate == null && !IsBackFoodBtnBound(self)) || backFoodBtn)) // && self.switchHandsProcess == 0f)
 		{
 			bool flag4 = true; // self.grasps[0] != null || self.grasps[1] != null;
 			if (self.grasps[0] != null && (self.Grabability(self.grasps[0].grabbed) == Player.ObjectGrabability.TwoHands || self.Grabability(self.grasps[0].grabbed) == Player.ObjectGrabability.Drag))
@@ -4577,14 +4582,15 @@ public class patch_Player
 
 
 			// Debug.Log("--SWITCH HANDS? " + flag4 + " - " + self.switchHandsCounter);
-			if (flag4 && self.input[0].IntVec == new IntVector2(0, 0))
+			
+			if (flag4 && (backFoodBtn || self.input[0].IntVec == new IntVector2(0, 0)))
 			{
 				
-				if (self.switchHandsCounter == 0 || self.switchHandsCounter == 14) //ALSO CHECK FOR 14, SINCE IT WILL BE THAT NUMBER IF ACTIVATED THIS FRAME
+				if ((self.switchHandsCounter == 0 || self.switchHandsCounter == 14) && !IsBackFoodBtnBound(self)) //ALSO CHECK FOR 14, SINCE IT WILL BE THAT NUMBER IF ACTIVATED THIS FRAME
 				{
 					self.switchHandsCounter = 15;
 				}
-				else if (bellyStats[playerNum].foodOnBack != null)
+				else
 				{
 					//THAT WAS THE TRIGGER TO SWAP HANDS!
 					if (bellyStats[playerNum].foodOnBack.HasAFood)
@@ -4746,9 +4752,14 @@ public class patch_Player
 	
 	public static PhysicalObject Player_PickupCandidate(On.Player.orig_PickupCandidate orig, Player self, float favorSpears)
 	{
-		PhysicalObject result = orig.Invoke(self, favorSpears);
 		if (BellyPlus.VisualsOnly())
-			return result;
+			return orig.Invoke(self, favorSpears);
+		
+		//IF WE JUST DROPPED A SPEAR, DON'T PICK UP ANOTHER ONE 
+		if (bellyStats[GetPlayerNum(self)].ignoreSpears > 0)
+			favorSpears -= 40;
+		
+		PhysicalObject result = orig.Invoke(self, favorSpears);
 		
 		PhysicalObject myFriend = patch_Player.FindPlayerTopInRange(self, 40f);
 		if (myFriend != null && self.CanIPickThisUp(myFriend) && IsStuckOrWedged(myFriend as Player))
@@ -4759,9 +4770,58 @@ public class patch_Player
 		return result;
 	}
 
+
+    private static void Player_ReleaseObject(On.Player.orig_ReleaseObject orig, Player self, int grasp, bool eu)
+    {
+        if (self.grasps[grasp].grabbed is Spear)
+            bellyStats[GetPlayerNum(self)].ignoreSpears = 40;
+		else
+            bellyStats[GetPlayerNum(self)].ignoreSpears = 0;
+
+        orig(self, grasp, eu);
+    }
 	
-	//HAPPENS IN PLACE OF JUMP
-	public static void Heave(Player self)
+	
+	public static bool IsFeedPressed(Player player)
+    {
+        if (BellyPlus.improvedInputEnabled)
+            return player.WantsToFeed();
+        else
+			return player.input[0].thrw && !player.input[1].thrw && player.input[0].pckp;
+    }
+
+    public static bool IsFeedHeld(Player player)
+    {
+        if (BellyPlus.improvedInputEnabled)
+            return player.HoldingFeed();
+        else
+            return player.input[0].thrw && player.input[0].pckp;
+    }
+
+    public static bool IsBackFoodPressed(Player player)
+    {
+        if (BellyPlus.improvedInputEnabled)
+            return player.WantsBackFood();
+        else
+			return false;
+    }
+	
+	public static bool IsBackFoodBtnBound(Player player)
+    {
+        if (BellyPlus.improvedInputEnabled)
+            return CheckFoodBtnBound(player);
+        else
+			return false;
+    }
+
+    public static bool CheckFoodBtnBound(Player player)
+    {
+        return RWInputMod.BackFoodBound(player);
+    }
+
+
+    //HAPPENS IN PLACE OF JUMP
+    public static void Heave(Player self)
 	{
 		
 	}
@@ -6733,6 +6793,9 @@ public class patch_Player
 
         if (bellyStats[playerNum].weightless > 0)
             bellyStats[playerNum].weightless--;
+		
+		if (bellyStats[playerNum].ignoreSpears > 0)
+			bellyStats[playerNum].ignoreSpears--;
 
         //DON'T DO THE CLIMBUPONBEAM ANIMATION IF WE'RE PUSHING SOMEONE
         if (self.animation == Player.AnimationIndex.GetUpOnBeam && (bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther))

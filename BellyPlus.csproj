@@ -54,9 +54,13 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\BepInEx\plugins\HOOKS-Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="ImprovedInput">
+      <HintPath>Resources\ImprovedInput.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="MMWingCat">
       <HintPath>Resources\MMWingCat.dll</HintPath>
-	  <Private>false</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\Managed\Mono.Cecil.dll</HintPath>
@@ -143,6 +147,7 @@
     <Compile Include="patch_Yeek.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="patch_SaveState.cs" />
+    <Compile Include="RWInputMod.cs" />
     <Compile Include="StrainSpark.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -123,6 +123,7 @@ public class BellyPlus : BaseUnityPlugin
     public static BellyPlus instance;
 	public static BPOptions myOptions;
 	public static new ManualLogSource Logger;
+	public static bool is_post_mod_init_initialized = false;
 
 	//public override void OnEnable()
 	public void OnEnable()
@@ -136,6 +137,7 @@ public class BellyPlus : BaseUnityPlugin
 
 			On.RainWorld.OnModsInit += RainWorld_OnModsInit;
             On.RainWorld.OnModsDisabled += RainWorld_OnModsDisabled;
+			On.RainWorld.PostModsInit += RainWorld_PostModsInit;
 			//if (ModManager.InstalledMods)
 
 			//On.RainWorld.Start += BP_RainWorld_Start;
@@ -243,8 +245,28 @@ public class BellyPlus : BaseUnityPlugin
             {
                 individualFoodEnabled = true;
             }
-
+			if (ModManager.ActiveMods[i].id == "improved-input-config")
+            {
+                improvedInputEnabled = true;
+            }
         }
+    }
+	
+	private void RainWorld_PostModsInit(On.RainWorld.orig_PostModsInit orig, RainWorld self)
+    {
+        orig(self);
+        //I BARELY UNDERSTAND HOW THIS WORKS BUT SHUAMBUAM SEEMS TO HAVE IT ON LOCK SO I'LL JUST FOLLOW HIS LEAD
+        if (is_post_mod_init_initialized) return;
+        is_post_mod_init_initialized = true;
+        if (improvedInputEnabled)
+            Initialize_Custom_Input();
+    }
+    public static void Initialize_Custom_Input()
+    {
+        // wrap it in order to make it a soft dependency only;
+        Debug.Log("Initialize custom input.");
+        RWInputMod.Initialize_Custom_Keybindings();
+        PlayerMod.OnEnable();
     }
 
 
@@ -279,6 +301,7 @@ public class BellyPlus : BaseUnityPlugin
 	public static bool expdEnhancedEnabled = false;
     public static bool parasiticEnabled = false;
 	public static bool individualFoodEnabled = false;
+	public static bool improvedInputEnabled = false;
 
     public static bool fullBellyOverride = false;
 	public static bool versionCheck = false;

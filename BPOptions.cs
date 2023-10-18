@@ -685,7 +685,10 @@ public class BPOptions : OptionInterface
         int infoTab = 3;
         lineCount = 550;
 
-        Tabs[infoTab].AddItems(new OpLabel(55f, lineCount, BPTranslate("If you run into any bugs or issues, let me know so I can fix them!")));
+        Tabs[infoTab].AddItems(new OpLabel(35f, lineCount, BPTranslate("Enable the Improved Input Config mod to change keybinds")));
+
+        lineCount -= 25;
+        Tabs[infoTab].AddItems(new OpLabel(35, lineCount, BPTranslate("If you run into any bugs or issues, let me know so I can fix them!")));
 
         lineCount -= 35;
         Tabs[infoTab].AddItems(new OpLabel(35f, lineCount, BPTranslate("Message me on discord: WillowWisp#3565 ")));
