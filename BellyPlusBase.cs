@@ -290,7 +290,7 @@ public class BellyPlus : BaseUnityPlugin
 	// public static bool fancySlugsEnabled = false;
     public static int bonusHudPip = 0;
 	public static int lizardFood = 0;
-	public static int MaxBonusPips = 30;
+	public static int MaxBonusPips = 40;
     public static int StoredCorn = 0;
     public static int StoredStumps = 0;
 

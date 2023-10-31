@@ -814,22 +814,22 @@ public class patch_Misc
 
         //AND SOME EXPERIMENTAL STUFF
         else if (ID == EnumExt_MyMod.P1food)
-			endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, 50); //NEED TO PUT THE MIN BELOW 0 OR ELSE IT WILL UNSTORE ITSELF AS A TRACKER AT 0
+			endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, BellyPlus.MaxBonusPips * 2); //NEED TO PUT THE MIN BELOW 0 OR ELSE IT WILL UNSTORE ITSELF AS A TRACKER AT 0
 		else if (ID == EnumExt_MyMod.P2food)
-			endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, 50);
+			endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, BellyPlus.MaxBonusPips * 2);
 		else if (ID == EnumExt_MyMod.P3food)
-			endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, 50);
+			endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, BellyPlus.MaxBonusPips * 2);
 		else if (ID == EnumExt_MyMod.P4food)
-			endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, 50);
+			endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, BellyPlus.MaxBonusPips * 2);
 
         else if (ID == EnumExt_MyMod.P5food)
-            endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, 50);
+            endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, BellyPlus.MaxBonusPips * 2);
         else if (ID == EnumExt_MyMod.P6food)
-            endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, 50);
+            endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, BellyPlus.MaxBonusPips * 2);
         else if (ID == EnumExt_MyMod.P7food)
-            endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, 50);
+            endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, BellyPlus.MaxBonusPips * 2);
         else if (ID == EnumExt_MyMod.P8food)
-            endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, 50);
+            endgameTracker = new WinState.IntegerTracker(ID, -1, -1, 9999, BellyPlus.MaxBonusPips * 2);
 
 
         else

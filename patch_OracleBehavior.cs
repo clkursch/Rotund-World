@@ -296,7 +296,10 @@ public class patch_OracleBehavior
 					self.owner.SetNewDestination(self.oracle.room.MiddleOfTile(24, 20));
 					if (!repeatSelf)
 					{
-						self.dialogBox.Interrupt(self.Translate("I may have underestimated your girth... Do brace yourself, this next one won't be so gentle."), 0);
+						if (self.player?.slugcatStats?.name?.value == "Estranged") //COLLAB UNIQUE DIALOGUE
+                            self.dialogBox.Interrupt(self.Translate("It's truly horrifying how a creature so small can trap itself so easily in the cycles... And my pipes."), 0);
+						else
+							self.dialogBox.Interrupt(self.Translate("I may have underestimated your girth... Do brace yourself, this next one won't be so gentle."), 0);
 						repeatSelf = true;
 					}
 					else

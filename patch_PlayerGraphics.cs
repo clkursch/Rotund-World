@@ -14,9 +14,8 @@ public class patch_PlayerGraphics
         public int randCycle;
         public bool staring;
 		public int blSprt;
+		public Color blColor;
 		public int bodySprt;
-        // public int hdSprt;
-        // public int lastChub; //OH WE ACTUALLY DON'T USE THIS ANYMORE...
         public float lastSquish;
         public float[] tailBase;
         public float checkRad; //USED TO DETECT CHANGES IN RAD
@@ -55,10 +54,8 @@ public class patch_PlayerGraphics
             staring = false,
             blSprt = 12,
             bodySprt = 0,
-            // hdSprt = 2 + self.tail.Length,
-            // lastChub = Math.Max(patch_Player.GetChubValue(self.player), 0),
+            blColor = Color.red,
             lastSquish = 0f,
-            //tailBonus = GetTailBonus(self),
             tailBase = new float[self.tail.Length],
             verified = false,
             checkRad = 1f,
@@ -72,11 +69,24 @@ public class patch_PlayerGraphics
                 bpGraph[playerNum].checkRad = self.tail[0].rad; //REMEMBER THE SIZE OF OUR FIRST SEGMENT AS A CHECK
         }
     }
+	
+	//FOR MODDERS TO SET THEIR CUSTOM SLUGCAT'S COLOR
+    public static void SetBloodColor(Player player, Color color) 
+    {
+        bpGraph[patch_Player.GetPlayerNum(player)].blColor = color;
+    }
 
-    // public static int GetHeadSprite(Player self)
-    // {
-        // return bpGraph[patch_Player.GetPlayerNum(self)].hdSprt;
-    // }
+    public static void GetDMSBloodColor(Player player)
+    {
+        int playerNum = patch_Player.GetPlayerNum(player);
+        if (DressMySlugcat.Customization.For(player).CustomSprites.Count > 0)
+        {
+            string SpriteSheetName = DressMySlugcat.Customization.For(player).CustomSprites[0].SpriteSheetID;
+            if (SpriteSheetName == "dressmyslugcat.crypt" || SpriteSheetName == "dressmyslugcat.cryptid")
+                bpGraph[playerNum].blColor = new Color(120f / 225f, 0 / 225f, 255 / 225f);
+        }
+        
+    }
 
 
     public static float POL_HowInterestingIsThisObject(On.PlayerGraphics.PlayerObjectLooker.orig_HowInterestingIsThisObject orig, object self, PhysicalObject obj)
@@ -143,6 +153,12 @@ public class patch_PlayerGraphics
 
         bpGraph[playerNum].blSprt = bls;
         sLeaser.sprites[bls].shader = rCam.game.rainWorld.Shaders["FlatLightNoisy"];
+		
+		if (self.player?.slugcatStats?.name?.value == "Guide") //GUIDE GETS A UNIQUE COLOR
+            bpGraph[playerNum].blColor = new Color(0.0f, 0.78f, 1f);
+
+        if (BellyPlus.dressMySlugcatEnabled) //FOR DMS SPECIFIC ONES
+            GetDMSBloodColor(self.player);
 
         self.AddToContainer(sLeaser, rCam, null);
     }
@@ -406,8 +422,7 @@ public class patch_PlayerGraphics
             sLeaser.sprites[bl].scale = 1.8f;
             sLeaser.sprites[bl].scaleY = 0.8f;
             sLeaser.sprites[bl].rotation = sLeaser.sprites[9].rotation;
-            sLeaser.sprites[bl].color = Color.red;
-
+            sLeaser.sprites[bl].color = bpGraph[playerNum].blColor; //Color.red;
 
             sLeaser.sprites[bl].x = sLeaser.sprites[9].x; // + Custom.DirVec(self.drawPositions[0, 0], self.objectLooker.mostInterestingLookPoint).x;
             sLeaser.sprites[bl].y = sLeaser.sprites[9].y -= 0.5f; // + Custom.DirVec(self.drawPositions[0, 0], self.objectLooker.mostInterestingLookPoint).y;
@@ -547,11 +562,11 @@ public class patch_PlayerGraphics
             else
                 sLeaser.sprites[9].scaleY = 1f;
         }
-		
-		
-		
-		
-		//EVERGREEN CHANGES!
+
+
+
+
+        //EVERGREEN CHANGES!
         /*
 		if (patch_Player.ChunkyEvergreen(self.player))
 		{
@@ -572,7 +587,9 @@ public class patch_PlayerGraphics
             }
 		}
 		*/
-
+        //Debug.Log("SPRITE" + sLeaser.sprites[3].element.name); //HMM NOPE 
+        //Debug.Log("SPRITE" + DressMySlugcat.Customization.For(self.player).CustomSprites[0].SpriteSheetID);
+        
 
         //QUIT STARING OFF INTO SPACE!
         //if (self.player.bodyMode == Player.BodyModeIndex.CorridorClimb && !(patch_Player.ObjIsWedged(self.player) && self.player.input[0].IntVec != new IntVector2(0,0)))

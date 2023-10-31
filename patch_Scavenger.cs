@@ -194,7 +194,7 @@ public class patch_Scavenger
 		
 		else if (patch_Player.IsGraspingActualSlugcat(self))
 		{
-			Player mySlug = self.grasps[0].grabbed as Player;
+			Player mySlug = patch_Player.GetGraspedCreature(self) as Player;
 			
 			if ((self.AI.behavior == ScavengerAI.Behavior.Flee || self.AI.behavior == ScavengerAI.Behavior.Attack) && UnityEngine.Random.value < 0.1f)
 			{

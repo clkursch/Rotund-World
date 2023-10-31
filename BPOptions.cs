@@ -270,9 +270,9 @@ public class BPOptions : OptionInterface
         Tabs[0].AddItems(chkBox6, new OpLabel(45f, lineCount, BPTranslate("Easily Winded")) { bumpBehav = chkBox6.bumpBehav, description = dsc6 });
         chkBox6.description = dsc6;
 		
-		OpCheckBox mpBox1;
+		
         string dscCorn = BPTranslate("Popcorn plants can be torn from their stems");
-		mpBox1 = new OpCheckBox(BPOptions.detachablePopcorn, new Vector2(15f + indenting, lineCount));
+        OpCheckBox mpBox1 = new OpCheckBox(BPOptions.detachablePopcorn, new Vector2(15f + indenting, lineCount));
 		Tabs[0].AddItems(mpBox1, new OpLabel(45f + indenting, lineCount, BPTranslate("Detachable Popcorn Plants")) { bumpBehav = mpBox1.bumpBehav, description = dscCorn });
 		mpBox1.description = dscCorn;
 
@@ -289,9 +289,9 @@ public class BPOptions : OptionInterface
 
 
 
-        OpCheckBox mpBox2;
+        
         string dscFood = BPTranslate("Allows the player to eat all food types for their full value");
-		mpBox2 = new OpCheckBox(BPOptions.foodLoverPerk, new Vector2(15f + indenting, lineCount));
+        OpCheckBox mpBox2 = new OpCheckBox(BPOptions.foodLoverPerk, new Vector2(15f + indenting, lineCount));
 		Tabs[0].AddItems(mpBox2, new OpLabel(45f + indenting, lineCount, BPTranslate("Food Lover")) { bumpBehav = mpBox2.bumpBehav, description = dscFood });
 		mpBox2.description = dscFood;
 
@@ -336,17 +336,19 @@ public class BPOptions : OptionInterface
         }
 		
 
-        myBoxes = new OpCheckBox[8];
+        myBoxes = new OpCheckBox[10];
         myBoxes[0] = chkBox5;
         myBoxes[1] = chkBoxArmor;
         myBoxes[2] = chkBox6;
         myBoxes[3] = chkBox4;
         myBoxes[4] = chkBox7;
         myBoxes[5] = chkBoxHints;
+        myBoxes[6] = mpBox1;
+        myBoxes[7] = mpBox2;
         if (ModManager.MSC)
         {
-            myBoxes[6] = this.chkBoxslugSlams;
-            myBoxes[7] = this.chkBoxNeedles;
+            myBoxes[8] = this.chkBoxslugSlams;
+            myBoxes[9] = this.chkBoxNeedles;
         }
 
 

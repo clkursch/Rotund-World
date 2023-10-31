@@ -270,7 +270,7 @@ public class patch_SeedCob
                 self.abstractRoom.entities.Add(abstractPhysicalObject);
                 abstractPhysicalObject.Realize();
                 abstractPhysicalObject.realizedObject.PlaceInRoom(self);
-                Debug.Log("CORN SPAWN ATTEMPT");
+                
 
                 SeedCob myCorn = abstractPhysicalObject.realizedObject as SeedCob;
                 SnapStalk(myCorn);
@@ -283,7 +283,7 @@ public class patch_SeedCob
 
 
                 bool live = (i >= stumpCnt);
-
+                Debug.Log("CORN SPAWN ATTEMPT " + live);
                 if (live)
                 {
                     myCorn.open = 1;
@@ -318,6 +318,7 @@ public class patch_SeedCob
     //THIS CAN ONLY HAPPEN WITH MSC ENABLED.... SO NON MSC NEEDS THEIR OWN VERSION
     public static void spawnFakeUtilityFoods(SeedCob self)
     {
+        Debug.Log("SPAWN KERNALS");
         self.AbstractCob.opened = true;
         self.AbstractCob.dead = true;
         self.AbstractCob.Consume();
@@ -476,7 +477,7 @@ public class patch_SeedCob
     public static void BP_Update(On.SeedCob.orig_Update orig, SeedCob self, bool eu)
 	{
         //IF THE CORN IS PULLED TWICE IT'S STALKS NORMAL LENGTH
-        if (BPOptions.detachablePopcorn.Value && self.rootPos != new Vector2(0, 0) && !Custom.DistLess(self.bodyChunks[1].pos, self.rootPos, self.stalkLength + 28f)) //self.stalkLength * 1.5f
+        if (!BellyPlus.VisualsOnly() && BPOptions.detachablePopcorn.Value && self.rootPos != new Vector2(0, 0) && !Custom.DistLess(self.bodyChunks[1].pos, self.rootPos, self.stalkLength + 28f)) //self.stalkLength * 1.5f
         {
             //STALK BREAK!! 
             SnapStalk(self);

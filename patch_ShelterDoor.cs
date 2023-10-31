@@ -208,7 +208,7 @@ public class patch_ShelterDoor
                             //BUT LIKE DO ALL THE STUFF FIRST
                             if (!myCobb.AbstractCob.dead)
                             {
-                                if (myCobb.open >= 1)
+                                if (myCobb.AbstractCob.opened)
                                     BellyPlus.StoredStumps++;
                                 else if (!myCobb.AbstractCob.opened)
                                     BellyPlus.StoredCorn++;

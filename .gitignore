@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 .idea/
+/obj/Debug/BellyPlus.csproj.AssemblyReference.cache
