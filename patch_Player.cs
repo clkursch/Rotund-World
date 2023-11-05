@@ -1551,7 +1551,7 @@ public class patch_Player
 	
 	public static bool ChunkyEvergreen(Player self)
 	{
-		return self.slugcatStats.name.value == "TrynsEvergreen" && GetOverstuffed(self) > 4;
+		return self.slugcatStats?.name?.value == "TrynsEvergreen" && GetOverstuffed(self) > 4;
 	}
 	
 	
@@ -4118,7 +4118,7 @@ public class patch_Player
 			
 
 		//THIS JUST RUNS THE SAME COPY OF EATMEATUPDATE EXCEPT IT RUNS WHEN OUR BELLY IS FULL
-		if (self.eatMeat > 20 && self.FoodInStomach >= self.MaxFoodInStomach && self.slugcatStats.name.value != "SprobParasite") //SKIP THIS FOR THE PARASITE!
+		if (self.eatMeat > 20 && self.FoodInStomach >= self.MaxFoodInStomach && self.slugcatStats?.name?.value != "SprobParasite") //SKIP THIS FOR THE PARASITE!
 		{
 			//CORPSE JIGGLE STUFF PROBABLY
 			if (self.eatMeat % 5 == 0)
@@ -4653,7 +4653,7 @@ public class patch_Player
 				}
 
                 //SOME SPECIALTIES FOR THE OUTSIDER
-    //            if (self.slugcatStats.name.value == "Outsider") // && self.FoodInStomach >= self.MaxFoodInStomach)
+    //            if (self.slugcatStats?.name?.value == "Outsider") // && self.FoodInStomach >= self.MaxFoodInStomach)
 				//{
     //                Debug.Log("BP - CAMERA TRIGGER FAILED TO SWITCH " + self.swallowAndRegurgitateCounter);
     //                if (self.swallowAndRegurgitateCounter >= 29 && self.grasps[num5] != null && (self.grasps[num5].grabbed is FlareBomb || self.grasps[num5].grabbed is FirecrackerPlant || self.grasps[num5].grabbed is FlyLure || self.grasps[num5].grabbed is BubbleGrass || self.grasps[num5].grabbed is PuffBall))
@@ -4786,7 +4786,7 @@ public class patch_Player
     public static bool IsFeedHeld(Player player)
     {
         if (BellyPlus.improvedInputEnabled)
-            return player.HoldingFeed();
+            return player.HoldingFeed() || (player.input[0].thrw && player.input[0].pckp); //WEIRD HOW THIS ONE DIDN'T WORK WITHOUT THE SECOND CHECK? HUH...
         else
             return player.input[0].thrw && player.input[0].pckp;
     }
@@ -5579,7 +5579,7 @@ public class patch_Player
         //SLUGBED 
         else if (otherObject is Player bedge && (bedge.emoteSleepCounter > 0.1 || bellyStats[GetPlayerNum(bedge)].slugBed != 0 || (bedge.touchedNoInputCounter > 6 && bedge.bodyMode == Player.BodyModeIndex.Crawl) || (GetChubValue(self) > GetChubValue(bedge) && bedge.bodyMode == Player.BodyModeIndex.Crawl)) 
 			&& !self.standing && self.bodyChunks[1].ContactPoint.y != -1 && self.bodyChunks[0].ContactPoint.y != -1 && !bedge.isNPC && !self.isNPC && !self.input[0].jmp //THIS IS A GOOD ONE TO MAKE SURE WE AREN'T TRYING TO GET OFF
-            && (GetChubValue(self) >= 3 || GetChubValue(bedge) >= 3 || bellyStats[GetPlayerNum(bedge)].slugBed != 0) && !IsCramped(bedge) && !IsCramped(self) && !bedge.dead && self.bodyChunks[myChunk].pos.y > bedge.bodyChunks[otherChunk].pos.y)
+            && !IsCramped(bedge) && !IsCramped(self) && !bedge.dead && self.bodyChunks[myChunk].pos.y > bedge.bodyChunks[otherChunk].pos.y) //(GetChubValue(self) >= 3 || GetChubValue(bedge) >= 3 || bellyStats[GetPlayerNum(bedge)].slugBed != 0) && 
         {
             int targChunk = (self.flipDirection == bedge.flipDirection) ? 1 : 0;
 			float strgt = (self.input[0].x == 0 || self.input[5].x == 0) ? 0.25f : 0f;
@@ -5601,8 +5601,8 @@ public class patch_Player
                 self.graphicsModule.BringSpritesToFront();
 
             //IF THE TOP IS HEAVIER THAN THE BOTTOM
-            int myChub = GetChubValue(self);
-            if (myChub >= 3 && myChub > (GetChubValue(bedge) + 2))
+            int myChub = GetChubValue(self) + (GetOverstuffed(self) / 4);
+            if (myChub >= 3 && myChub > (GetChubValue(bedge) + 3))
 			{
                 bellyStats[GetPlayerNum(bedge)].slugBed = -2; //SQUASH THE BEDGE
                 //self.bodyChunks[0].vel.y = Mathf.Max(-1, self.bodyChunks[0].vel.y);
@@ -6469,7 +6469,7 @@ public class patch_Player
 					self.bodyChunks[0].pos.y = self.bodyChunks[1].pos.y - 5f;
 				}
                 
-                if (self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < ((crashVel - 5f) / 10f))
+                if (self.slugcatStats?.name?.value == "NoirCatto" && UnityEngine.Random.value < ((crashVel - 5f) / 10f))
                     DoNoirSounds(self, true);
             }
 			//ONLY DO THE JOLT IF OUR HEAD IS IN A TUNNEL 
@@ -6969,7 +6969,7 @@ public class patch_Player
 		{
             bellyStats[playerNum].slicked = 450;
             //THE GUIDE IS AQUATIC AND CAN BE EXTRA SLIPPERY!
-            if (self.slugcatStats.name.value == "Guide")
+            if (self.slugcatStats?.name?.value == "Guide")
                 bellyStats[playerNum].slicked = 450 * 5;
         }
 			
@@ -8032,7 +8032,7 @@ public class patch_Player
 				else
 					bellyStats[playerNum].myFlipValY *= -1;
 				//UNIQUE INTERACTION WITH NOIRCAT!
-                if (self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < 0.2f)
+                if (self.slugcatStats?.name?.value == "NoirCatto" && UnityEngine.Random.value < 0.2f)
 					DoNoirSounds(self, false);
 			}
 			if (bellyStats[playerNum].pushingOther)
@@ -8538,7 +8538,7 @@ public class patch_Player
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("-----LAUNCH!!!: " + (launchSpeed * popMag));
 
-        if (self.slugcatStats.name.value == "NoirCatto" && UnityEngine.Random.value < ((launchSpeed * popMag) - 10f) / 10f)
+        if (self.slugcatStats?.name?.value == "NoirCatto" && UnityEngine.Random.value < ((launchSpeed * popMag) - 10f) / 10f)
             DoNoirSounds(self, true);
 
         //IF WE'RE BEING TUGGED (BY A SLUGCAT) RELEASE US 

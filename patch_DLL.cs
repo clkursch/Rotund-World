@@ -318,7 +318,7 @@ public class patch_DLL
     private static void BPCentipede_Shock(On.Centipede.orig_Shock orig, Centipede self, PhysicalObject shockObj)
     {
         //Debug.Log("----SUBTR PLR " + (shockObj as Player).slugcatStats.name.value);
-        if (shockObj != null && shockObj is Player && (shockObj as Player).slugcatStats.name.value == "thedronemaster" && (shockObj as Player).playerState.foodInStomach == (shockObj as Player).MaxFoodInStomach)
+        if (shockObj != null && shockObj is Player && (shockObj as Player).slugcatStats?.name?.value == "thedronemaster" && (shockObj as Player).playerState.foodInStomach == (shockObj as Player).MaxFoodInStomach)
 		{
 			//IF WE GOT THIS FAR THAT MEANS THE DRONEMASTER WAS FULL WHEN THE SHOCK OCCURRED
 			(shockObj as Player).playerState.foodInStomach--; //SO LETS JUST... UNDO THAT FOR A QUICK SEC

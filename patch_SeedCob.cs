@@ -477,7 +477,7 @@ public class patch_SeedCob
     public static void BP_Update(On.SeedCob.orig_Update orig, SeedCob self, bool eu)
 	{
         //IF THE CORN IS PULLED TWICE IT'S STALKS NORMAL LENGTH
-        if (!BellyPlus.VisualsOnly() && BPOptions.detachablePopcorn.Value && self.rootPos != new Vector2(0, 0) && !Custom.DistLess(self.bodyChunks[1].pos, self.rootPos, self.stalkLength + 28f)) //self.stalkLength * 1.5f
+        if (!BellyPlus.VisualsOnly() && BPOptions.detachablePopcorn.Value && self.rootPos != new Vector2(0, 0) && !Custom.DistLess(self.bodyChunks[1].pos, self.rootPos, self.stalkLength + 28f) && self.grabbedBy.Count > 0)
         {
             //STALK BREAK!! 
             SnapStalk(self);
