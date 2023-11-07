@@ -114,7 +114,7 @@ Other features:
 (This is not my native language, so pleae correct me if I translated something wrong!)
 This item can only be swallowed if there are no items stored in your belly.
 */
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.8.10")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.8.11")]
 //[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin

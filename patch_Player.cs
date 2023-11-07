@@ -8343,7 +8343,8 @@ public class patch_Player
             self.objectInStomach.RealizeInRoom();
             CheckExternal(self, self.objectInStomach.realizedObject);
             //THEN PUT IT BACK
-            self.objectInStomach.realizedObject.RemoveFromRoom(); //ONE OF THESE IS NULL SOMEHOW??
+			if (self.objectInStomach.realizedObject != null)
+				self.objectInStomach.realizedObject.RemoveFromRoom(); //ONE OF THESE IS NULL SOMEHOW??
             self.objectInStomach.Abstractize(self.abstractCreature.pos);
             self.objectInStomach.Room.RemoveEntity(self.objectInStomach);
         }
@@ -9260,7 +9261,7 @@ public class patch_Player
 				
 				
 				//CHECK FOR PIPE BOTTLENECKS!~
-				if (bellyStats[playerNum].inPipeStatus)
+				if (bellyStats[playerNum].inPipeStatus && self.onBack == null)
 				{
 					//SOME SILLY RIGGING FOR TUTORIAL STUFF
 					bool rigged = (self.room.roomSettings.name.ToString() == "SU_A44") ? true : false;
