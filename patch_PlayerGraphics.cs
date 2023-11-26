@@ -82,7 +82,7 @@ public class patch_PlayerGraphics
         if (DressMySlugcat.Customization.For(player).CustomSprites.Count > 0)
         {
             string SpriteSheetName = DressMySlugcat.Customization.For(player).CustomSprites[0].SpriteSheetID;
-            if (SpriteSheetName == "dressmyslugcat.crypt" || SpriteSheetName == "dressmyslugcat.cryptid")
+            if (SpriteSheetName == "dressmyslugcat.crypt" || SpriteSheetName == "dressmyslugcat.cryptid" || SpriteSheetName == "snowbean" || SpriteSheetName == "snowberry")
                 bpGraph[playerNum].blColor = new Color(120f / 225f, 0 / 225f, 255 / 225f);
         }
         

@@ -780,6 +780,7 @@ public class patch_Player
 		bellyStats = new BellyState[totalPlayerNum];
 
         On.StoryGameSession.CreateJollySlugStats += StoryGameSession_CreateJollySlugStats;
+		On.RainWorldGame.Update += RainWorldGame_Update;
         //SLIME_CUBED REPORTED THAT THIS IS NEEDED TO WORK AROUND A BUG WHERE MOD PRIORITIES FOR OTHER MODS AREN'T RESET UNLESS YOU RESET IT MANUALLY
         // using (new DetourContext()) { } //ISN'T A THING IN 1.9 UNFORTUNATELY...
     }
@@ -1530,7 +1531,15 @@ public class patch_Player
 	}
 	
 	
-
+	public static void RainWorldGame_Update(On.RainWorldGame.orig_Update orig, RainWorldGame self)
+    {
+        orig(self);
+		//BRIEF POPCORN TANGIBILITY FOR SPEARMASTER
+        if (self.processActive && !self.GamePaused && BellyPlus.popcornSpearable > 0)
+			BellyPlus.popcornSpearable--;
+    }
+	
+	
 	//SOUNDS THAT DON'T GET INTERRUPTED! -they already don't get interrupted I'm stupid
 	public static void PlayExternalSound(Creature self, SoundID soundId, float sVol, float sPitch)
     {
@@ -1611,10 +1620,8 @@ public class patch_Player
 	
 	public static int SlugcatStats_NourishmentOfObjectEaten(On.SlugcatStats.orig_NourishmentOfObjectEaten orig, SlugcatStats.Name slugcatIndex, IPlayerEdible eatenobject)
 	{
-		//FOOD LOVER PERK! SURVIVOR GETS MAX FOOD VALUE FROM ALL EDIBLE OBJECTS SO LETS JUST DO IT THAT WAY
-		if (IsFoodLover())
-			slugcatIndex = SlugcatStats.Name.White;
-		
+		//MOVED THE REST OF THIS HOOK TO SOMEHERE ELSE, TO FIX SLUGBASE COMPAT
+
 		int result = orig.Invoke(slugcatIndex, eatenobject);
 		
 		if (BellyPlus.VisualsOnly() || result == -1)
@@ -3789,7 +3796,7 @@ public class patch_Player
 			self.SubtractFood(-add);
 			return;
 		}
-			
+		add *= BPOptions.foodMult.Value;
 		
 		//SPECIAL EXCEPTIONS FOR SOME CHALLENGE MODE LEVELS 
 		if (ModManager.MSC && self.room != null && self.room.game.IsArenaSession 
@@ -4056,6 +4063,10 @@ public class patch_Player
 			return;
 		}
 		
+		if (self.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Spear && self.grasps[grasp].grabbed is Spear spear && spear.spearmasterNeedle && spear.spearmasterNeedle_hasConnection)
+		{
+			BellyPlus.popcornSpearable = 20;
+		}
 		if ((self.grasps[grasp].grabbed is Player && IsCramped(self.grasps[grasp].grabbed as Player)) || self.grasps[grasp].grabbed is Lizard ) //we can still throw mice, thats fine
 		{
 			if (BPOptions.debugLogs.Value)
@@ -5465,6 +5476,7 @@ public class patch_Player
 			self.bodyChunks[1].vel = self.mainBodyChunk.vel;
 		}
 		
+		//RAMMING SPEED
 		if (otherObject is Player && IsStuck(otherObject as Player))
 		{
 			int playerNum = GetPlayerNum(self);
@@ -6705,10 +6717,12 @@ public class patch_Player
 				bellyStats[playerNum].stuckStrain = 0;
 				self.bodyChunks[1].vel.y += 2;
 			}
-			
 
-			//OK WE NEED A FORMULA WHERE THAT, WHEN OUR X >= 9.5 FROM MID, VOL APPROACHES 0
-			self.bodyChunks[1].vel.y += pushBack + (GetCappedBoostStrain(self) * bellyStats[playerNum].myFlipValY / 6f);
+			//CENTER US IN THE PIPE A BIT...
+			self.bodyChunks[1].pos.x = Vector2.Lerp(self.bodyChunks[1].pos, self.room.MiddleOfTile(self.bodyChunks[1].pos), 0.5f).x;
+
+            //OK WE NEED A FORMULA WHERE THAT, WHEN OUR X >= 9.5 FROM MID, VOL APPROACHES 0
+            self.bodyChunks[1].vel.y += pushBack + (GetCappedBoostStrain(self) * bellyStats[playerNum].myFlipValY / 6f);
 			//CHECK IF WE'RE MOVING BACKWARDS WHILE PUSHING. IF WE ARE, CUT THE VEL IN HALF. WE DON'T WANT TO BE MOVING BACKWARDS
 			if (self.bodyChunks[1].vel.y < 0 != self.input[0].y < 0)
 				self.bodyChunks[1].vel.y /= 2; //THIS PREVENTS THE HEAVY JITTER WHILE STRUGGLING
@@ -7560,13 +7574,13 @@ public class patch_Player
 		//OKAY NO DON'T DO THIS IF WE'RE PIGGYBACKED. THAT MAKES WEIRD THINGS HAPPEN
 		if (IsPiggyBacked(self))
 			return;
-		
-		//----- CHECK IF WE'RE PUSHING ANOTHER CREATURE.------
-		// if (bellyStats[playerNum].pushingOther || bellyStats[playerNum].holdJump > 5)
-		// {
-		
 
-		Player myPartner = FindPlayerInRange(self);
+        //----- CHECK IF WE'RE PUSHING ANOTHER CREATURE.------
+        // if (bellyStats[playerNum].pushingOther || bellyStats[playerNum].holdJump > 5)
+        // {
+
+
+        Player myPartner = FindPlayerInRange(self);
 		LanternMouse mousePartner = patch_LanternMouse.FindMouseInRange(self);
 		Cicada cicadaPartner = patch_Cicada.FindCicadaInRange(self);
 		Yeek yeekPartner = patch_Yeek.FindYeekInRange(self);
@@ -7742,16 +7756,24 @@ public class patch_Player
 					if (self.input[0].y == -1)
 					{
 						if (self.bodyChunks[1].pos.x < ObjGetBodyChunkPos(myObject, "middle").x)
-							bellyStats[playerNum].myFlipValX = 1;
+						{
+                            bellyStats[playerNum].myFlipValX = 1;
+							self.flipDirection = 1;
+                        }
 						else
-							bellyStats[playerNum].myFlipValX = -1;
+						{
+                            bellyStats[playerNum].myFlipValX = -1;
+                            self.flipDirection = -1;
+                        }
 					}
 
 					
 					//DON'T LET THIS WEIRDNESS HAPPEN IF WE DON'T COLLIDE WITH PLAYERS (TO FIX PUSHING DOWNWARD UPROOTING OUR STUCK PLAYERS
 					if (ObjGetStuckVector(myObject).y == -1 && self.bodyChunks[0].pos.y < ObjGetBodyChunkPos(myObject, pushLocation).y )
                     {
-                        self.bodyChunks[0].pos.y = ObjGetBodyChunkPos(myObject, pushLocation).y + 3f;
+						//self.bodyChunks[0].pos.y = ObjGetBodyChunkPos(myObject, pushLocation).y + 3f;
+						//self.bodyChunks[0].pos.y = ObjGetBodyChunkPos(myObject, pushLocation).y + myObject.bodyChunks[ObjGetBodyChunkID(myObject, pushLocation)].rad + self.bodyChunks[0].rad;
+						self.bodyChunks[0].pos.y += 2; //IDK MAN...
                         self.bodyChunks[0].vel.y = 0;
                     }
 					
@@ -7865,7 +7887,6 @@ public class patch_Player
                     //Debug.Log("PUSHBACK SHOVE!: " + pushBack);
 					bool isPullLine = ObjIsPullingOther(myObject);
 					self.bodyChunks[0].vel.x -= pushBack * (isPullLine ? 1.5f : 1f);
-					//self.bodyChunks[1].vel.x -= pushBack + (1.8f * bellyStats[playerNum].myFlipValX); // + (bellyStats[playerNum].boostStrain / 10f));
 					self.bodyChunks[1].vel.x -= (pushBack + (1.2f * bellyStats[playerNum].myFlipValX) * (bellyStats[playerNum].inPipeStatus ? 0f : 1f))  * 1.2f * (isPullLine ? 0.5f : 1f) ;
 
 					//CHECK IF WE'RE MOVING BACKWARDS WHILE PUSHING. IF WE ARE, CUT THE VEL IN HALF. WE DON'T WANT TO BE MOVING BACKWARDS

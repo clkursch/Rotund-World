@@ -12,10 +12,12 @@ using System.Security;
 using System.Security.Permissions;
 using BepInEx.Logging;
 using SprobParasiticScug;
+using MonoMod.RuntimeDetour;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 
+//[BepInDependency("slime-cubed.slugbase", BepInDependency.DependencyFlags.SoftDependency)] //FOR THAT ONE FOOD EATING HOOK - guess we didn't need it!
 
 /*
 If you want something to reference for how to store more info for a creature.... 
@@ -114,7 +116,7 @@ Other features:
 (This is not my native language, so pleae correct me if I translated something wrong!)
 This item can only be swallowed if there are no items stored in your belly.
 */
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.8.11")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.8.12")]
 //[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin
@@ -205,11 +207,11 @@ public class BellyPlus : BaseUnityPlugin
 		
 	}
 
-	
 
 
 
-	private void RainWorld_OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
+    private bool IsInit;
+    private void RainWorld_OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
 	{
 		orig(self);
 		BPEnums.BPSoundID.RegisterValues();
@@ -250,9 +252,32 @@ public class BellyPlus : BaseUnityPlugin
                 improvedInputEnabled = true;
             }
         }
+
+        //OKAY WE'VE GOT A FEW HOOKS THAT NEED TO GO IN HERE FOR LOAD ORDER REASONS
+        try
+        {
+            if (IsInit) return;
+
+            On.SlugcatStats.NourishmentOfObjectEaten += SlugcatStats_NourishmentOfObjectEaten;
+
+            IsInit = true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
     }
-	
-	private void RainWorld_PostModsInit(On.RainWorld.orig_PostModsInit orig, RainWorld self)
+
+    private int SlugcatStats_NourishmentOfObjectEaten(On.SlugcatStats.orig_NourishmentOfObjectEaten orig, SlugcatStats.Name slugcatIndex, IPlayerEdible eatenobject)
+    {
+        //FOOD LOVER PERK! SURVIVOR GETS MAX FOOD VALUE FROM ALL EDIBLE OBJECTS SO LETS JUST DO IT THAT WAY
+        if (patch_Player.IsFoodLover())
+            slugcatIndex = SlugcatStats.Name.White;
+
+        return orig.Invoke(slugcatIndex, eatenobject);
+    }
+
+    private void RainWorld_PostModsInit(On.RainWorld.orig_PostModsInit orig, RainWorld self)
     {
         orig(self);
         //I BARELY UNDERSTAND HOW THIS WORKS BUT SHUAMBUAM SEEMS TO HAVE IT ON LOCK SO I'LL JUST FOLLOW HIS LEAD
@@ -293,6 +318,7 @@ public class BellyPlus : BaseUnityPlugin
 	public static int MaxBonusPips = 40;
     public static int StoredCorn = 0;
     public static int StoredStumps = 0;
+	public static int popcornSpearable = 0;
 
     //1.9 MOD CHEKCS
     public static bool ridableLizEnabled = false;

@@ -34,8 +34,9 @@ public class BPOptions : OptionInterface
         BPOptions.startThresh = this.config.Bind<int>("startThresh", 2, new ConfigAcceptableRange<int>(-4, 8));//(0, 4)
 		BPOptions.gapVariance = this.config.Bind<float>("gapVariance", 1.0f, new ConfigAcceptableRange<float>(0.5f, 1.75f));
         BPOptions.jokeContent1 = this.config.Bind<bool>("jokeContent1", true);
-		
-		BPOptions.fatP1 = this.config.Bind<bool>("fatP1", true);
+        BPOptions.foodMult = this.config.Bind<int>("foodMult", 1, new ConfigAcceptableRange<int>(1, 4));
+
+        BPOptions.fatP1 = this.config.Bind<bool>("fatP1", true);
 		BPOptions.fatP2 = this.config.Bind<bool>("fatP2", true);
 		BPOptions.fatP3 = this.config.Bind<bool>("fatP3", true);
 		BPOptions.fatP4 = this.config.Bind<bool>("fatP4", true);
@@ -76,8 +77,9 @@ public class BPOptions : OptionInterface
     public static Configurable<bool> jokeContent1;
 	public static Configurable<bool> detachablePopcorn;
 	public static Configurable<bool> foodLoverPerk;
-	
-	public static Configurable<bool> fatP1;
+    public static Configurable<int> foodMult;
+
+    public static Configurable<bool> fatP1;
 	public static Configurable<bool> fatP2;
 	public static Configurable<bool> fatP3;
 	public static Configurable<bool> fatP4;
@@ -395,6 +397,11 @@ public class BPOptions : OptionInterface
         OpFloatSlider sfxSlide = new OpFloatSlider(BPOptions.sfxVol, new Vector2(45f, lineCount - 25), 300, 1, false);
         Tabs[1].AddItems(sfxSlide, new OpLabel(45f, lineCount + 15, BPTranslate("Squeeze SFX Volume")) { bumpBehav = sfxSlide.bumpBehav, description = BPTranslate("Volume of the squeeze sound effect when slugcats are stuck") });
         Tabs[1].AddItems(new OpLabel(50f, lineCount - 40f, BPTranslate("(If the sfx is too soft or played without headphones)")));
+
+
+        OpSlider foodMultSlide = new OpSlider(BPOptions.foodMult, new Vector2(400f, lineCount - 25), 120, false);
+        Tabs[1].AddItems(foodMultSlide, new OpLabel(400f, lineCount + 15, BPTranslate("Food Multiplier")) { bumpBehav = foodMultSlide.bumpBehav, description = BPTranslate("Multiplies how much food you get per-food") });
+
 
         lineCount -= 80;
         Tabs[1].AddItems(new OpLabel(50f, lineCount, BPTranslate("Tip: The squeeze sfx pitch hints how close you are to popping free")));

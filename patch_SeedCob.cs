@@ -300,6 +300,7 @@ public class patch_SeedCob
                             myCorn.seedsPopped[l] = true;
                         }
                     }
+                    Debug.Log("CORN LOCATOR " + myCorn.bodyChunks[0].pos);
                 }
                 else
                 {
@@ -483,6 +484,23 @@ public class patch_SeedCob
             SnapStalk(self);
             return; //DON'T UPDATE THE REST
         }
+        
+        //EMERGENCY CORN SAVING PROTOCOLS IF POPCORN FALLS OUT OF BOUNDS DURING WORLD LOADING
+        if (self.room != null && self.room.abstractRoom.shelter && self.bodyChunks[0].pos.y < 0)
+        {
+            Debug.Log("CORN SAVING PROTOCOLS " + self.bodyChunks[0].pos);
+            for (int k = 0; k < self.room.abstractRoom.creatures.Count; k++)
+            {
+                Creature realizedCreature = self.room.abstractRoom.creatures[k].realizedCreature;
+                if (realizedCreature != null && realizedCreature is Player player)
+                {
+                    for (int l = 0; l < self.bodyChunks.Length; l++)
+                    {
+                        self.bodyChunks[l].HardSetPosition(player.mainBodyChunk.pos);
+                    }
+                }
+            }
+        }
 
         bool uprooted = false;
         bool carried = (self.grabbedBy.Count > 0);
@@ -588,6 +606,15 @@ public class patch_SeedCob
             //self.placedPos = new Vector2(0, 0);
             self.placedPos = origPlacement;
         }
+		
+		//SPECIAL CHECK TO ALLOW SPEARMASTER SPEARS TO HIT 
+		if (self.AbstractCob.opened && !self.AbstractCob.dead)
+		{
+			if (BellyPlus.popcornSpearable > 0)
+				self.canBeHitByWeapons = true;
+			else
+				self.canBeHitByWeapons = false;
+		}
     }
 
 
