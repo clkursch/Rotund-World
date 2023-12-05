@@ -580,6 +580,11 @@ https://guardian.vigaro.xyz/organizations/rain-world/issues/9835/?project=2&quer
 //detachable popcorn
 //Don't unfat the lizards
 
+//Tweaked lizard visuals so they don't look so circular at larger sizes
+//Fixed backfood becoming invisible/intangible if the player is abstracted and realized in a different room
+//Fixed a bug that would put players in a glitched state if they became unstuck by losing weight
+//Other players can now hit popcorn plants with spearmaster spears
+
 /*
 Slime_Cubed: Either works. You can use the former even if you construct hooks manually, but the latter may be more convenient if you have many hooks to other mods that need different priorities 
 
@@ -4063,9 +4068,9 @@ public class patch_Player
 			return;
 		}
 		
-		if (self.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Spear && self.grasps[grasp].grabbed is Spear spear && spear.spearmasterNeedle && spear.spearmasterNeedle_hasConnection)
+		if (self.grasps[grasp].grabbed is Spear spear && spear.spearmasterNeedle && spear.spearmasterNeedle_hasConnection)
 		{
-			BellyPlus.popcornSpearable = 20;
+			BellyPlus.popcornSpearable = 15;
 		}
 		if ((self.grasps[grasp].grabbed is Player && IsCramped(self.grasps[grasp].grabbed as Player)) || self.grasps[grasp].grabbed is Lizard ) //we can still throw mice, thats fine
 		{
@@ -4601,7 +4606,7 @@ public class patch_Player
 					{
 						// Debug.Log("-DOUBLE TAPPED - FOOD TO HAND! ");
 						bellyStats[playerNum].foodOnBack.FoodToHand(eu);
-						return;
+                        return;
 					}
 					else if (IsStuckOrWedged(self) == false)
 					{
@@ -7063,49 +7068,57 @@ public class patch_Player
 		}
 
 
-		//-----THE MAIN SQUEEZE CHECK-----
-		if ((IsGrabbedByHelper(self) || bellyStats[playerNum].beingPushed > 0 || self.LickedByPlayer != null) && GetChubValue(self) >= 0)
+		//-----THE MAIN SQUEEZE CHECK-----  -12-4-23 QUICK QUESTION; WHY DOES THIS HAPPEN OUTSIDE OF OUR NORMAL STUCKAGECHECK?...
+		if (GetChubValue(self) >= -1)
 		{
-			//FIRST CHECK IF WE'RE BEING GRABBED BY A HELPER
-			if (IsCramped(self as Creature)) //(self.room.aimap.getAItile(self.mainBodyChunk.pos).narrowSpace)
-			{
-				bellyStats[playerNum].isSqueezing = true;
-				bellyStats[playerNum].assistedSqueezing = true;
-				self.touchedNoInputCounter = 12; //SO SCAVS WILL CHILL TF OUT
-				//WE INCREASE STRAIN DIRECTLY HERE BECAUSE THE MOVEMENT UPDATE ISN'T RUNNING WHILE GRABBED
-				bellyStats[playerNum].squeezeStrain = Math.Min(bellyStats[playerNum].squeezeStrain + 1, 60);
-				if (IsGrabbedByPlayer(self) && self.graphicsModule != null)
-					self.grabbedBy[0].grabber.graphicsModule.BringSpritesToFront(); //SO WE CAN SEE THEIR HANDS :)
-				if (self.LickedByPlayer != null && bellyStats[playerNum].isStuck)
+            if (IsGrabbedByHelper(self) || bellyStats[playerNum].beingPushed > 0 || self.LickedByPlayer != null)
+            {
+                //FIRST CHECK IF WE'RE BEING GRABBED BY A HELPER
+                if (IsCramped(self as Creature)) //(self.room.aimap.getAItile(self.mainBodyChunk.pos).narrowSpace)
                 {
-					ObjGainBoostStrain(self, 1, 3, 15);
-					ObjGainStuckStrain(self, 2f);
-				}
-					
-
-			}
-			else
-			{
-				bellyStats[playerNum].isSqueezing = false;
-				bellyStats[playerNum].assistedSqueezing = false;
-			}
-		}
-		//IF WE HAVE ANY STUCK STRAIN AT ALL
-		else if (IsStuck(self) && bellyStats[playerNum].stuckStrain > 0)
-		{
-			bellyStats[playerNum].isSqueezing = true;
-			self.touchedNoInputCounter = 12; //SO SCAVS WILL CHILL TF OUT
-		}
-		else if ((self.bodyMode == Player.BodyModeIndex.CorridorClimb) && ((self.input[0].x == self.flipDirection) || (self.input[0].y != 0)) && GetChubValue(self) >= 0)
-		{
-			bellyStats[playerNum].isSqueezing = true;
-		}
-		else
+                    bellyStats[playerNum].isSqueezing = true;
+                    bellyStats[playerNum].assistedSqueezing = true;
+                    self.touchedNoInputCounter = 12; //SO SCAVS WILL CHILL TF OUT
+                                                     //WE INCREASE STRAIN DIRECTLY HERE BECAUSE THE MOVEMENT UPDATE ISN'T RUNNING WHILE GRABBED
+                    bellyStats[playerNum].squeezeStrain = Math.Min(bellyStats[playerNum].squeezeStrain + 1, 60);
+                    if (IsGrabbedByPlayer(self) && self.graphicsModule != null)
+                        self.grabbedBy[0].grabber.graphicsModule.BringSpritesToFront(); //SO WE CAN SEE THEIR HANDS :)
+                    if (self.LickedByPlayer != null && bellyStats[playerNum].isStuck)
+                    {
+                        ObjGainBoostStrain(self, 1, 3, 15);
+                        ObjGainStuckStrain(self, 2f);
+                    }
+                }
+                else
+                {
+                    bellyStats[playerNum].isSqueezing = false;
+                    bellyStats[playerNum].assistedSqueezing = false;
+                }
+            }
+            //IF WE HAVE ANY STUCK STRAIN AT ALL
+            else if (IsStuck(self) && bellyStats[playerNum].stuckStrain > 0)
+            {
+                bellyStats[playerNum].isSqueezing = true;
+                self.touchedNoInputCounter = 12; //SO SCAVS WILL CHILL TF OUT
+            }
+            else if ((self.bodyMode == Player.BodyModeIndex.CorridorClimb) && ((self.input[0].x == self.flipDirection) || (self.input[0].y != 0)))
+            {
+                bellyStats[playerNum].isSqueezing = true;
+            }
+            else
+            {
+                bellyStats[playerNum].isSqueezing = false;
+                bellyStats[playerNum].assistedSqueezing = false;
+                //Debug.Log("-----NOT IN TUNNEL: " + GetPlayerNum(self));
+            }
+        }
+		else //SOMEHOW WE'VE REVOKED OUR STUCKAGE THRESHOLD, AND VALUES WON'T RESET CORRECTLY IF WE DON'T CORRECT THEM OURSELVES
 		{
 			bellyStats[playerNum].isSqueezing = false;
 			bellyStats[playerNum].assistedSqueezing = false;
-			//Debug.Log("-----NOT IN TUNNEL: " + GetPlayerNum(self));
-		}
+			bellyStats[playerNum].stuckStrain = 0;
+            bellyStats[playerNum].isStuck = false;
+        }
 		
 		
 		//OKAY BUT THIS STUFF CAN BE NEW
@@ -9706,13 +9719,11 @@ public class patch_Player
 		{
 			if (this.spear == null)
 				return;
-			// for (int i = 0; i < 2; i++)
-			// {
-			// if (this.owner.grasps[i] != null && this.owner.Grabability(this.owner.grasps[i].grabbed) >= Player.ObjectGrabability.BigOneHand)
-			// return;
-			// }
 
-			if (this.owner.grasps[1] != null)
+			if (this.spear.room != this.owner.room) //IN CASE MODDING SHENANIGANS DESYNCED THIS
+                this.owner.room.AddObject(this.spear);
+
+            if (this.owner.grasps[1] != null)
 				return;
 
 			int num = -1;

@@ -1,12 +1,35 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using RWCustom;
 
 public class patch_LizardGraphics
 {
     public static void Patch()
     {
         On.LizardGraphics.DrawSprites += PG_DrawSprites;
+        On.LizardCosmetics.JumpRings.DrawSprites += JumpRings_DrawSprites;
     }
 
+	//FIX CYAN RINGS LOOKING TOO DERPY
+    private static void JumpRings_DrawSprites(On.LizardCosmetics.JumpRings.orig_DrawSprites orig, LizardCosmetics.JumpRings self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+		orig(self, sLeaser, rCam, timeStacker, camPos);
+		if (self.lGraphics.iVars.fatness > 2f)
+		{
+            for (int i = 0; i < 2; i++)
+            {
+                for (int j = 0; j < 2; j++)
+                {
+                    sLeaser.sprites[self.RingSprite(i, j, 0)].scale *= self.lGraphics.iVars.fatness;
+                    sLeaser.sprites[self.RingSprite(i, j, 1)].scale *= self.lGraphics.iVars.fatness;
+                }
+                //Vector2 adjPos = Custom.DirVec(sLeaser.sprites[self.RingSprite(i, 0, 0)].GetPosition(), sLeaser.sprites[self.RingSprite(i, 0, 1)].GetPosition());
+                //sLeaser.sprites[self.RingSprite(i, 1, 1)].x += adjPos.x * 20;
+                //sLeaser.sprites[self.RingSprite(i, 1, 1)].y += adjPos.y * 20;
+                //THESE GO SOMEWHERE WEIRD AT CERTAIN ANGLES I GUESS
+            }
+        }
+    }
 
     public static void PG_DrawSprites(On.LizardGraphics.orig_DrawSprites orig, LizardGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
     {
@@ -16,9 +39,11 @@ public class patch_LizardGraphics
             return;
 
         int myLizard = patch_Lizard.GetRef(self.lizard);
-		
-		//MINI VERSION FOR VISUALS ONLY
-		if (BellyPlus.VisualsOnly())
+
+		//BellyPlus.myFatness[patch_Lizard.GetRef(self.lizard)] = 3f;
+
+        //MINI VERSION FOR VISUALS ONLY
+        if (BellyPlus.VisualsOnly())
 		{
 			float lizFatness = BellyPlus.myFatness[patch_Lizard.GetRef(self.lizard)];
 			self.iVars.fatness = lizFatness; //NO BELLY BULGE CALCULATION HERE
@@ -32,12 +57,16 @@ public class patch_LizardGraphics
 			float bodyStretch = Mathf.Min(BellyPlus.boostStrain[myLizard], 13f) * 1.0f;
 			if (BellyPlus.beingPushed[myLizard] > 0 || (patch_Lizard.IsVerticalStuck(self.lizard) && patch_Lizard.GetYFlipDirection(self.lizard) > 0))
 				bodyStretch *= 0.6f;
-			//self.lizard.bodyChunkConnections[0].distance += Mathf.Sqrt(bodyStretch);
-			self.lizard.bodyChunkConnections[0].distance = (17f * self.lizard.lizardParams.bodyLengthFac * ((self.lizard.lizardParams.bodySizeFac + 1f) / 2f)) + Mathf.Sqrt(bodyStretch);
 
+            float fatStretch = Mathf.Max(1, BellyPlus.myFatness[myLizard] - 1);
+			self.headConnectionRad = 11 * self.lizard.lizardParams.headSize * fatStretch; 
 
-			//IF WE'RE BEING PUSHED, SQUISH THE TAIL
-			Lizard liz = self.lizard as Lizard;
+            //self.lizard.bodyChunkConnections[0].distance += Mathf.Sqrt(bodyStretch);
+            self.lizard.bodyChunkConnections[0].distance = (17f * self.lizard.lizardParams.bodyLengthFac * ((self.lizard.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch + Mathf.Sqrt(bodyStretch);
+            self.lizard.bodyChunkConnections[1].distance = (17f * self.lizard.lizardParams.bodyLengthFac * ((self.lizard.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch; //FOR TAILS FOR EXTRA FATTIES
+
+            //IF WE'RE BEING PUSHED, SQUISH THE TAIL
+            Lizard liz = self.lizard as Lizard;
 			float tailSquish = Mathf.InverseLerp(25, 0, BellyPlus.boostStrain[myLizard]);
 			float bellyBulge = (BellyPlus.inPipeStatus[myLizard] || !BellyPlus.isStuck[myLizard]) ? 0 : Mathf.InverseLerp(0, 60, BellyPlus.boostStrain[myLizard]);
 			//float baseChunkConnSize = 17f * ((liz.lizardParams.bodySizeFac + 1f) / 2f) * (1f + liz.lizardParams.bodyStiffnes);

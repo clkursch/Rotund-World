@@ -1076,11 +1076,11 @@ public class patch_Lizard
 		
 		self.AI.runSpeed = Mathf.Min(self.AI.runSpeed, 1f * myRunSpeed);
 		
-		//DISABLE THIS BODY CHUNK WHEN STUCK IN SHORTCUT
+		//DISABLE THIS BODY CHUNK WHEN STUCK IN SHORTCUT (IDK IF THIS ACTUALLY HELPS...)
 		self.bodyChunkConnections[2].active = !BellyPlus.stuckInShortcut[lizNum];
 
-		//HEY OUR AI DOESN'T RUN WHILE GRABBED! WE HAVE TO RUN THIS HERE
-		if (self.grabbedBy.Count > 0 && (self.grabbedBy[0].grabber is Player) && (self.AI.friendTracker.friend != null && self.AI.friendTracker.friend is Player)) //IF OUR FRIEND IS A PLAYER, ASSUME ALL PLAYERS ARE CHILL
+        //HEY OUR AI DOESN'T RUN WHILE GRABBED! WE HAVE TO RUN THIS HERE
+        if (self.grabbedBy.Count > 0 && (self.grabbedBy[0].grabber is Player) && (self.AI.friendTracker.friend != null && self.AI.friendTracker.friend is Player)) //IF OUR FRIEND IS A PLAYER, ASSUME ALL PLAYERS ARE CHILL
 		{
 			self.grabbedAttackCounter = 0;
 			self.JawOpen = 0;
