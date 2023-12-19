@@ -136,7 +136,7 @@ public class patch_PlayerGraphics
             //-- Has to be in the foreground for the shader to work properly
             newContatiner = rCam.ReturnFContainer("Foreground");
             newContatiner.AddChild(sLeaser.sprites[bls]);
-
+            //Debug.Log("BLS SPRITE");
             //sLeaser.sprites[bls].MoveToFront(); //MOVE THE FACE OVER FRONT, PLS?
             //-- Can't move over the face since we're in the wrong container
             //sLeaser.sprites[bls].MoveBehindOtherNode(sLeaser.sprites[9]);
@@ -160,7 +160,7 @@ public class patch_PlayerGraphics
         if (BellyPlus.dressMySlugcatEnabled) //FOR DMS SPECIFIC ONES
             GetDMSBloodColor(self.player);
 
-        self.AddToContainer(sLeaser, rCam, null);
+        //self.AddToContainer(sLeaser, rCam, null);
     }
 
 	//RECALCULATE OUR BASE TAIL SIZE AS IF WE WERE JUST INITIALIZING
@@ -197,6 +197,7 @@ public class patch_PlayerGraphics
     //TAIL THICKNESS CHART BASED ON CHUB
     static readonly float[] tailThickChartA = { 1f, 1.1f, 1.2f, 1.3f, 1.4f };
     static readonly float[] tailThickChartB = { 1f, 1.35f, 1.6f, 1.7f, 1.8f }; //THIS ONE IS FOR THE GUIDE (the other applecat)
+    static readonly float[] tailThickChartC = { 1f, 1.05f, 1.1f, 1.15f, 1.2f }; //REDUCED SIZE (for forager)
 
     public static void UpdateTailThickness(PlayerGraphics self) //, float tailThick)
     {
@@ -232,6 +233,8 @@ public class patch_PlayerGraphics
 			//Debug.Log("TAIL THICC!: " + self.tail.Length + " i: " + i);
             //OKAY WE HAVE A BETTER WAY TO DO THAT NOW      -    IT'S NOT APPLECAT. IT'S FOR THE GUIDE
             float tailThickMult = (self.player?.slugcatStats?.name?.value == "Guide") ? tailThickChartB[newChubVal] : tailThickChartA[newChubVal];
+            if (self.player?.slugcatStats?.name?.value == "Cloudtail")
+                tailThickMult = tailThickChartC[newChubVal];
             self.tail[i].rad = bpGraph[playerNum].tailBase[i] * tailThickMult + bonusChubVal;
             if (i == 0)
                 bpGraph[playerNum].checkRad = self.tail[0].rad; //REMEMBER THE SIZE OF OUR FIRST SEGMENT AS A CHECK

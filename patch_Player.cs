@@ -1568,6 +1568,12 @@ public class patch_Player
 		return self.slugcatStats?.name?.value == "TrynsEvergreen" && GetOverstuffed(self) > 4;
 	}
 	
+	public static bool ChunkyFallOverride(Player self)
+	{
+		string slugName = self.slugcatStats?.name?.value;
+		return GetOverstuffed(self) > 4 && (slugName == "TrynsEvergreen" || slugName == "Citrus");
+	}
+	
 	
 	public static bool CheckFriendlyFire(Player self)
 	{
@@ -1578,7 +1584,7 @@ public class patch_Player
 	
 	public static bool BP_SlugSlamConditions(On.Player.orig_SlugSlamConditions orig, Player self, PhysicalObject otherObject)
     {
-		if (BellyPlus.VisualsOnly() || (!BPOptions.slugSlams.Value && !ChunkyEvergreen(self)) || GetChubValue(self) < 3)
+		if (BellyPlus.VisualsOnly() || (!BPOptions.slugSlams.Value && !ChunkyFallOverride(self)) || GetChubValue(self) < 3)
 			return orig(self, otherObject);
 		
 		
@@ -3116,6 +3122,8 @@ public class patch_Player
 	{
 		if (ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("bur-rotund") && !self.isNPC)
 			return ((self.slugcatStats.maxFood - self.slugcatStats.foodToHibernate) + 2); // (bellyStats[GetPlayerNum(self)].bigBelly ? 0 : 2));
+		else if (self.slugcatStats?.name?.value == "Citrus")
+			return -(BPOptions.startThresh.Value - 6);
 		else
 			return -BPOptions.startThresh.Value; // - 2;
 	}
@@ -3164,8 +3172,12 @@ public class patch_Player
             reduce += Mathf.Max(GetChubFloatValue(self) / 20f, 0f); // (0 - 0.2)   -0.2f if 4 chub.  -0.1f at 3 chub
 
         reduce = Mathf.Min(reduce + GetOverstuffed(self) * (0.05f * (1f + (BPOptions.bpDifficulty.Value * 0.15f))), minSpd); //0.5f
-		//IF WE'RE IN MULTIPLAUER/ARENA MODE, GO EVEN FURTHER
-		if (extFloor)
+
+		if (self.slugcatStats?.name?.value == "Cloudtail")
+			reduce = Mathf.Max(0, (reduce - 0.15f) * 0.1f);
+
+        //IF WE'RE IN MULTIPLAUER/ARENA MODE, GO EVEN FURTHER
+        if (extFloor)
 		{
 			if (BPOptions.easilyWinded.Value)
 				reduce = Mathf.Min(ScaledBack(reduce, 0.5f, 2.5f), 0.9f);
@@ -4891,6 +4903,9 @@ public class patch_Player
             //WITH THIS SETUP, WEIGHT PENALTY CAPS AT 14 (OR LIKE 7+ EXTRA FOOD PIPS)
             stuffing *= (1 + (Mathf.Min(BPOptions.bpDifficulty.Value * 1.2f, 0) / 10f)); //LET EASY MODE PLAYERS GET UP MUCH EASIER 
                                                                                          //Debug.Log("-----STUFFING TEST!: " + stuffing + " PRE: " + preStuffing);
+
+            if (self.slugcatStats?.name?.value == "Cloudtail")
+                stuffing = Mathf.Max(0, (stuffing - 5) * 0.8f);
 
             //OR IF WE'RE CARRYING A FAT PARTNER!
             // if (BellyPlus.jollyCoopEnabled)
@@ -7069,7 +7084,7 @@ public class patch_Player
 
 
 		//-----THE MAIN SQUEEZE CHECK-----  -12-4-23 QUICK QUESTION; WHY DOES THIS HAPPEN OUTSIDE OF OUR NORMAL STUCKAGECHECK?...
-		if (GetChubValue(self) >= -1)
+		if (GetChubValue(self) >= -1 || bellyStats[playerNum].bigBelly)
 		{
             if (IsGrabbedByHelper(self) || bellyStats[playerNum].beingPushed > 0 || self.LickedByPlayer != null)
             {
@@ -8466,6 +8481,8 @@ public class patch_Player
 
 		if (self.room != null)
 		{
+			//Debug.Log("POS: " + self.mainBodyChunk.pos);
+			
 			BPUUpdatePass2(self, playerNum, eu);
 
 			BPUUpdatePass3(self, playerNum);
