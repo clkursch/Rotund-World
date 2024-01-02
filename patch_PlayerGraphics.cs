@@ -160,7 +160,7 @@ public class patch_PlayerGraphics
         if (BellyPlus.dressMySlugcatEnabled) //FOR DMS SPECIFIC ONES
             GetDMSBloodColor(self.player);
 
-        //self.AddToContainer(sLeaser, rCam, null);
+        self.AddToContainer(sLeaser, rCam, null);
     }
 
 	//RECALCULATE OUR BASE TAIL SIZE AS IF WE WERE JUST INITIALIZING

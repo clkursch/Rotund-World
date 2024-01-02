@@ -86,6 +86,11 @@ public class patch_FoodMeter
                                     foodArrows[i + (j * players.Count)].alpha = 0;
                             }
 						}
+						else
+						{	
+							//REALIZED CREATURE IS NULL!
+							foodArrows[i + (j * players.Count)].alpha = 0;
+						}
 					}
 				}
 				else
