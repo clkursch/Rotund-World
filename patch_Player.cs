@@ -627,7 +627,7 @@ public class patch_Player
 		public bool isSqueezing;
 		// public bool wasSqueezing;	//relic of the past...
 		public bool assistedSqueezing;
-		public bool pushingOther;
+		public int pushingOther;
 		public Creature pushingCreature;
 		public bool pullingOther;
 		public int targetStuck;
@@ -689,6 +689,8 @@ public class patch_Player
         public bool tuching;
 		public int ignoreSpears;
         public int slugBed;
+		public int chubModOffset;
+		public int stuckLock;
         public PhysicalObject forceEatTarget;
 		public ChunkSoundEmitter squeezeLoop;
 		public ChunkSoundEmitter stuckLoop;
@@ -863,7 +865,7 @@ public class patch_Player
 			fwumpDelay = 0,
 			isSqueezing = false,
 			assistedSqueezing = false,
-			pushingOther = false,
+			pushingOther = 0, //TURNING THIS INTO A SOFT BOOL
 			pushingCreature = null,
 			pullingOther = false,
 			targetStuck = 0,
@@ -929,7 +931,9 @@ public class patch_Player
             slugBed = 0,
             squeezeLoop = null,
 			stuckLoop = null,
-			foodOnBack = new FoodOnBack(player)
+            chubModOffset = 0,
+            stuckLock = 0,
+            foodOnBack = new FoodOnBack(player)
 		};
 
 
@@ -1432,7 +1436,7 @@ public class patch_Player
         cursor.EmitDelegate((Player mySelf) =>
         {
             int playerNum = GetPlayerNum(mySelf);
-			if (BellyPlus.VisualsOnly() || !(IsStuck(mySelf) || bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther || bellyStats[playerNum].boostCounter > 0))
+			if (BellyPlus.VisualsOnly() || !(IsStuck(mySelf) || bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].pullingOther || bellyStats[playerNum].boostCounter > 0))
             {
                 //Debug.Log("JUMP, BUT WITH A TWIST");
                 return true; // mySelf.Jump(); //JUST JUMP
@@ -1712,7 +1716,7 @@ public class patch_Player
 			bool y = i.y < 0 && !i.jmp; // || i.y == 0 && self.input.Take(10).All(inp => inp.jmp);
 			bool x = i.x == 0 || self.IsTileSolid(0, i.x, 0) && (!self.IsTileSolid(0, -1, 0) || !self.IsTileSolid(0, 1, 0));
 			
-			if (!bellyStats[playerNum].pushingOther && !bellyStats[playerNum].isStuck)
+			if (bellyStats[playerNum].pushingOther <= 0 && !bellyStats[playerNum].isStuck)
 			{
 				
 				if (bellyStats[playerNum].bpForceSleep >= 90)
@@ -2647,7 +2651,7 @@ public class patch_Player
 	public static bool ObjIsPushingOther(Creature obj)
 	{
 		if (obj is Player)
-			return bellyStats[GetPlayerNum(obj as Player)].pushingOther;
+			return bellyStats[GetPlayerNum(obj as Player)].pushingOther > 0;
 		else 
 			return patch_Lizard.IsPushingOther(obj);
 	}
@@ -3056,8 +3060,11 @@ public class patch_Player
 		return bellyStats[GetPlayerNum(self)].myChubValue;
 	}
 	
-	
-	
+	public static void SetChubModOffset(Player self, int amnt)
+	{
+		bellyStats[GetPlayerNum(self)].chubModOffset = amnt;
+		UpdateBellySize(self);
+	}
 	
 	public static float GetAdjChubValue(Player self)
 	{
@@ -3122,10 +3129,8 @@ public class patch_Player
 	{
 		if (ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("bur-rotund") && !self.isNPC)
 			return ((self.slugcatStats.maxFood - self.slugcatStats.foodToHibernate) + 2); // (bellyStats[GetPlayerNum(self)].bigBelly ? 0 : 2));
-		else if (self.slugcatStats?.name?.value == "Citrus")
-			return -(BPOptions.startThresh.Value - 6);
 		else
-			return -BPOptions.startThresh.Value; // - 2;
+			return -(BPOptions.startThresh.Value + bellyStats[GetPlayerNum(self)].chubModOffset); // - 2;
 	}
 
 	//FINALLY... SHORTCUT TO ONE OF MY MOST USED FORMULA EQUATIONS
@@ -3517,15 +3522,10 @@ public class patch_Player
 		else if (bellyStats[GetPlayerNum(self)].beingPushed <= 3)
 			bellyStats[GetPlayerNum(self)].beingPushed = 3;
 	}
-	
-	public static void PushedOther(Player self)
-	{
-		bellyStats[GetPlayerNum(self)].pushingOther = true;
-	}
 
 	public static bool IsPushingOther(Player self)
 	{
-		return bellyStats[GetPlayerNum(self)].pushingOther;
+		return bellyStats[GetPlayerNum(self)].pushingOther > 0;
 	}
 
 	public static bool IsPullingOther(Player self)
@@ -4857,7 +4857,7 @@ public class patch_Player
     
 	public static void Player_Jump(On.Player.orig_Jump orig, Player self)
 	{
-		if (BellyPlus.VisualsOnly())
+        if (BellyPlus.VisualsOnly())
 		{
 			orig.Invoke(self);
 			return;
@@ -4865,12 +4865,13 @@ public class patch_Player
 		
 		//Debug.Log("-----JUMP PRESSED!: " + self.canJump);
 		int playerNum = GetPlayerNum(self);
-		if (!(IsStuck(self) || bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther || bellyStats[playerNum].boostCounter > 0) )
+		if (!(IsStuck(self) || bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].pullingOther || bellyStats[playerNum].boostCounter > 0) )
         {
             //MOVED TO HEAVE() - NEVERMIND IT'S BACK
             //int playerNum = GetPlayerNum(self);
-            // Debug.Log("RUN ORIGINAL JUMP!!: " + self.animation + " BODMODE "+ self.bodyMode);
-            bool onBeamTip = self.animation == Player.AnimationIndex.BeamTip;//WE NEED TO DECLARE THIS EARLY, ITS ABOUT TO CHANGE.
+			
+            //Debug.Log("RUN ORIGINAL JUMP!!: " + self.Malnourished + " AEROBIC "+ self.aerobicLevel);
+			bool onBeamTip = self.animation == Player.AnimationIndex.BeamTip;//WE NEED TO DECLARE THIS EARLY, ITS ABOUT TO CHANGE.
             bool climbBeam = (self.animation == Player.AnimationIndex.ClimbOnBeam);
             bool standBeam = (self.animation == Player.AnimationIndex.StandOnBeam);
             bool specialJump = (self.animation == Player.AnimationIndex.Flip || self.animation == Player.AnimationIndex.Roll || self.animation == Player.AnimationIndex.BellySlide);
@@ -5116,7 +5117,7 @@ public class patch_Player
 		if (isPlayer && (IsStuckOrWedged(obj as Creature) || InPullingChain(obj as Player)) && (obj as Player).dead == false )
 		{
 			//Debug.Log("CAN I PICK THIS UP? " + (!bellyStats[playerNum].pushingOther && !IsPushingOther(obj as Player) && !IsGrabbedByPlayer(obj as Player)) + " - " + self.Grabability(obj));
-			if (!bellyStats[playerNum].pushingOther && !IsPushingOther(obj as Player) && !IsGrabbedByPlayer(obj as Player) && self.FreeHand() != -1) //IDK MAN - && Custom.DistLess(self.bodyChunks[0].pos, player.bodyChunks[0].pos, 20f))
+			if (bellyStats[playerNum].pushingOther <= 0 && !IsPushingOther(obj as Player) && !IsGrabbedByPlayer(obj as Player) && self.FreeHand() != -1) //IDK MAN - && Custom.DistLess(self.bodyChunks[0].pos, player.bodyChunks[0].pos, 20f))
 				return true;
 			else
 				return false;
@@ -5803,7 +5804,7 @@ public class patch_Player
 			}
 		}
 
-		if (self.input[0].pckp && !self.input[1].pckp && (bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther || bellyStats[playerNum].isStuck) && self.input[0].IntVec != new IntVector2(0, 0))
+		if (self.input[0].pckp && !self.input[1].pckp && (bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].pullingOther || bellyStats[playerNum].isStuck) && self.input[0].IntVec != new IntVector2(0, 0))
 			bellyStats[playerNum].autoPilot = self.input[0].IntVec;
 
 		//if (self.animation == Player.AnimationIndex.HangFromBeam)
@@ -6070,17 +6071,17 @@ public class patch_Player
 		float posMod = inPipe ? 0.5f : 0f;
 
 		bool backedOut = false;
-		if (bellyStats[playerNum].isStuck && bellyStats[playerNum].stuckStrain > 0  && bellyStats[playerNum].stuckCoords != new Vector2(0,0))
-		{
+		if (bellyStats[playerNum].isStuck && bellyStats[playerNum].stuckCoords != new Vector2(0,0)) //&& bellyStats[playerNum].stuckStrain > 0  
+        {
 			Vector2 newCoords = bellyStats[playerNum].stuckCoords;
 			if (!bellyStats[playerNum].verticalStuck)
 			{
 				//if(bellyStats[playerNum].myFlipValX == 1 && self.bodyChunks[1].pos.x > bellyStats[playerNum].stuckCoords.x)
 				//OUR FLIPVAL WILL BE CHANGING WHEN WE TRY AND BACK OUT, AND WE DON'T WANT THAT TO GET US STUCK ON THE WAY BACK (USUALLY)
 				// if (bellyStats[playerNum].stuckVector.x == 1 && self.bodyChunks[1].pos.x > bellyStats[playerNum].stuckCoords.x)
-				if (bellyStats[playerNum].stuckVector.x == 1 && self.bodyChunks[1].pos.x > bellyStats[playerNum].stuckCoords.x)
+				if (bellyStats[playerNum].stuckVector.x == 1 && self.bodyChunks[1].pos.x > bellyStats[playerNum].stuckCoords.x + 5)
 					newCoords = new Vector2(newCoords.x - posMod * 10, newCoords.y);
-				else if (bellyStats[playerNum].stuckVector.x == -1 && self.bodyChunks[1].pos.x < bellyStats[playerNum].stuckCoords.x)
+				else if (bellyStats[playerNum].stuckVector.x == -1 && self.bodyChunks[1].pos.x < bellyStats[playerNum].stuckCoords.x - 5)
 					newCoords = new Vector2(newCoords.x + posMod * 10, newCoords.y); // Vector2(newCoords.x + 5, newCoords.y); //NO THIS IS TOO FAR FOR OUT OF PIPE SQUEEZES posMod
 				else
 					backedOut = true;
@@ -6088,9 +6089,9 @@ public class patch_Player
 			}
 			else
 			{
-				if(bellyStats[playerNum].stuckVector.y == 1 && self.bodyChunks[1].pos.y > bellyStats[playerNum].stuckCoords.y)
+				if(bellyStats[playerNum].stuckVector.y == 1 && self.bodyChunks[1].pos.y > bellyStats[playerNum].stuckCoords.y + 5)
 					newCoords = new Vector2(newCoords.x, newCoords.y - posMod * 10);
-				if (bellyStats[playerNum].stuckVector.y == -1 && self.bodyChunks[1].pos.y < bellyStats[playerNum].stuckCoords.y)
+				if (bellyStats[playerNum].stuckVector.y == -1 && self.bodyChunks[1].pos.y < bellyStats[playerNum].stuckCoords.y - 5)
 					newCoords = new Vector2(newCoords.x, newCoords.y + posMod * 10);
 				else
 					backedOut = true;
@@ -6407,6 +6408,8 @@ public class patch_Player
 					Debug.Log("SQUINCH " + inPipe);
 			}
 			// Debug.Log("NOT TIGHT ENOUGH TO BE STUCK! " + squeezeThresh);
+			if (!inPipe) //SO WE CAN TRANSITION INTO PIPESTATUS RIGHT AWAY
+				bellyStats[playerNum].timeInNarrowSpace = 30;
 			return;
 		}
 
@@ -6448,7 +6451,7 @@ public class patch_Player
 
 			//IF WE WERE SUPER JUMPING
 			if (self.simulateHoldJumpButton > 0)
-				crashVel = Mathf.Max(crashVel, 10);
+				crashVel = Mathf.Max(crashVel, 12);
 
 			if (self.animation == Player.AnimationIndex.BellySlide)
             {
@@ -6523,6 +6526,7 @@ public class patch_Player
 				RedirectStuckage(self, true, eu);
                 bellyStats[playerNum].stuckStrain += 10; //JUST TO KEEP US WEDGED
 				bellyStats[playerNum].autoPilot = new IntVector2((int)bellyStats[playerNum].stuckVector.x, (int)bellyStats[playerNum].stuckVector.y);
+				bellyStats[playerNum].stuckLock = 15; //HOLD THEM IN PLACE FOR THIS LONG
             }
         }
 
@@ -6530,9 +6534,17 @@ public class patch_Player
 		if ((vertStuck || wedgedInFront || wedgedBehind))
 			bellyStats[playerNum].stuckCoords = self.room.MiddleOfTile(self.bodyChunks[1].pos);
 
+		//DON'T LET PIGGYBACKING PHYSICS JANK CHEAT US THROUGH GAPS! LOCK THEM IN PLACE BRIEFLY WHEN THE DISMOUNT HAPPENS
+        if (bellyStats[playerNum].stuckLock > 0)
+        {
+            self.bodyChunks[1].pos = self.room.MiddleOfTile(bellyStats[playerNum].stuckCoords);
+			bellyStats[playerNum].stuckLock--;
+			if (bellyStats[playerNum].stuckLock == 0) //DISABLE THE AUTO PILOT AFTER A TIME
+				bellyStats[playerNum].autoPilot = new IntVector2(0, 0);
+        }
 
-		//STUCK BWOMP!
-		if (bellyStats[playerNum].fwumpDelay == 1 && self.graphicsModule != null)
+        //STUCK BWOMP!
+        if (bellyStats[playerNum].fwumpDelay == 1 && self.graphicsModule != null)
         {
 			//THE SLUGCAT'S TAIL WILL GO INVISIBLE IF CRASHVEL IS NEGATIVE
 			float velMag = 0.0f + Mathf.Sqrt(crashVel);
@@ -6788,8 +6800,7 @@ public class patch_Player
 	public static void BPUUpdatePass1(Player self, int playerNum, bool eu)
     {
 		//IF WE'RE PUSHING SOMEONE, PAUSE OUR RUN ANIMATION SO OUR LEGS DON'T MOVE
-		if (self.bodyMode == Player.BodyModeIndex.Stand && self.input[0].x != 0 && (bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther) && self.animationFrame > 0 && self.slowMovementStun < 8
-			) //&& (self.input[0].IntVec == self.input[9].IntVec || eu))
+		if (self.bodyMode == Player.BodyModeIndex.Stand && self.input[0].x != 0 && (bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].pullingOther) && self.animationFrame > 0 && self.slowMovementStun < 8)
 			self.animationFrame--; //REDUCE THE RUN ANIMATION TICK BY 1 SO IT LOOKS LIKE WE'RE STANDING STILL
 		
 
@@ -6837,11 +6848,8 @@ public class patch_Player
 		//Debug.Log("-----MY INPUT2!: " + playerNum );
 		//Debug.Log("-----DEBUG!: " + bellyStats[playerNum].myFlipValX + " " + bellyStats[playerNum].inPipeStatus + " " + self.bodyMode + " " + +self.room.MiddleOfTile(self.bodyChunks[1].pos).x + " " + self.bodyChunks[1].pos.x);
 		//Debug.Log("-----DEBUG!: " + bellyStats[playerNum].myFlipValX + " " + bellyStats[playerNum].inPipeStatus + " " + self.bodyMode + " " + bellyStats[playerNum].stuckStrain + " " + +self.room.MiddleOfTile(self.bodyChunks[1].pos).x + " " + self.bodyChunks[1].pos.x);
-		
-		//if ((bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther))
-		//	Debug.Log("-----DEBUG!: " + GetAxisMagnitude(self));
 
-		if (bellyStats[playerNum].myHeat < 1350 && (bellyStats[playerNum].isSqueezing || bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther))
+		if (bellyStats[playerNum].myHeat < 1350 && (bellyStats[playerNum].isSqueezing || bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].pullingOther))
 			bellyStats[playerNum].myHeat++;
 		//else if (bellyStats[playerNum].myHeat < 1350 && bellyStats[playerNum].isSqueezing) //-NAH THAT'S STUPID
 		//	bellyStats[playerNum].myHeat +=  eu ? 1 : 0;
@@ -6871,11 +6879,11 @@ public class patch_Player
 			bellyStats[playerNum].ignoreSpears--;
 
         //DON'T DO THE CLIMBUPONBEAM ANIMATION IF WE'RE PUSHING SOMEONE
-        if (self.animation == Player.AnimationIndex.GetUpOnBeam && (bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther))
+        if (self.animation == Player.AnimationIndex.GetUpOnBeam && (bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].pullingOther))
 			self.animation = Player.AnimationIndex.HangFromBeam;
 
 		//ADJUST RUNSPEED ANIM - I DON'T ACTUALLY KNOW IF THIS EVEN WORKED.....
-		if (self.animation == Player.AnimationIndex.StandUp && Mathf.Abs(self.input[0].x) > 0 && GetOverstuffed(self) > 0 && (bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther) && Mathf.Abs(self.bodyChunks[0].vel.x) > 2f)
+		if (self.animation == Player.AnimationIndex.StandUp && Mathf.Abs(self.input[0].x) > 0 && GetOverstuffed(self) > 0 && (bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].pullingOther) && Mathf.Abs(self.bodyChunks[0].vel.x) > 2f)
         {
 			if (UnityEngine.Random.value > bellyStats[playerNum].runSpeedMod && self.animationFrame > 0)
 				self.animationFrame--;
@@ -7429,17 +7437,24 @@ public class patch_Player
 			{
 				//bool hipsInNarrow = self.room.aimap.getAItile(self.room.MiddleOfTile(self.bodyChunks[1].pos)).narrowSpace;
 				//OKAY THIS ISN'T WORKING. THEIR VERSION OF NARROWSPACE DOESN'T WORK. WE NEED TO USE OURS
-				bool hipsInNarrow = IsTileNarrowFloat(self, 1, 0f, 0f);
+				//Vector2 tChk = new Vector2(bellyStats[playerNum].myFlipValX, bellyStats[playerNum].myFlipValY - 0.5f) * -0.5f; //self.input[0].IntVec.ToVector2() 
+				Vector2 tChk = new Vector2(0, 0); //FINE... THIS IS TOO BUGGY TO TRY AND GET IT FRAME PERFECT. WE'LL HAVE TO LEAVE IT IMPERFECT AND GIVE IT A FEW FRAMES
+                bool hipsInNarrow = IsTileNarrowFloat(self, 1, tChk.x, tChk.y);
 				bool torsoInNarrow = self.room.aimap.getAItile(self.mainBodyChunk.pos).narrowSpace;
 				postHipCheck = hipsInNarrow; //SOME OPTIMIZATION I GUESS
-				if ((hipsInNarrow && torsoInNarrow && bellyStats[playerNum].timeInNarrowSpace > 20)) // || bellyStats[playerNum].assistedSqueezing) //self.bodyMode == Player.BodyModeIndex.CorridorClimb
+				if (hipsInNarrow && !bellyStats[playerNum].inPipeStatus) // || bellyStats[playerNum].assistedSqueezing) //self.bodyMode == Player.BodyModeIndex.CorridorClimb
 				{
-					bellyStats[playerNum].inPipeStatus = true;
-				}
+					if (bellyStats[playerNum].timeInNarrowSpace > 20) // && torsoInNarrow) //AFTER LONG ENOUGH, GIVE UP AND ACCEPT THE CHEAT
+						bellyStats[playerNum].inPipeStatus = true;
+					else if (bellyStats[playerNum].timeInNarrowSpace > 5) //ATTEMPT TO FIX CHEATING INTO PIPES!
+						FixStuckCheat(self, playerNum);
+                    bellyStats[playerNum].timeInNarrowSpace++; //WE'RE CHANGING THIS SO THAT ONLY OUR HIPS DETERMINE THIS
+                }
 				else if (!hipsInNarrow && !torsoInNarrow)
 				{
 					bellyStats[playerNum].inPipeStatus = false;
-					bellyStats[playerNum].timeInNarrowSpace = 0;
+					if (bellyStats[playerNum].noStuck <= 0)
+						bellyStats[playerNum].timeInNarrowSpace = 0;
 				}
 			}
             //Debug.Log("-CHECKCHECK!: " + bellyStats[playerNum].inPipeStatus + " - " + bellyStats[playerNum].myFlipValY + " - " + self.bodyChunks[1].vel.y);
@@ -7572,7 +7587,29 @@ public class patch_Player
     }
 
 
-	public static float GetSweetSpotPerc(Player self)
+    public static void FixStuckCheat(Player self, int playerNum)
+	{
+        //Debug.Log("FIXING PIPE STATUS! " + bellyStats[playerNum].timeInNarrowSpace);
+		//FLIP PIPE STATUS FOR THESE CHECKS, ELSE SOLID TILES WILL COUNT AS TIGHT
+		bellyStats[playerNum].inPipeStatus = !bellyStats[playerNum].inPipeStatus;
+        Vector2 setPos = self.bodyChunks[1].pos;
+		if (!IsTileNarrowFloat(self, 1, 0f, -1.2f)) //CHECK 0.2 FARTHER OUT IN HOPES THAT WILL COVER OUR ROUGHLY 1.0 HEIGHT TORSO
+			self.bodyChunks[1].HardSetPosition(setPos + new Vector2(0, -20f));
+		else if (!IsTileNarrowFloat(self, 1, 0f, 1.2f))
+			self.bodyChunks[1].HardSetPosition(setPos + new Vector2(0, 20f));
+		else if (!IsTileNarrowFloat(self, 1, 1.2f, 0f))
+			self.bodyChunks[1].HardSetPosition(setPos + new Vector2(20, 0f));
+		else if (!IsTileNarrowFloat(self, 1, -1.2f, 0f))
+			self.bodyChunks[1].HardSetPosition(setPos + new Vector2(-20, 0f));
+		else
+			//Debug.Log("UNABLE TO FIX!");
+		bellyStats[playerNum].inPipeStatus = !bellyStats[playerNum].inPipeStatus;
+    }
+
+
+
+
+    public static float GetSweetSpotPerc(Player self)
     {
 		int playerNum = GetPlayerNum(self);
 		float stuckPerc = GetProgress(self) / Mathf.Max(((bellyStats[playerNum].tileTightnessMod) / 30) - 6, 0.1f);
@@ -7604,9 +7641,6 @@ public class patch_Player
 			return;
 
         //----- CHECK IF WE'RE PUSHING ANOTHER CREATURE.------
-        // if (bellyStats[playerNum].pushingOther || bellyStats[playerNum].holdJump > 5)
-        // {
-
 
         Player myPartner = FindPlayerInRange(self);
 		LanternMouse mousePartner = patch_LanternMouse.FindMouseInRange(self);
@@ -7639,8 +7673,7 @@ public class patch_Player
 		}
 		
 		//RESET BEFORE EACH CALCULATION IS RUN
-        bellyStats[playerNum].pushingOther = false;
-		
+        // bellyStats[playerNum].pushingOther = false;
 		
 		if (myObject != null
 			&& (IsStuckOrWedged(myObject) || ObjIsPushingOther(myObject)) 
@@ -7656,7 +7689,7 @@ public class patch_Player
             {
 				//Debug.Log("-----PUSHING PLAYER!: " + vertStuck); //+ self.input[0].y + "_" + GetYFlipDirection(myObject));
                 ObjPushedOn(myObject);
-				bellyStats[playerNum].pushingOther = true; // PushedOther(self);
+				bellyStats[playerNum].pushingOther = 3; // PushedOther(self);
             }
 		}
 		else
@@ -7666,7 +7699,7 @@ public class patch_Player
 
 		
 		//------MOVING THE SHIFT HERE------
-		if (bellyStats[playerNum].pushingOther || bellyStats[playerNum].holdJump > 5)
+		if (bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].holdJump > 5)
 		{
 			self.forceSleepCounter = 0; //STOP FALLING ASLEEP!
 			self.sleepCurlUp = 0;
@@ -7677,7 +7710,7 @@ public class patch_Player
 				bool horzPushLine = ObjIsPushingOrPullingOther(myObject) && self.input[0].x != 0 && self.input[0].x == ObjGetXFlipDirection(myObject);
 				bool vertPushLine = ObjIsPushingOrPullingOther(myObject) && self.input[0].y != 0 && self.input[0].y == ObjGetYFlipDirection(myObject);
 				bool matchingShoveDir = ((ObjIsVerticalStuck(myObject) || vertPushLine) && self.input[0].y == ObjGetYFlipDirection(myObject)) || ((!ObjIsVerticalStuck(myObject) || horzPushLine) && self.input[0].x == ObjGetXFlipDirection(myObject)) || (ObjIsPushingOther(myObject) && self.input[0].IntVec != new IntVector2(0, 0)) || self.simulateHoldJumpButton > 0 || self.isNPC;
-
+				float gravMod = Mathf.Lerp(0f, 0.9f, self.gravity);
 				float slouch = (Mathf.Max(Mathf.Min(bellyStats[playerNum].holdJump, 35) - 10f, 0f) / 2.3f) * (matchingShoveDir ? 1 : 0);
 
 				//IF WE'RE AN NPC, TRY AND PUSH THE RIGHT DIRECTIONAL BUTTONS
@@ -7747,7 +7780,7 @@ public class patch_Player
 							}
 							if (self.input[0].x != 0 && self.bodyChunks[0].vel.y < 0)
 							{
-								self.bodyChunks[0].vel.y += 0.2f;
+								self.bodyChunks[0].vel.y += 0.2f * gravMod;
 							}
 
 							if (self.graphicsModule != null)
@@ -7809,7 +7842,7 @@ public class patch_Player
 					pushBack -= pushBoostStrn; // (bellyStats[playerNum].boostStrain / 2); //BOOST STRAIN VISUALS
 					// Debug.Log("---I'M PUSHING Y! LETS SHOW SOME EFFORT: " + pushBack);
 					pushBack = Mathf.Max(pushBack, 0);
-					pushBack *= bellyStats[playerNum].myFlipValY;
+					pushBack *= bellyStats[playerNum].myFlipValY * gravMod;
 					self.bodyChunks[0].vel.y -= pushBack;
 					
 					//CHECK IF WE'RE MOVING BACKWARDS WHILE PUSHING. IF WE ARE, CUT THE VEL IN HALF. WE DON'T WANT TO BE MOVING BACKWARDS
@@ -7827,7 +7860,7 @@ public class patch_Player
 				{
 					float pushBack = Mathf.Max((25f - pushBoostStrn + (horzPushLine ? 1 : 0) - (bellyStats[playerNum].inPipeStatus ? 0f : 0f) - Mathf.Abs(ObjGetBodyChunkPos(myObject, "rear").x - self.bodyChunks[0].pos.x - (BonusChunkRad(myObject, 1) * bellyStats[playerNum].myFlipValX))) * (bellyStats[playerNum].inPipeStatus ? 0.5f : 1f), 0f);
 					//pushBack = Mathf.Max(pushBack * (1f - slouch/20f), 0);
-					pushBack *= bellyStats[playerNum].myFlipValX;
+					pushBack *= bellyStats[playerNum].myFlipValX * gravMod;
 					// Debug.Log("---I'M PUSHING X! LETS SHOW SOME EFFORT: " + pushBack + " " + self.bodyChunks[0].vel.x);
 
 					//IF THEYRE A TILE ABOVE US, REDUCE ALL THIS
@@ -7933,7 +7966,7 @@ public class patch_Player
 
 
 		//ALRIGHT. FUN NEW ALT WAY TO PUSH BY HOLDING DOWN SPACE.
-		if (self.input[1].jmp && self.input[0].jmp && !self.lungsExhausted && (bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther))
+		if (self.input[1].jmp && self.input[0].jmp && !self.lungsExhausted && (bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].pullingOther))
 		{
 			if (bellyStats[playerNum].holdJump < 35)
 				bellyStats[playerNum].holdJump += 2;
@@ -7948,7 +7981,7 @@ public class patch_Player
 
 		//PRESS JUMP TO GIVE OURSELVES A BOOST
 		bool matchingStuckDir = (IsVerticalStuck(self) && self.input[0].y != 0) || (!IsVerticalStuck(self) && self.input[0].x != 0) || self.isNPC;
-		if (((self.input[0].jmp && !self.input[1].jmp && bellyStats[playerNum].boostCounter < 10) || (self.isNPC && bellyStats[playerNum].boostCounter <= 0)) && (!self.lungsExhausted || self.submerged) && ((bellyStats[playerNum].isStuck && matchingStuckDir) || bellyStats[playerNum].pushingOther || bellyStats[playerNum].pullingOther || IsWedged(self, playerNum)))
+		if (((self.input[0].jmp && !self.input[1].jmp && bellyStats[playerNum].boostCounter < 10) || (self.isNPC && bellyStats[playerNum].boostCounter <= 0)) && (!self.lungsExhausted || self.submerged) && ((bellyStats[playerNum].isStuck && matchingStuckDir) || bellyStats[playerNum].pushingOther > 0 || bellyStats[playerNum].pullingOther || IsWedged(self, playerNum)))
 		{
 			
 			//BEING WEDGED, FOR SOME REASON, IS HUGELY AFFECTED BY BOOSTSTRAIN. SO WE GOTTA LOWER IT FOR STRAINS
@@ -8084,7 +8117,7 @@ public class patch_Player
                 if (self.slugcatStats?.name?.value == "NoirCatto" && UnityEngine.Random.value < 0.2f)
 					DoNoirSounds(self, false);
 			}
-			if (bellyStats[playerNum].pushingOther)
+			if (bellyStats[playerNum].pushingOther > 0)
 			{
 				boostAmnt += Math.Max(GetChubValue(self), 0);
 				//UNIVERSAL!!
@@ -8214,6 +8247,9 @@ public class patch_Player
             bellyStats[playerNum].slugBed--;
 		else if (bellyStats[playerNum].slugBed < 0)
             bellyStats[playerNum].slugBed++;
+		
+		if (bellyStats[playerNum].pushingOther > 0)
+			bellyStats[playerNum].pushingOther--;
 
         //IF WE'RE ABOUT TO EAT POPCORN, ADD IT TO OUR BELLY.
         //if (self.eatExternalFoodSourceCounter == 2) //1 FRAME AWAY FROM TAKING A CHOMP
@@ -8533,8 +8569,9 @@ public class patch_Player
 		bellyStats[playerNum].wedgeStrain = 0;
 		bellyStats[playerNum].autoPilot = new IntVector2(0, 0);
 		bellyStats[playerNum].bloated = false;
-		// bellyStats[playerNum].slicked /= 2;
-		self.bodyChunkConnections[0].type = PhysicalObject.BodyChunkConnection.Type.Normal; //IN CASES OF UNCONCOUSNESS, THE GAME MIGHT OTHERWISE FORGET TO RESET THIS
+		bellyStats[playerNum].stuckLock = 0;
+        // bellyStats[playerNum].slicked /= 2;
+        self.bodyChunkConnections[0].type = PhysicalObject.BodyChunkConnection.Type.Normal; //IN CASES OF UNCONCOUSNESS, THE GAME MIGHT OTHERWISE FORGET TO RESET THIS
 		self.shortcutDelay = 1;
 		self.gourmandAttackNegateTime = Math.Max(6, self.gourmandAttackNegateTime); //PHYSICS IS WEIRD. THIS IS NESSESARY APPARENTLY
 		
@@ -8633,6 +8670,7 @@ public class patch_Player
 				)
 				{
 					helper.bodyChunks[0].vel = inputVect;
+					bellyStats[GetPlayerNum(helper)].pushingOther = 0;
 					// Debug.Log("-----LAUNCH OUR PUSHER!!!: " + inputVect / 2);
 				}
 			}
@@ -8957,7 +8995,7 @@ public class patch_Player
 		}
 		else if (self.bodyMode == Player.BodyModeIndex.CorridorClimb)
 		{
-			bellyStats[playerNum].timeInNarrowSpace++;
+			//bellyStats[playerNum].timeInNarrowSpace++;
 			//PRE CORRIDOR SPECIFIC STUFF
 			self.diveForce = Mathf.Max(0f, self.diveForce - 0.05f);
 			self.waterRetardationImmunity = Mathf.InverseLerp(0f, 0.3f, self.diveForce) * 0.85f;
@@ -9108,7 +9146,7 @@ public class patch_Player
 				{
 					self.canCorridorJump--;
 				}
-				if (self.input[0].jmp && !self.input[1].jmp && self.slowMovementStun < 1 && !IsStuckOrWedged(self) && !bellyStats[playerNum].pushingOther) //DON'T BOOST IF WE'RE STUCK OR PUSHING
+				if (self.input[0].jmp && !self.input[1].jmp && self.slowMovementStun < 1 && !IsStuckOrWedged(self) && bellyStats[playerNum].pushingOther <= 0) //DON'T BOOST IF WE'RE STUCK OR PUSHING
 				{
 					if (self.EffectiveRoomGravity == 0f)
 					{
@@ -9499,7 +9537,7 @@ public class patch_Player
 
 
         //NO POLE JUMPING IF WE'RE STUCK OR PUSHING!
-        if (bellyStats[playerNum].isStuck || bellyStats[playerNum].pushingOther)
+        if (bellyStats[playerNum].isStuck || ObjIsPushingOther(self))
 			self.slideUpPole = 0;
 		
 

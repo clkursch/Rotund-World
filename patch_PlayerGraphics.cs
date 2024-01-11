@@ -2,6 +2,7 @@
 using RWCustom;
 using UnityEngine;
 using MonoMod.RuntimeDetour;
+using Pearlcat;
 
 public class patch_PlayerGraphics
 {
@@ -20,6 +21,7 @@ public class patch_PlayerGraphics
         public float[] tailBase;
         public float checkRad; //USED TO DETECT CHANGES IN RAD
         public bool verified;
+        public bool cloakRipped;
     }
     public static BPgraph[] bpGraph;
     public static int totalPlayerNum = 500;
@@ -59,6 +61,7 @@ public class patch_PlayerGraphics
             tailBase = new float[self.tail.Length],
             verified = false,
             checkRad = 1f,
+            cloakRipped = false,
         };
 
         for (int i = 0; i < self.tail.Length; i++)
@@ -242,6 +245,71 @@ public class patch_PlayerGraphics
     }
 
 
+    public static void CloakCheck(PlayerGraphics self)
+    {
+        if (Pearlcat.ModOptions.DisableCosmetics.Value)
+            return;
+        int playerNum = patch_Player.GetPlayerNum(self.player);
+        if (self.owner.bodyChunks[1].mass > 0.55f)
+        {
+            if (!bpGraph[playerNum].cloakRipped && self.player.room != null)
+            {
+                self.owner.room.PlaySound(SoundID.Tentacle_Plant_Grab_Other, self.owner.firstChunk.pos, 1.0f, 0.5f);
+                self.owner.room.PlaySound(SoundID.Seed_Cob_Open, self.owner.firstChunk.pos, 1.6f, 2.0f);
+                /*
+                AbstractConsumable abstractConsumable = new AbstractConsumable(self.player.room.world, AbstractPhysicalObject.AbstractObjectType.SlimeMold, null, self.player.abstractCreature.pos, self.player.room.game.GetNewID(), -1, -1, null);
+                abstractConsumable.destroyOnAbstraction = true;
+                self.player.room.abstractRoom.AddEntity(abstractConsumable);
+                abstractConsumable.RealizeInRoom();
+                SlimeMold floorCloak = (abstractConsumable.realizedObject as SlimeMold);
+                floorCloak.JellyfishMode = true;
+                floorCloak.firstChunk.pos += Custom.RNV() * UnityEngine.Random.value * 85f;
+                floorCloak.firstChunk.vel = new Vector2(0, 2f);
+                floorCloak.gravity = 0.1f;
+                floorCloak.CollideWithObjects = false;
+                //if (self.player.TryGetPearlcatModule(out var playerModule))
+                //    floorCloak.color = playerModule.CloakColor;
+                */
+                Color cloakColor = default;
+                if (self.player.TryGetPearlcatModule(out var playerModule))
+                    cloakColor = playerModule.CloakColor;
+
+                int num = 18;
+                for (int j = 0; j < num; j++)
+                {
+                    self.player.room.AddObject(new PuffBallSkin(self.player.firstChunk.pos, Custom.RNV() * Mathf.Lerp(2f, 10f, UnityEngine.Random.value), cloakColor, cloakColor));
+                }
+                
+            }
+
+            bpGraph[playerNum].cloakRipped = true;
+        }
+    }
+
+    public static void CloakDraw(PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser)
+    {
+        if (Pearlcat.ModOptions.DisableCosmetics.Value)
+            return;
+
+        if (!self.player.TryGetPearlcatModule(out var playerModule)) return;
+
+        var cloakSprite = sLeaser.sprites[playerModule.CloakSprite];
+        var scarfSprite = sLeaser.sprites[playerModule.ScarfSprite];
+        var sleeveLSprite = sLeaser.sprites[playerModule.SleeveLSprite];
+        var sleeveRSprite = sLeaser.sprites[playerModule.SleeveRSprite];
+
+        int playerNum = patch_Player.GetPlayerNum(self.player);
+        if (bpGraph[playerNum].cloakRipped)
+        {
+            sLeaser.sprites[0].alpha = 1.0f;
+            cloakSprite.isVisible = false;
+            sleeveLSprite.isVisible = false;
+            sleeveRSprite.isVisible = false;
+            scarfSprite.isVisible = false;
+        }
+    }
+
+
     public static void BP_DrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
     {
         int playerNum = patch_Player.GetPlayerNum(self.player);
@@ -251,7 +319,6 @@ public class patch_PlayerGraphics
         //HOPEFULLY TO HELP COMBAT ERROR LOG ISSUES!
         if (self.player.room == null)
             return;
-
 
         //MAKE SURE TAIL SIZES HAVE NOT BEEN TINKERED WITH ALL OF A SUDDEN!
         if (self.tail.Length > 0 && bpGraph[playerNum].checkRad != self.tail[0].rad)
@@ -448,7 +515,7 @@ public class patch_PlayerGraphics
                 self.player.ClassMechanicsGourmand();
 
             if (!self.player.lungsExhausted && !self.player.gourmandExhausted)
-                self.player.aerobicLevel = Mathf.Max(self.player.aerobicLevel, heatVal) * 0.85f;
+                self.player.aerobicLevel = Mathf.Min(0.85f, Mathf.Max(self.player.aerobicLevel, heatVal));
 
             //RELAXED EYES
             if (heatVal >= 0.7f && bpGraph[playerNum].randCycle < 3)
@@ -627,11 +694,25 @@ public class patch_PlayerGraphics
         }
     }
 
+
+    //THIS IS THE SAME DRAWSPRITES HOOK EXCEPT APPLIED LATER SO IT HAS LATER PRIORITY
+    public static void LatePriorityDrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
+
+        if (self.player?.slugcatStats?.name?.value == "Pearlcat")
+            CloakDraw(self, sLeaser);
+    }
+
+
     public static void PlayerGraphics_Update(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)
     {
         orig(self);
         //TUMMY RUBS
         self.drawPositions[1, 0] += patch_Player.bellyStats[patch_Player.GetPlayerNum(self.player)].tuchShift;
+
+        if (self.player?.slugcatStats?.name?.value == "Pearlcat")
+            CloakCheck(self);
     }
 
     public static bool InspectGraphics(PlayerGraphics self)

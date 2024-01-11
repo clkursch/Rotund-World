@@ -86,6 +86,10 @@
       <HintPath>Resources\NoirCatto.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Pearlcat">
+      <HintPath>Resources\Pearlcat.dll</HintPath>
+	  <Private>false</Private>
+    </Reference>
     <Reference Include="PUBLIC-Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\BepInEx\utils\PUBLIC-Assembly-CSharp.dll</HintPath>
       <Private>false</Private>

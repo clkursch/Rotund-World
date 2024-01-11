@@ -116,7 +116,7 @@ Other features:
 (This is not my native language, so pleae correct me if I translated something wrong!)
 This item can only be swallowed if there are no items stored in your belly.
 */
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.8.14")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.8.16")]
 //[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin
@@ -259,6 +259,7 @@ public class BellyPlus : BaseUnityPlugin
             if (IsInit) return;
 
             On.SlugcatStats.NourishmentOfObjectEaten += SlugcatStats_NourishmentOfObjectEaten;
+			On.PlayerGraphics.DrawSprites += patch_PlayerGraphics.LatePriorityDrawSprites;
 
             IsInit = true;
         }
