@@ -2730,9 +2730,9 @@ public class patch_Player
 	public static void ObjGainHeat(Creature obj, int amnt)
 	{
 		if (obj is Player)
-			bellyStats[GetPlayerNum(obj as Player)].myHeat += amnt;
+			bellyStats[GetPlayerNum(obj as Player)].myHeat = Math.Min(1500, bellyStats[GetPlayerNum(obj as Player)].myHeat + amnt);
 		else
-			BellyPlus.myHeat[GetRef(obj)] += amnt;
+			BellyPlus.myHeat[GetRef(obj)] = Math.Min(1500, BellyPlus.myHeat[GetRef(obj)] + amnt);
 	}
 	
 	public static void ObjFeatherHeat(Player obj, int amnt, int max)
@@ -5076,6 +5076,10 @@ public class patch_Player
 			return Player.ObjectGrabability.TwoHands;
 		}
 		else if (obj is SeedCob && BPOptions.detachablePopcorn.Value && !self.isNPC)
+        {
+			return Player.ObjectGrabability.TwoHands;
+		}
+		else if (obj is Deer der && der.dead && self.CanEatMeat(der) && !self.isNPC)
         {
 			return Player.ObjectGrabability.TwoHands;
 		}
@@ -8411,14 +8415,13 @@ public class patch_Player
 		
 		
 		
-		//I THINK MAYBE DOWNPOUR UPDATED SO THIS SHOULD JUST ALWAYS SHOW NOW?... MAYBE?
-		//NO BUT THEN THE OUTDATED VERSIONS THAT NEED TO SEE IT WON'T SEE IT!! LETS JUST MOVE IT DOWN INSTEAD
-        if (self.graphicsModule != null && self.timeSinceSpawned < 60 && !ModManager.MSC)
-			self.timeSinceSpawned++;
+		//THIS ALWAYS RUNS ANYWAYS DUMMY!
+        // if (self.graphicsModule != null && self.timeSinceSpawned < 60 && !ModManager.MSC)
+			// self.timeSinceSpawned++;
 		
-		//MAKE SURE OUR GRAPHICS ARENT BEING STOLEN
-		if (self.timeSinceSpawned == 60 && !self.isNPC && self.graphicsModule != null && patch_PlayerGraphics.InspectGraphics(self.graphicsModule as PlayerGraphics) == false && self.room != null && self.room.game.cameras[0].hud != null)
-			self.room.game.cameras[0].hud.textPrompt.AddMessage(self.room.game.rainWorld.inGameTranslator.Translate("Rotund World Warning - This mod's graphics module was overwritten by another active mod. Visual changes may not take affect."), 90, 1000, false, false);
+		//MAKE SURE OUR GRAPHICS ARENT BEING STOLEN - THIS IS PRETTY OUTDATED. NO MODS SHOULD DO THIS ANYMORE...
+		// if (self.timeSinceSpawned == 60 && !self.isNPC && self.graphicsModule != null && patch_PlayerGraphics.InspectGraphics(self.graphicsModule as PlayerGraphics) == false && self.room != null && self.room.game.cameras[0].hud != null)
+			// self.room.game.cameras[0].hud.textPrompt.AddMessage(self.room.game.rainWorld.inGameTranslator.Translate("Rotund World Warning - This mod's graphics module was overwritten by another active mod. Visual changes may not take affect."), 90, 1000, false, false);
 
 		//CHECK EXTERNALS
 		if (self.timeSinceSpawned == 2 && !self.isNPC && self.objectInStomach != null)
@@ -8482,12 +8485,20 @@ public class patch_Player
 
         if (ModManager.JollyCoop && self.room?.game.Players.Count > 1 && BPOptions.blushEnabled.Value && self.input[0].mp && !self.input[1].mp)
 		{
-			ObjGainHeat(self, 150);
-			if (self.input[0].y == 1)
+			//SKIP IF PLAYERS ARE WAITING IN PIPES
+			bool pipeWait = false;
+			for (int i = 0; i < self.room.game.Players.Count; i++)
 			{
-                ObjSetWideEyes(self, 45);
-				//self.Blink(3);
-            }
+				if (self.room.game.Players[i].realizedCreature != null && self.room.game.Players[i].realizedCreature is Player plr && plr.inShortcut)
+					pipeWait = true;
+			}
+			
+			if (!pipeWait)
+			{
+				ObjGainHeat(self, 150);
+				if (self.input[0].y == 1)
+					ObjSetWideEyes(self, 45);
+			}
 				
 		}
         //self.input[0].mp
@@ -9611,63 +9622,73 @@ public class patch_Player
 		if (bellyStats[playerNum].foodOnBack != null)
 			bellyStats[playerNum].foodOnBack.GraphicsModuleUpdated(actuallyViewed, eu);
 		
-		//THIS PART OF THE CODE ALSO DETERMINES HOW CLOSELY WE HOLD OUR GRABBED OBJECTS TO US. SO UNDER THOSE SPECIFIC CONDTIONS, SKIP THE NORMAL VERSION.
 		bool skipOrig = false;
-		for (int i = 0; i < 2; i++)
-		{
-			if (self.grasps[i] != null && self.grasps[i].grabbed is Creature)
-			{
-				Creature myTarget = self.grasps[i].grabbed as Creature;
-				if (self.HeavyCarry(self.grasps[i].grabbed) 
-					&& ObjIsStuckable(myTarget) && (IsStuckOrWedged(myTarget) || InPullingChain(myTarget)))
-				{
-					skipOrig = true; //WE'RE SKIPPING THE ORIGINAL
-					//AND RUNNING OUR SLIGHTLY ALTERED VERSION OF THE BASE CODE INSTEAD, WHERE EVERYTHING IS THE SAME EXCEPT WE PRETENT WE'RE HOLDING A SQUIDCADA
-					Vector2 vector = Custom.DirVec(self.mainBodyChunk.pos, self.grasps[i].grabbedChunk.pos);
-					float num = Vector2.Distance(self.mainBodyChunk.pos, self.grasps[i].grabbedChunk.pos);
-					// float num2 = 5f + self.grasps[i].grabbedChunk.rad;
-					// if (self.grasps[i].grabbed is Cicada)
-					// {
-						// num2 = 30f;
-					// }
-					float num2 = 22f;
-					if (ObjIsStuck(myTarget) && ObjGetStuckVector(myTarget) == new Vector2(0, 1)
-						&&!(self.tongue != null && self.tongue.Attached)) //BUT NOT IF WE'RE IN WINCH MODE
-						num2 -= 12f; //FUR PULLING UP WE WANT A CLOSER GRAB
+		//OKAY BUT WE NEED TO STOP SKIPPING ORIG SO LETS INSTEAD TEMPORARILY NULL ANY GRABS CONTAINING A STUCK CREATURE WE ARE PULLING
+		//Creature.Grasp[] origGrasps = self.grasps; //NO THIS KEEPS LIVE REFERENCES
+		int grpIndex = 0;
+		Creature stuckCrit = null;
+		int chunk = 0;
+		Creature.Grasp.Shareability grpShare = Creature.Grasp.Shareability.CanOnlyShareWithNonExclusive;
+		float dom = 0f;
 
-					num2 += Mathf.Min(Mathf.Max(GetCappedBoostStrain(self) - 0, 0) / 3f, 6);
-					num2 *= Mathf.InverseLerp(25f, 15f, (float)self.eatMeat);
-					float num3 = self.grasps[i].grabbedChunk.mass / (self.mainBodyChunk.mass + self.grasps[i].grabbedChunk.mass);
-					if (self.enteringShortCut != null)
-					{
-						num3 = 0f;
-					}
-					else if (self.grasps[i].grabbed.TotalMass < self.TotalMass)
-					{
-						num3 /= 2f;
-					}
-					if (self.enteringShortCut == null || num > num2)
-					{
-						self.mainBodyChunk.pos += vector * (num - num2) * num3;
-						self.mainBodyChunk.vel += vector * (num - num2) * num3;
-						//self.grasps[i].grabbedChunk.pos -= vector * (num - num2) * (1f - num3); //LETS GET RID OF THIS ONE
-						self.grasps[i].grabbedChunk.vel -= vector * (num - num2) * (1f - num3);
-					}
-					if (self.bodyMode == Player.BodyModeIndex.ClimbingOnBeam && self.animation != Player.AnimationIndex.BeamTip && self.animation != Player.AnimationIndex.StandOnBeam)
-					{
-						BodyChunk grabbedChunk = self.grasps[i].grabbedChunk;
-						grabbedChunk.vel.y = grabbedChunk.vel.y + self.grasps[i].grabbed.gravity * (1f - self.grasps[i].grabbedChunk.submersion) * 0.75f;
-					}
-					if (self.Grabability(self.grasps[i].grabbed) == Player.ObjectGrabability.Drag && num > num2 * 2f + 30f)
-					{
-						self.ReleaseGrasp(i);
-					}
+        //THIS PART OF THE CODE ALSO DETERMINES HOW CLOSELY WE HOLD OUR GRABBED OBJECTS TO US. SO UNDER THOSE SPECIFIC CONDTIONS, SKIP THE NORMAL VERSION.
+        for (int i = 0; i < 2; i++)
+		{
+			if (self.grasps[i] != null && self.grasps[i].grabbed is Creature myTarget && self.HeavyCarry(self.grasps[i].grabbed) && ObjIsStuckable(myTarget) && (IsStuckOrWedged(myTarget) || InPullingChain(myTarget)))
+			{
+				//AND RUNNING OUR SLIGHTLY ALTERED VERSION OF THE BASE CODE INSTEAD, WHERE EVERYTHING IS THE SAME EXCEPT WE PRETENT WE'RE HOLDING A SQUIDCADA
+				Vector2 vector = Custom.DirVec(self.mainBodyChunk.pos, self.grasps[i].grabbedChunk.pos);
+				float num = Vector2.Distance(self.mainBodyChunk.pos, self.grasps[i].grabbedChunk.pos);
+				// float num2 = 5f + self.grasps[i].grabbedChunk.rad;
+				float num2 = 22f; //30f FOR SQUIDCADAS
+				if (ObjIsStuck(myTarget) && ObjGetStuckVector(myTarget) == new Vector2(0, 1)
+					&&!(self.tongue != null && self.tongue.Attached)) //BUT NOT IF WE'RE IN WINCH MODE
+					num2 -= 12f; //FOR PULLING UP WE WANT A CLOSER GRAB
+
+				num2 += Mathf.Min(Mathf.Max(GetCappedBoostStrain(self) - 0, 0) / 3f, 6);
+				float num3 = self.grasps[i].grabbedChunk.mass / (self.mainBodyChunk.mass + self.grasps[i].grabbedChunk.mass);
+				if (self.grasps[i].grabbed.TotalMass < self.TotalMass)
+				{
+					num3 /= 2f;
 				}
-			}
+				if (self.enteringShortCut == null || num > num2)
+				{
+					self.mainBodyChunk.pos += vector * (num - num2) * num3;
+					self.mainBodyChunk.vel += vector * (num - num2) * num3;
+					//self.grasps[i].grabbedChunk.pos -= vector * (num - num2) * (1f - num3); //LETS GET RID OF THIS ONE
+					self.grasps[i].grabbedChunk.vel -= vector * (num - num2) * (1f - num3);
+				}
+
+				//IT'S TOO LATE I'M ALREADY IN TOO DEEP
+                stuckCrit = myTarget;
+                grpIndex = i;
+				chunk = self.grasps[i].chunkGrabbed;
+                grpShare = self.grasps[i].shareability;
+                dom = self.grasps[i].dominance;
+
+                //THE IMPORTANT PART! TEMPORARILY SET THE GRASP TO NULL SO IT DOESN'T UPDATE AGAIN
+                self.grasps[i] = null;
+            }
 		}
 		
-		if (skipOrig == false)
-			orig.Invoke(self, actuallyViewed, eu); 
+		//OKAY NEW PLAN, WE AREN'T ACTUALLY SKIPPING THE ORIGINAL. JUST MODIFYING OUR GRASPS BEFORE RUNNING IT
+		orig.Invoke(self, actuallyViewed, eu);
+		
+		if (stuckCrit != null)
+		{
+			//self.grasps = origGrasps;
+			//self.Grab(obj, graspUsed, chunkGrabbed, Creature.Grasp.Shareability.CanOnlyShareWithNonExclusive, 0.5f, true, false);
+			self.grasps[grpIndex] = new Creature.Grasp(self, stuckCrit, grpIndex, chunk, grpShare, dom, false);
+			Debug.Log("SKIPPING");
+			for (int i = 0; i < 2; i++)
+			{
+				if (self.grasps[i] != null) // && self.grasps[i].grabbed is Creature)
+				{
+                    Debug.Log(i + " HOLDING " + self.grasps[i].grabbed);
+                }
+			}
+        }
+			
 	}
 	
 	

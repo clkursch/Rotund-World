@@ -40,12 +40,39 @@ public class patch_DLL
         //On.PoleMimic.Rad += BP_Rad;
         On.DropBug.ctor += DropBug_ctor;
         //On.DropBugGraphics.ctor += DropBugGraphics_ctor;
-        On.DropBugGraphics.InitiateSprites += DropBugGraphics_InitiateSprites;
+        // On.DropBugGraphics.InitiateSprites += DropBugGraphics_InitiateSprites;
         On.DropBugGraphics.DrawSprites += DropBugGraphics_DrawSprites;
         On.DropBug.MoveTowards += DropBug_MoveTowards;
         On.DropBug.Update += DropBug_Update;
 
+        On.JetFish.ctor += JetFish_ctor;
+		On.JetFish.Act += JetFish_Act;
+        On.JetFishGraphics.Update += JetFishGraphics_Update;
+        On.JetFishGraphics.InitiateSprites += JetFishGraphics_InitiateSprites;
+
+        On.Deer.ctor += Deer_ctor;
+        On.Deer.Act += Deer_Act;
+        //On.Deer.DrawSprites += ;
+
+        On.StaticWorld.InitStaticWorld += StaticWorld_InitStaticWorld;
     }
+
+    
+
+    private static void StaticWorld_InitStaticWorld(On.StaticWorld.orig_InitStaticWorld orig)
+    {
+        orig();
+
+        foreach (CreatureTemplate critTempl in StaticWorld.creatureTemplates)
+        {
+            if (critTempl.type == CreatureTemplate.Type.Deer)
+            {
+                StaticWorld.creatureTemplates[critTempl.type.Index].meatPoints = 30;
+            }
+        }
+    }
+
+    
 
     
     public static int GetRef(Creature self)
@@ -133,15 +160,29 @@ public class patch_DLL
             //BellyPlus.myFoodInStomach[critNum] = critChub;
             //UpdateBellySize(self as DropBug, BellyPlus.myFoodInStomach[critNum]);
         }
+
+        else if (CheckFattable(self))
+        {
+            BellyPlus.myFoodInStomach[critNum] = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
+        }
     }
 
 
 
 
-    public static void UpdateBellySize(DropBug self, int amnt)
+    public static void UpdateBellySize(Creature self, int amnt)
     {
-        //if ()
-        (self.graphicsModule as DropBugGraphics).bodyThickness += 0.3f * amnt;
+        if (self is DropBug)
+			(self.graphicsModule as DropBugGraphics).bodyThickness += 0.3f * amnt;
+	
+		else if (self is Deer)
+		{
+			float massMod = 1f + Mathf.Max(0f, (BellyPlus.myFoodInStomach[GetRef(self)] - 6) / 20f);
+			for (int i = 1; i < 5; i++)
+			{
+				self.bodyChunks[i].rad *= massMod;
+			}
+		}
     }
 
 
@@ -406,29 +447,6 @@ public class patch_DLL
         CheckIn(self, miscBook);
     }
 
-    public static void DropBugGraphics_ctor(On.DropBugGraphics.orig_ctor orig, DropBugGraphics self, PhysicalObject ow)
-    {
-		orig.Invoke(self, ow);
-
-        //CheckIn(self.bug, miscBook);
-		/*
-		if (GetChub(self.bug) == 4)
-		{
-			self.bodyThickness *= 2.5f;
-			//CEILING MODE MIGHT GET A BIT WIDE...
-			// (1f + Mathf.Lerp(this.lastCeilingMode, this.ceilingMode, timeStacker)) 
-		}
-        */
-    }
-
-
-    private static void DropBugGraphics_InitiateSprites(On.DropBugGraphics.orig_InitiateSprites orig, DropBugGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
-    {
-        orig.Invoke(self, sLeaser, rCam);
-        //Debug.Log("ID CHECK!..." + (self.bug as Creature).abstractCreature.ID.RandomSeed + " - " + (self.bug as DropBug).abstractCreature.ID.RandomSeed);
-        //CheckIn(self.bug, miscBook);
-    }
-
 
     private static void DropBug_Update(On.DropBug.orig_Update orig, DropBug self, bool eu)
     {
@@ -463,6 +481,90 @@ public class patch_DLL
         //AND THEN REVERT TO OUR REAL SIZE
         self.bodyThickness = origThicc;
     }
+
+
+    private static void JetFish_ctor(On.JetFish.orig_ctor orig, JetFish self, AbstractCreature abstractCreature, World world)
+    {
+        orig.Invoke(self, abstractCreature, world);
+        CheckIn(self, miscBook);
+        float massMod = 1f + Mathf.Max(0f, (BellyPlus.myFoodInStomach[GetRef(self)] - 6) / 10f);
+        self.bodyChunks[0].mass *= massMod;
+        self.bodyChunks[1].mass *= massMod;
+    }
+	
+	private static void JetFishGraphics_InitiateSprites(On.JetFishGraphics.orig_InitiateSprites orig, JetFishGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
+    {
+        orig(self, sLeaser, rCam);
+		sLeaser.sprites[self.BodySprite].scale *= Custom.LerpMap(BellyPlus.myFoodInStomach[GetRef(self.fish)], 3f, 10f, 1f, 2f);
+        //sLeaser.sprites[self.BodySprite].scaleY *= 3f;
+    }
+	
+	private static void JetFish_Act(On.JetFish.orig_Act orig, JetFish self)
+    {
+        MovementConnection movementConnection = (self.AI.pathFinder as FishPather).FollowPath(self.room.GetWorldCoordinate(self.mainBodyChunk.pos), true);
+        if (movementConnection != null && (movementConnection.type == MovementConnection.MovementType.ShortCut || movementConnection.type == MovementConnection.MovementType.NPCTransportation))
+        {
+            if (ModManager.MMF && self.AI.denFinder.GetDenPosition() != null && movementConnection.destinationCoord == self.AI.denFinder.GetDenPosition() && self.AI.behavior == JetFishAI.Behavior.ReturnPrey && self.grasps[0] != null && !(self.grasps[0].grabbed is Creature))
+            {
+                BellyPlus.myFoodInStomach[BellyPlus.GetRef(self)] += 1;
+                UpdateBellySize(self, 0);
+                self.graphicsModule.Reset();
+                //self.graphicsModule.
+            }
+        }
+        orig(self);
+    }
+
+
+    private static void JetFishGraphics_Update(On.JetFishGraphics.orig_Update orig, JetFishGraphics self)
+    {
+		orig(self);
+		for (int i = 0; i < 2; i++)
+		{
+			for (int k = 0; k < self.tails.GetLength(1); k++)
+			{
+				self.tails[i, k].rad *= 1 + Mathf.Max(0f, (BellyPlus.myFoodInStomach[GetRef(self.fish)] - 6) / 2f);
+                //self.tails[i, k].rad *= 5f;
+
+            }
+		}
+	}
+
+
+    private static void Deer_ctor(On.Deer.orig_ctor orig, Deer self, AbstractCreature abstractCreature, World world)
+    {
+        orig.Invoke(self, abstractCreature, world);
+        CheckIn(self, miscBook);
+        UpdateBellySize(self, 0);
+        self.Template.meatPoints = 30;
+    }
+
+    private static void Deer_Act(On.Deer.orig_Act orig, Deer self, bool eu, float support, float forwardPower)
+    {
+        if (self.eatCounter == 50)
+        {
+            BellyPlus.myFoodInStomach[BellyPlus.GetRef(self)] += 1;
+            UpdateBellySize(self, 0);
+            self.graphicsModule.Reset();
+            //self.graphicsModule.
+        }
+        orig(self, eu, support, forwardPower);
+    }
+    
+	
+	/*
+	public override void DrawSprites(RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
+	{
+		orig(self, sLeaser, rCam);
+		
+		//UPDATE THIS EVERY FRAME NOW
+		for (int i = 0; i < 5; i++)
+		{
+			sLeaser.sprites[self.BodySprite(i)].scaleX = self.owner.bodyChunks[i].rad / 8f * 1.05f;
+			sLeaser.sprites[self.BodySprite(i)].scaleY = self.owner.bodyChunks[i].rad / 8f * 1.3f;
+		}
+	}
+	*/
 
 
     public static void Centipede_ctor(On.Centipede.orig_ctor orig, Centipede self, AbstractCreature abstractCreature, World world)

@@ -49,14 +49,6 @@ public class patch_LizardAI
 			 return;
 		
 		int myLizard = patch_Lizard.GetRef(self.lizard);
-
-        
-		//KEEP TRACK OF OUR MEALS! //I DON'T THINK THIS WORKED
-		if (self.behavior == LizardAI.Behavior.ReturnPrey)
-			BellyPlus.scoreMeal[myLizard] = true;
-		else
-			BellyPlus.scoreMeal[myLizard] = false;
-
 		
 		//MORNING UPDATE OUR SAVED BELLY SIZE
 		if (self.friendTracker.friend != null && (self.friendTracker.friend as Player).stillInStartShelter && BellyPlus.lizardFood != 0)

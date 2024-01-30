@@ -116,7 +116,7 @@ Other features:
 (This is not my native language, so pleae correct me if I translated something wrong!)
 This item can only be swallowed if there are no items stored in your belly.
 */
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.8.16")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.8.17")]
 //[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin
@@ -410,7 +410,7 @@ public class BellyPlus : BaseUnityPlugin
 	public static Dictionary<int, float> myFatness = new Dictionary<int, float>(dictSize);
 	// public static Dictionary<int, int> freshFromShortcut = new Dictionary<int, int>(dictSize); //THIS ALREADY EXISTS. ITS self.shortcutdelay
 	public static Dictionary<int, bool> stuckInShortcut = new Dictionary<int, bool>(dictSize);
-	public static Dictionary<int, bool> scoreMeal = new Dictionary<int, bool>(dictSize);
+	// public static Dictionary<int, bool> scoreMeal = new Dictionary<int, bool>(dictSize);
 	public static Dictionary<int, int> slicked = new Dictionary<int, int>(dictSize);
 	public static Dictionary<int, float> wedgeStrain = new Dictionary<int, float>(dictSize);
 	public static Dictionary<int, Vector2> stuckCoords = new Dictionary<int, Vector2>(dictSize);
@@ -489,7 +489,7 @@ public class BellyPlus : BaseUnityPlugin
 		BellyPlus.myFatness.Add(creatureID, 1f);
 		// BellyPlus.freshFromShortcut.Add(creatureID, 0);
 		BellyPlus.stuckInShortcut.Add(creatureID, false); //I DON'T THINK THIS WAS EVEN EFFECTIVE BUT WHATEVER
-		BellyPlus.scoreMeal.Add(creatureID, false);
+		// BellyPlus.scoreMeal.Add(creatureID, false);
 		BellyPlus.slicked.Add(creatureID, 0);
 		BellyPlus.wedgeStrain.Add(creatureID, 0f);
 		BellyPlus.stuckCoords.Add(creatureID, new Vector2(0,0));
@@ -545,7 +545,7 @@ public class BellyPlus : BaseUnityPlugin
 		BellyPlus.myFatness.Clear();
 		// BellyPlus.freshFromShortcut.Clear();
 		BellyPlus.stuckInShortcut.Clear();
-		BellyPlus.scoreMeal.Clear();
+		// BellyPlus.scoreMeal.Clear();
 		BellyPlus.slicked.Clear();
 		BellyPlus.wedgeStrain.Clear();
 		BellyPlus.stuckCoords.Clear();

@@ -172,6 +172,13 @@ public class patch_AbstractCreature
 					patch_DLL.UpdateBellySize(mySelf as DropBug, amnt);
 					Debug.Log("MINI CREATURE IN DEN - EATING A TASTY SNACK! " + BellyPlus.myFoodInStomach[patch_Lizard.GetRef(mySelf)]);
 				}
+				
+				if (self.realizedCreature is JetFish fish && fish.AI != null && fish.AI.behavior == JetFishAI.Behavior.ReturnPrey)
+				{
+					BellyPlus.myFoodInStomach[BellyPlus.GetRef(fish)] += 2;
+					patch_Lizard.ObjUpdateBellySize(fish);
+					Debug.Log("JETFISH - EATING A TASTY SNACK! " + BellyPlus.myFoodInStomach[patch_Lizard.GetRef(fish)]);
+				}
 			}
         }
 		catch
