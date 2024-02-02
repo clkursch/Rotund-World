@@ -3,6 +3,9 @@ using RWCustom;
 using UnityEngine;
 using MoreSlugcats;
 
+
+namespace RotundWorld;
+
 public class patch_LizardAI
 {
 	public static void Patch()
@@ -47,13 +50,12 @@ public class patch_LizardAI
 		
 		 if (BellyPlus.VisualsOnly())
 			 return;
-		
-		int myLizard = patch_Lizard.GetRef(self.lizard);
-		
+
+        
 		//MORNING UPDATE OUR SAVED BELLY SIZE
 		if (self.friendTracker.friend != null && (self.friendTracker.friend as Player).stillInStartShelter && BellyPlus.lizardFood != 0)
 		{
-			BellyPlus.myFoodInStomach[myLizard] = BellyPlus.lizardFood;
+			self.creature.GetAbsBelly().myFoodInStomach = BellyPlus.lizardFood;
 			if (BPOptions.debugLogs.Value)
 				Debug.Log("LZ! RESTORING MY LIZARDS FOOD VALUE!" + BellyPlus.lizardFood);
 			patch_Lizard.UpdateBellySize(self.lizard);
@@ -75,7 +77,7 @@ public class patch_LizardAI
 
 		if (patch_Player.IsStuckOrWedged(self.lizard))
 		{
-			float stuckcitement = (BellyPlus.pushingOther[myLizard] ? 0.5f : 0f) + Mathf.Min(BellyPlus.stuckStrain[patch_Lizard.GetRef(self.lizard)] / 150f, 0.7f);
+			float stuckcitement = ((self.lizard.GetBelly().pushingOther > 0) ? 0.5f : 0f) + Mathf.Min(self.lizard.GetBelly().stuckStrain / 150f, 0.7f);
 			//self.excitement = Mathf.Max(self.excitement, stuckcitement); //OK I THINK THIS IS MAKING LIZARDS WEIRD OUT WITH STOPPING AND REPEATING VOCALS
 
 			self.stuckTracker.stuckCounter = 0; //BECAUSE WE ACTUALLY ARE STUCK
@@ -87,15 +89,11 @@ public class patch_LizardAI
 			//if (UnityEngine.Random.value < 0.0125f)
 			//    self.lizard.EnterAnimation(Lizard.Animation.PreyReSpotted, false);
 
-			if (UnityEngine.Random.value < 0.125f && BellyPlus.beingPushed[myLizard] == 0)
+			if (UnityEngine.Random.value < 0.125f && self.lizard.GetBelly().beingPushed == 0)
 				self.lizard.bodyWiggleCounter = Math.Max(self.lizard.bodyWiggleCounter, (int)(UnityEngine.Random.value * 35f));
 
 			//DON'T WIGGLE TOO HARD! THIS BREAKS THE STUCK.
 			self.lizard.bodyWiggleCounter = Math.Min(self.lizard.bodyWiggleCounter, 25);
-
-			//SOMETIMES WE SHOULDN'T BODY WIGGLE AT ALL
-			//if (!BellyPlus.inPipeStatus[patch_Lizard.GetRef(self.lizard)])
-			//	self.lizard.bodyWiggleCounter = 0;
 
 
 			if (UnityEngine.Random.value < 0.0125f)
@@ -196,7 +194,7 @@ public class patch_LizardAI
 
 
 
-		if (BellyPlus.pushingOther[myLizard])
+		if (self.lizard.GetBelly().pushingOther > 0)
 		{
 			//DON'T WIGGLE SO MUCH WHILE PUSHING!
 			self.stuckTracker.stuckCounter = Custom.IntClamp(self.stuckTracker.stuckCounter, 0, 25); //OKAY, MAYBE A BIT OF WIGGLE~...
@@ -332,7 +330,7 @@ public class patch_LizardAI
 				{
 					((self as Lizard).AI as LizardAI).runSpeed = 0.5f;
 					//OKAY, I GUESS THEY CAN KEEP THE STATIC RUNSPEED. BUT IT NEEDS TO SLOW DOWN ONCE THEY GET STUCK
-					if (patch_Player.IsStuckOrWedged(self))//(BellyPlus.isStuck[patch_Lizard.GetRef(self.lizard)])
+					if (patch_Player.IsStuckOrWedged(self))
 						((self as Lizard).AI as LizardAI).runSpeed = origRunspeed;
 
                     (self as Lizard).AI.creature.abstractAI.SetDestination(myDest);

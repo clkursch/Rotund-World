@@ -1,6 +1,7 @@
 using UnityEngine;
 using MoreSlugcats;
 
+namespace RotundWorld;
 public class patch_OracleBehavior
 {
 	public static void Patch()

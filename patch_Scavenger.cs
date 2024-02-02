@@ -5,7 +5,7 @@ using UnityEngine;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 
-
+namespace RotundWorld;
 public class patch_Scavenger
 {
 	public delegate float orig_MovementSpeed(Scavenger self); //NEAT...
@@ -40,29 +40,16 @@ public class patch_Scavenger
 
 	}
 
-    public static Dictionary<int, Scavenger> scavBook = new Dictionary<int, Scavenger>(0);
-
 	private static void ScavPatch(On.Scavenger.orig_ctor orig, Scavenger self, AbstractCreature abstractCreature, World world)
 	{
 		orig(self, abstractCreature, world);
 		
 		int critNum = self.abstractCreature.ID.RandomSeed;
 
-		//MAKE SURE THERE ISN'T ALREADY A CREATURE WITH OUR NAME ON THIS!
-		bool critExists = false;
-        try
-        {
-			patch_Scavenger.scavBook.Add(critNum, self); //ADD OURSELVES TO THE GUESTBOOK
-		}
-		catch (ArgumentException)
-        {
-			critExists = true;
-		}
-
-		if (critExists)
+		if (self.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
         {
 			//Debug.Log("SCAV ALREADY EXISTS! CANCELING: " + critNum);
-			patch_Scavenger.scavBook[critNum] = self; //WELL HOLD ON! WE STALL NEED THE REFERENCE FROM THAT BOOK TO POINT TO US!
+			UpdateBellySize(self);
 			return;
 		}
 		
@@ -70,7 +57,6 @@ public class patch_Scavenger
 		
 		
 		//NEW, LETS BASE OUR RANDOM VALUE ON OUR ABSTRACT CREATURE ID
-		int seed = UnityEngine.Random.seed;
 		UnityEngine.Random.seed = critNum;
 
 		int mouseChub = Mathf.FloorToInt(Mathf.Lerp(2, 9, UnityEngine.Random.value));
@@ -78,7 +64,7 @@ public class patch_Scavenger
 			mouseChub = 4;
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("SCAV SPAWNED! CHUB SIZE: " + mouseChub);
-		BellyPlus.myFoodInStomach[critNum] = mouseChub;
+		self.abstractCreature.GetAbsBelly().myFoodInStomach = mouseChub;
 
 		UpdateBellySize(self);
         //Debug.Log("SCAV SPAWNED! - KARMA? " + self.abstractCreature.karmicPotential);
@@ -95,10 +81,10 @@ public class patch_Scavenger
 	
 	public static void UpdateBellySize(Scavenger self)
 	{
-		int myLiz = GetRef(self);
+		int critNum = GetRef(self);
 		float baseWeight = 0.5f; //I THINK...
 		float baseRad = 9.5f;
-		int currentFood = BellyPlus.myFoodInStomach[GetRef(self)];
+		int currentFood = self.abstractCreature.GetAbsBelly().myFoodInStomach;
 
 		//new BodyChunk(this, 0, new Vector2(0f, 0f), 9.5f, 0.5f);
 		float newMass = baseWeight;
@@ -107,11 +93,11 @@ public class patch_Scavenger
             case 8:
                 newMass = baseWeight * 1.4f;
 				//self.bodyChunks[0].rad = baseRad * 1.5f;
-				BellyPlus.myFatness[myLiz] = 1.4f;
+				self.GetBelly().myFatness = 1.4f;
 				break;
             default:
 				newMass = baseWeight * 1f;
-				BellyPlus.myFatness[myLiz] = 1f;
+				self.GetBelly().myFatness = 1f;
 				break;
         }
 		
@@ -130,7 +116,7 @@ public class patch_Scavenger
         if (self.graphicsModule != null && !BellyPlus.VisualsOnly())
         {
             int critNum = self.abstractCreature.ID.RandomSeed;
-            if (BellyPlus.pushingOther[critNum] || BellyPlus.isStuck[critNum])
+            if (self.GetBelly().pushingOther > 0 || self.GetBelly().isStuck)
                 return Mathf.Min(0.5f, orig.Invoke(self)); //RETURN 10% SPEED (OR 0, IF WE WOULD BE STANDING STILL)
         }
         return orig.Invoke(self); //OTHERWISE, JUST RUN AS NORMAL
@@ -140,55 +126,57 @@ public class patch_Scavenger
 
 	public static Scavenger FindScavInRange(Creature self)
 	{
-		foreach (KeyValuePair<int, Scavenger> kvp in patch_Scavenger.scavBook)
-		{
-			if (
-				kvp.Value != null
-				&& kvp.Value != self
-				&& kvp.Value.room == self.room
-				&& kvp.Value.dead == false
-				&& Custom.DistLess(self.mainBodyChunk.pos, kvp.Value.bodyChunks[0].pos, 35f)
-			)
-			{
-				return kvp.Value as Scavenger;
-			}
-		}
-		return null;
+        if (self.room == null)
+            return null; 
+		
+		for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++)
+        {
+            if (self.room.abstractRoom.creatures[i].realizedCreature != null
+                && self.room.abstractRoom.creatures[i].realizedCreature is Scavenger crit
+                && crit != self && crit.room != null && crit.room == self.room && !crit.dead
+                && Custom.DistLess(self.mainBodyChunk.pos, crit.bodyChunks[1].pos, 35f)
+            )
+            {
+                return crit;
+            }
+        }
+        return null;
 	}
 	
 	
 	
 	public static Scavenger FindStuckScavInRange(Creature self)
 	{
-		foreach (KeyValuePair<int, Scavenger> kvp in patch_Scavenger.scavBook)
-		{
-			if (
-				kvp.Value != null
-				&& kvp.Value != self
-				&& kvp.Value.room == self.room
-				&& kvp.Value.dead == false
-				&& patch_Player.ObjIsStuck(kvp.Value)
-				&& Custom.DistLess(self.mainBodyChunk.pos, kvp.Value.bodyChunks[0].pos, 60f)
-			)
-			{
-				return kvp.Value as Scavenger;
-			}
-		}
-		return null;
+        if (self.room == null)
+            return null; 
+		
+		for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++)
+        {
+            if (self.room.abstractRoom.creatures[i].realizedCreature != null
+                && self.room.abstractRoom.creatures[i].realizedCreature is Scavenger crit
+				&& crit != self && crit.room != null && crit.room == self.room && !crit.dead
+                && patch_Player.ObjIsStuck(crit)
+                && Custom.DistLess(self.mainBodyChunk.pos, crit.bodyChunks[0].pos, 60f)
+            )
+            {
+                return crit;
+            }
+        }
+        return null;
 	}
 	
 	
 	//OKAY, THESE GUYS CAN HAVE ONE STEP.
 	public static void BPUUpdatePass1(Scavenger self, int critNum)
 	{
-		//Debug.Log("SC!-----DEBUG!: " + BellyPlus.myFlipValX[critNum] + " " + BellyPlus.inPipeStatus[critNum] + " "  + " " + BellyPlus.stuckStrain[critNum] + " " + +self.room.MiddleOfTile(self.bodyChunks[1].pos).x + " " + self.bodyChunks[1].pos.x);
+		//Debug.Log("SC!-----DEBUG!: " + self.GetBelly().myFlipValX + " " + self.GetBelly().inPipeStatus + " "  + " " + self.GetBelly().stuckStrain + " " + +self.room.MiddleOfTile(self.bodyChunks[1].pos).x + " " + self.bodyChunks[1].pos.x);
 		
-		BellyPlus.myFlipValX[critNum] = (self.bodyChunks[0].pos.x > self.bodyChunks[1].pos.x) ? 1 : -1;
-		BellyPlus.myFlipValY[critNum] = (self.bodyChunks[0].pos.y > self.bodyChunks[1].pos.y) ? 1 : -1;
-		BellyPlus.pullingOther[critNum] = false;
+		self.GetBelly().myFlipValX = (self.bodyChunks[0].pos.x > self.bodyChunks[1].pos.x) ? 1 : -1;
+		self.GetBelly().myFlipValY = (self.bodyChunks[0].pos.y > self.bodyChunks[1].pos.y) ? 1 : -1;
+		self.GetBelly().pullingOther = false;
 		
 		//CHECK IF WE'RE PUSHING, PULLING, ETC
-		if (BellyPlus.pushingOther[critNum])
+		if (self.GetBelly().pushingOther > 0)
 			self.stuckCounter = 0;
 		
 		
@@ -206,7 +194,7 @@ public class patch_Scavenger
 			//MAKE SURE WE ARE BOTH STUCK AND NOT RESISTING
 			else if (patch_Player.IsStuck(mySlug) && mySlug.input[0].IntVec.ToVector2() != -patch_Player.ObjGetStuckVector(mySlug))
 			{
-				BellyPlus.pullingOther[critNum] = true;
+				self.GetBelly().pullingOther = true;
 				self.bodyChunks[0].vel = patch_Player.ObjGetStuckVector(mySlug) * 0.25f;
 				self.shortcutDelay = 10;
 				if (BPOptions.debugLogs.Value)
@@ -275,7 +263,7 @@ public class patch_Scavenger
 			patch_Lizard.BPUUpdatePass5(self, critNum);
 			patch_Lizard.BPUUpdatePass5_2(self, critNum);
 
-			if (BellyPlus.pushingOther[critNum] || BellyPlus.pullingOther[critNum])
+			if (self.GetBelly().pushingOther > 0 || self.GetBelly().pullingOther)
 				self.bodyChunks[0].vel.y += 0.2f;
 		}
 		patch_Lizard.BPUUpdatePass6(self, critNum);

@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 
+namespace RotundWorld;
+
 public class patch_CicadaGraphics
 {
     public static void Patch()
@@ -56,11 +58,11 @@ public class patch_CicadaGraphics
         if (self.cicada.room == null)
             return;
 		
-        int myLizard = BellyPlus.GetRef(self.cicada);
+        int critNum = BellyPlus.GetRef(self.cicada);
 		
         //IF WE'RE BEING PUSHED, SQUISH THE TAIL
         Cicada liz = self.cicada as Cicada;
-        float bellyBulge = (BellyPlus.inPipeStatus[myLizard] || !BellyPlus.isStuck[myLizard]) ? 0 : Mathf.InverseLerp(0, 60, BellyPlus.boostStrain[myLizard]);
+        float bellyBulge = (self.GetBelly().inPipeStatus || !self.GetBelly().isStuck) ? 0 : Mathf.InverseLerp(0, 60, self.GetBelly().boostStrain);
 		
 		// WHAT IS A LIZARDS FATNESS...
 		//float lizFatness = BellyPlus.myFatness[BellyPlus.GetRef(liz)];

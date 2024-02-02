@@ -30,7 +30,7 @@ public class BPOptions : OptionInterface
         BPOptions.debugLogs = this.config.Bind<bool>("debugLogs", false);
         BPOptions.blushEnabled = this.config.Bind<bool>("blushEnabled", false);
         BPOptions.bpDifficulty = this.config.Bind<float>("bpDifficulty", 0f, new ConfigAcceptableRange<float>(-5f, 5f));
-        BPOptions.sfxVol = this.config.Bind<float>("sfxVol", 0.1f, new ConfigAcceptableRange<float>(0f, 0.4f));
+        BPOptions.sfxVol = this.config.Bind<float>("sfxVol", 0.1f, new ConfigAcceptableRange<float>(-0.1f, 0.4f));
         BPOptions.startThresh = this.config.Bind<int>("startThresh", 2, new ConfigAcceptableRange<int>(-4, 8));//(0, 4)
 		BPOptions.gapVariance = this.config.Bind<float>("gapVariance", 1.0f, new ConfigAcceptableRange<float>(0.5f, 1.75f));
         BPOptions.jokeContent1 = this.config.Bind<bool>("jokeContent1", true);
@@ -53,6 +53,10 @@ public class BPOptions : OptionInterface
 		BPOptions.fatEels = this.config.Bind<bool>("fatEels", true);
         BPOptions.fatPups = this.config.Bind<bool>("fatPups", true);
 
+        BPOptions.fatJets = this.config.Bind<bool>("fatJets", true);
+        BPOptions.fatDeer = this.config.Bind<bool>("fatDeer", true);
+        BPOptions.fatYeeks = this.config.Bind<bool>("fatYeeks", true);
+        BPOptions.fatLeechs = this.config.Bind<bool>("fatLeechs", true);
     }
 
 
@@ -95,6 +99,10 @@ public class BPOptions : OptionInterface
 	public static Configurable<bool> fatWigs;
 	public static Configurable<bool> fatEels;
     public static Configurable<bool> fatPups;
+    public static Configurable<bool> fatJets;
+    public static Configurable<bool> fatDeer;
+    public static Configurable<bool> fatYeeks;
+    public static Configurable<bool> fatLeechs;
     //Lizard
     //Lantern Mice
     //Scavengers
@@ -521,11 +529,11 @@ public class BPOptions : OptionInterface
 		//---------------- crits-------------
 		margin = baseMargin;
 		lineCount -= 75;
-		float linePadding = 50f;
+		float linePadding = 45f;
 
         Tabs[critTab].AddItems(new UIelement[]
         {
-            new OpRect(new Vector2(0, lineCount - 165), new Vector2(600, 200))
+            new OpRect(new Vector2(0, lineCount - 235), new Vector2(600, 275))
         });
 
         OpCheckBox critBox1;
@@ -667,9 +675,59 @@ public class BPOptions : OptionInterface
 		});
 
 
+        margin += 175;
+        //OpCheckBox critBox11;
+        dsc = BPTranslate("creaturetype-JetFish");
+        Tabs[critTab].AddItems(new UIelement[]
+        {
+            critBox11 = new OpCheckBox(BPOptions.fatJets, new Vector2(margin, lineCount))
+            {description = dsc},
+            new OpLabel(critBox11.pos.x + xPad, critBox11.pos.y + yPad, dsc)
+            {description = dsc}
+        });
+
+
+        margin = baseMargin;
+        lineCount -= linePadding;
+        dsc = BPTranslate("creaturetype-Deer");
+        Tabs[critTab].AddItems(new UIelement[]
+        {
+            critBox11 = new OpCheckBox(BPOptions.fatDeer, new Vector2(margin, lineCount))
+            {description = dsc},
+            new OpLabel(critBox11.pos.x + xPad, critBox11.pos.y + yPad, dsc)
+            {description = dsc}
+        });
+
+
+        margin += 175;
+        //OpCheckBox critBox11;
+        dsc = BPTranslate("creaturetype-Leech");
+        Tabs[critTab].AddItems(new UIelement[]
+        {
+            critBox11 = new OpCheckBox(BPOptions.fatLeechs, new Vector2(margin, lineCount))
+            {description = dsc},
+            new OpLabel(critBox11.pos.x + xPad, critBox11.pos.y + yPad, dsc)
+            {description = dsc}
+        });
+
+
         if (ModManager.MSC)
         {
             margin += 175;
+            OpCheckBox critBox13;
+            dsc = BPTranslate("creaturetype-Yeek");
+            Tabs[critTab].AddItems(new UIelement[]
+            {
+                critBox13 = new OpCheckBox(BPOptions.fatYeeks, new Vector2(margin, lineCount))
+                {description = dsc},
+                new OpLabel(critBox13.pos.x + xPad, critBox13.pos.y + yPad, dsc)
+                {description = dsc}
+            });
+
+
+
+            margin = baseMargin;
+            lineCount -= linePadding;
             OpCheckBox critBox12;
             dsc = BPTranslate("creaturetype-SlugNPC");
             Tabs[critTab].AddItems(new UIelement[]

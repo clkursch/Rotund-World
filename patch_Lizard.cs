@@ -4,7 +4,7 @@ using RWCustom;
 using UnityEngine;
 using MoreSlugcats;
 
-
+namespace RotundWorld;
 
 public class patch_Lizard
 {
@@ -23,34 +23,17 @@ public class patch_Lizard
 		On.Creature.Die += BP_Die;
 	}
 
-	public static Dictionary<int, Lizard> lizardBook = new Dictionary<int, Lizard>(0);
-
 	private static void MainPatch(On.Lizard.orig_ctor orig, Lizard self, AbstractCreature abstractCreature, World world)
 	{
 		orig(self, abstractCreature, world);
 		int lizardNum = self.abstractCreature.ID.RandomSeed;
 
-		//MAKE SURE THERE ISN'T ALREADY A CREATURE WITH OUR NAME ON THIS!
-		bool mouseExists = false;
-        try
+		if (self.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
         {
-			//ADD OURSELVES TO THE GUESTBOOK
-			patch_Lizard.lizardBook.Add(lizardNum, self);
-		}
-		catch (ArgumentException)
-        {
-			mouseExists = true;
-		}
-
-		if (mouseExists)
-        {
-			// Debug.Log("LIZARD ALREADY EXISTS! CANCELING: " + lizardNum);
-			patch_Lizard.lizardBook[lizardNum] = self; //WELL HOLD ON! WE STALL NEED THE REFERENCE FROM THAT BOOK TO POINT TO US!
+			Debug.Log("LIZARD ALREADY EXISTS! CANCELING: ");
 			UpdateBellySize(self);
 			return;
 		}
-		
-		BellyPlus.InitializeCreature(lizardNum);
         
 
         // int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
@@ -69,7 +52,7 @@ public class patch_Lizard
 		
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("LIZARD SPAWNED! CHUB SIZE: " + critChub);
-		BellyPlus.myFoodInStomach[GetRef(self)] = critChub;
+		self.abstractCreature.GetAbsBelly().myFoodInStomach = critChub;
 		
 		UpdateBellySize(self);
 
@@ -129,94 +112,49 @@ public class patch_Lizard
 	}
 	
 	
-	//FIND THE NEAREST
-	public static Lizard FindLizardInRange(Creature self)
-	{
-		foreach(KeyValuePair<int, Lizard> kvp in patch_Lizard.lizardBook)
-        {
-            if (
-				kvp.Value != null
-				&& kvp.Value != self
-				&& kvp.Value.room == self.room
-				&& kvp.Value.dead == false
-				&& Custom.DistLess(self.mainBodyChunk.pos, kvp.Value.bodyChunks[1].pos, 35f)
-			)
-			{
-				return kvp.Value as Lizard;
-				// break;
-			}
-        }
-		return null;
-	}
-
-
 	//WEIGHTINESS
 	public static void UpdateChubValue(Creature self)
 	{
 		int critNum = GetRef(self);
-		int currentFood = Math.Min(BellyPlus.myFoodInStomach[critNum], 8);
+		int currentFood = Math.Min(self.abstractCreature.GetAbsBelly().myFoodInStomach, 8);
 		
 		switch (currentFood)
 		{
 			case 8:
-				BellyPlus.myChubValue[critNum] = 4;
+				self.GetBelly().myChubValue = 4;
 				break;
 			case 7:
-				BellyPlus.myChubValue[critNum] = 3;
+				self.GetBelly().myChubValue = 3;
 				break;
 			case 6:
-				BellyPlus.myChubValue[critNum] = 2;
+				self.GetBelly().myChubValue = 2;
 				break;
 			case 5:
-				BellyPlus.myChubValue[critNum] = 1;
+				self.GetBelly().myChubValue = 1;
 				break;
 			case 4:
-				BellyPlus.myChubValue[critNum] = 0;
+				self.GetBelly().myChubValue = 0;
 				break;
 			case 3:
-				BellyPlus.myChubValue[critNum] = -1;
+				self.GetBelly().myChubValue = -1;
 				break;
 			case 2:
-				BellyPlus.myChubValue[critNum] = -2;
+				self.GetBelly().myChubValue = -2;
 				break;
 			case 1:
-				BellyPlus.myChubValue[critNum] = -3;
+				self.GetBelly().myChubValue = -3;
 				break;
 			case 0:
 			default:
-				BellyPlus.myChubValue[critNum] = -4;
+				self.GetBelly().myChubValue = -4;
 				break;
 		}
 	}
 	
 	
-	public static int GetChubValue(Creature self)
+	public static float GetChubValue(Creature self)
 	{
-		/*
-		int currentFood = BellyPlus.myFoodInStomach[GetRef(self)];
-		int maxFood = 7;
-		if (maxFood - currentFood <= -1)
-			return 4;
-		else if (maxFood - currentFood == 0)
-			return 3;
-		else if (maxFood - currentFood == 1)
-			return 2;
-		else if (maxFood - currentFood == 2)
-			return 1;
-		else if (maxFood - currentFood == 3)
-			return 0;
-		else if (maxFood - currentFood == 4)
-			return -1;
-		else if (maxFood - currentFood == 5)
-			return -2;
-		else if (maxFood - currentFood == 6)
-			return -3;
-		else
-		{
-			return -4;
-		}
-		*/
-		return BellyPlus.myChubValue[GetRef(self)]; //OPTIMIZED
+		return self.GetBelly().myChubValue; //OPTIMIZED
 	}
 
 
@@ -239,7 +177,7 @@ public class patch_Lizard
 	{
 		int myLiz = GetRef(self);
 		float baseRad = 8f * self.lizardParams.bodySizeFac * self.lizardParams.bodyRadFac;
-		int currentFood = BellyPlus.myFoodInStomach[GetRef(self)];
+		int currentFood = self.abstractCreature.GetAbsBelly().myFoodInStomach;
 
 		//BIG LIZARDS NEED TO CHILL
 		float chonkMod = (self.lizardParams.bodySizeFac >= 1.4f ? 0.2f : 0);
@@ -249,28 +187,28 @@ public class patch_Lizard
 		{
 			case 8:
 				newChunkRad = baseRad * 1.3f;
-				BellyPlus.myFatness[myLiz] = 1.5f - chonkMod + (GetOverstuffed(self) / 25f);
+				self.GetBelly().myFatness = 1.5f - chonkMod + (GetOverstuffed(self) / 25f);
 				break;
 			case 7:
 				newChunkRad = baseRad * 1.2f;
-				BellyPlus.myFatness[myLiz] = 1.35f - chonkMod;
+				self.GetBelly().myFatness = 1.35f - chonkMod;
 				break;
 			case 6:
 				newChunkRad = baseRad * 1.1f;
-				BellyPlus.myFatness[myLiz] = 1.2f - chonkMod;
+				self.GetBelly().myFatness = 1.2f - chonkMod;
 				break;
 			case 5:
 				newChunkRad = baseRad * 1.05f;
-				BellyPlus.myFatness[myLiz] = 1.1f - chonkMod;
+				self.GetBelly().myFatness = 1.1f - chonkMod;
 				break;
 			case 4:
 				newChunkRad = baseRad * 1f;
-				BellyPlus.myFatness[myLiz] = 1.0f - chonkMod;
+				self.GetBelly().myFatness = 1.0f - chonkMod;
 				break;
 			case 3:
 			default:
 				newChunkRad = baseRad * 1f;
-				BellyPlus.myFatness[myLiz] = 0.9f - chonkMod;
+				self.GetBelly().myFatness = 0.9f - chonkMod;
 				break;
 		}
 		
@@ -285,7 +223,7 @@ public class patch_Lizard
 	
 	public static int GetOverstuffed(Creature self)
     {
-		int currentFood = BellyPlus.myFoodInStomach[GetRef(self)];
+		int currentFood = self.abstractCreature.GetAbsBelly().myFoodInStomach;
 		if (currentFood > 8)
 			return currentFood - 8;
 		else
@@ -297,7 +235,7 @@ public class patch_Lizard
 	private static readonly float maxStamina = 120f;
 	public static float GetExhaustionMod(Creature self, float startAt)
 	{
-		float exh = BellyPlus.corridorExhaustion[GetRef(self)];
+		float exh = self.GetBelly().corridorExhaustion;
 		return Mathf.Max(0f, exh - startAt) / (maxStamina - startAt);
 	}
 
@@ -306,7 +244,7 @@ public class patch_Lizard
 		//NAH, JUST RETURNS TRUE IF IN A PASSAGE AT ALL
 		return (
 			(self.room != null && self.room.aimap != null && self.room.aimap.getAItile(self.bodyChunks[1].pos).narrowSpace)
-			|| BellyPlus.isStuck[GetRef(self)]);
+			|| self.GetBelly().isStuck);
 
 	}
 
@@ -314,57 +252,8 @@ public class patch_Lizard
 	public static bool IsStuck(Creature self)
 	{
 		//PRESSED AGAINST AN ENTRANCE
-		return BellyPlus.isStuck[GetRef(self)];
+		return self.GetBelly().isStuck;
 	}
-
-	public static float GetBoostStrain(Creature self)
-	{
-		return BellyPlus.boostStrain[GetRef(self)];
-	}
-
-	public static float GetStuckPercent(Creature self)
-	{
-		float squeezeThresh = BellyPlus.tileTightnessMod[GetRef(self)];
-		return (BellyPlus.stuckStrain[GetRef(self)] / squeezeThresh);
-	}
-
-
-	public static void PushedOn(Creature self) //, Lizard pusher)
-	{
-		BellyPlus.beingPushed[GetRef(self)] = 3;
-		// pushingOther[GetRef(pusher)] = true;
-	}
-	public static void PushedOther(Creature self)
-	{
-		BellyPlus.pushingOther[GetRef(self)] = true;
-	}
-
-	public static bool IsPushingOther(Creature self)
-	{
-		return BellyPlus.pushingOther[GetRef(self)];
-	}
-
-	public static bool IsPullingOther(Creature self)
-	{
-		return BellyPlus.pullingOther[GetRef(self)];
-	}
-
-	public static bool IsVerticalStuck(Creature self)
-	{
-		return BellyPlus.verticalStuck[GetRef(self)];
-	}
-
-	public static int GetYFlipDirection(Creature self)
-	{
-		return BellyPlus.myFlipValY[GetRef(self)];
-	}
-
-	public static int GetXFlipDirection(Creature self)
-	{
-		return BellyPlus.myFlipValX[GetRef(self)];
-	}
-
-
 
 
 	public static void Lizard_SpitOutOfShortCut(On.Lizard.orig_SpitOutOfShortCut orig, Lizard self, IntVector2 pos, Room newRoom, bool spitOutAllSticks)
@@ -380,18 +269,18 @@ public class patch_Lizard
 	
 	public static void Creature_SpitOutOfShortCut(Creature self, IntVector2 pos, Room newRoom)
 	{
-		int playerNum = GetRef(self);
-		BellyPlus.inPipeStatus[playerNum] = true;
-		BellyPlus.noStuck[playerNum] = 0;
-		BellyPlus.boostStrain[playerNum] = 0;
-		BellyPlus.stuckStrain[playerNum] = 0;
-		BellyPlus.stuckCoords[playerNum] = new Vector2(0, 0);
-		BellyPlus.timeInNarrowSpace[playerNum] = 100; //ENOUGH TO TRIGGER THE IN-PIPE STATUS
+		int critNum = GetRef(self);
+		self.GetBelly().inPipeStatus = true;
+		self.GetBelly().noStuck = 0;
+		self.GetBelly().boostStrain = 0;
+		self.GetBelly().stuckStrain = 0;
+		self.GetBelly().stuckCoords = new Vector2(0, 0);
+		self.GetBelly().timeInNarrowSpace = 100; //ENOUGH TO TRIGGER THE IN-PIPE STATUS
 		
-		BellyPlus.myFlipValX[playerNum] = newRoom.ShorcutEntranceHoleDirection(pos).x;
-		BellyPlus.myFlipValY[playerNum] = newRoom.ShorcutEntranceHoleDirection(pos).y;
+		self.GetBelly().myFlipValX = newRoom.ShorcutEntranceHoleDirection(pos).x;
+		self.GetBelly().myFlipValY = newRoom.ShorcutEntranceHoleDirection(pos).y;
 		
-		// Debug.Log("CRT!----SHORTCUT EJECT! " + playerNum);
+		// Debug.Log("CRT!----SHORTCUT EJECT! " + critNum);
 	}
 	
 
@@ -456,9 +345,13 @@ public class patch_Lizard
 				else
                     self.State.meatLeft += 3;
 			}
-            else if (self is DropBug && BellyPlus.myFoodInStomach[BellyPlus.GetRef(self)] >= 3)
+            else if (self is DropBug && self.abstractCreature.GetAbsBelly().myFoodInStomach >= 3)
             {
                 self.State.meatLeft += 2;
+            }
+			else if (self.abstractCreature.GetAbsBelly().myFoodInStomach >= 7)
+			{
+				self.State.meatLeft = Mathf.CeilToInt(self.State.meatLeft * 1.5f);
             }
         }
 
@@ -533,16 +426,16 @@ public class patch_Lizard
 	private static float crashVel = 0f;
 	public static void CheckStuckage(Creature self)
 	{
-		int lizNum = GetRef(self);
-		bool inPipe = BellyPlus.inPipeStatus[lizNum];
+		int critnum = GetRef(self);
+		bool inPipe = self.GetBelly().inPipeStatus;
 		float posMod = inPipe ? 0.5f : 0f;
 
 		//CHECK FOR GRACE PERIOD
-		if (BellyPlus.noStuck[lizNum] > 0)
+		if (self.GetBelly().noStuck > 0)
 		{
-			BellyPlus.noStuck[lizNum]--;
-			BellyPlus.isStuck[lizNum] = false;
-			BellyPlus.verticalStuck[lizNum] = false;
+			self.GetBelly().noStuck--;
+			self.GetBelly().isStuck = false;
+			self.GetBelly().verticalStuck = false;
 			//Debug.Log("LZ!----NO STUCKS ALLOWED! ");
 			return;
 		}
@@ -551,11 +444,11 @@ public class patch_Lizard
 			return;
 
 		//AREA SLIGHTLY IN FRONT OF HIPS
-		float myxF = (0.5f + posMod) * BellyPlus.myFlipValX[lizNum]; //NOO DON'T ADD OUR INPUT
-		float myxB = (-0.0f + posMod) * BellyPlus.myFlipValX[lizNum]; //AREA SLIGHTLY BEHIND HIPS
+		float myxF = (0.5f + posMod) * self.GetBelly().myFlipValX; //NOO DON'T ADD OUR INPUT
+		float myxB = (-0.0f + posMod) * self.GetBelly().myFlipValX; //AREA SLIGHTLY BEHIND HIPS
 																		  //FOR THE Y VERSION
-		float myyF = (0.5f + posMod) * BellyPlus.myFlipValY[lizNum]; //AREA SLIGHTLY IN FRONT OF HIPS
-		float myyB = (-0.0f + posMod) * BellyPlus.myFlipValY[lizNum]; //AREA SLIGHTLY BEHIND HIPS													
+		float myyF = (0.5f + posMod) * self.GetBelly().myFlipValY; //AREA SLIGHTLY IN FRONT OF HIPS
+		float myyB = (-0.0f + posMod) * self.GetBelly().myFlipValY; //AREA SLIGHTLY BEHIND HIPS													
 
 
 		//DON'T GET CONFUSED, THESE ARE BOTH FOR THE BOTTOM CHUNK. BUT IT'S CHECKING FOR THE FRONT/REAR OF THE BOTTOM CHUNK
@@ -569,14 +462,14 @@ public class patch_Lizard
 		bool isVertical = false;
 
 		//THIS MIGHT FIX IT; IF WE'RE VERTICAL STUCK, STAY THAT WAY UNTIL WE ARE NOT, REGARDLESS OF OUR ANGLE
-		// if (BellyPlus.verticalStuck[lizNum]) //ACTUALLY, THIS MIGHT BE CAUSING ISSUES. LETS TRY REVERTING THIS
+		// if (self.GetBelly().verticalStuck) //ACTUALLY, THIS MIGHT BE CAUSING ISSUES. LETS TRY REVERTING THIS
 			// isVertical = true;
 		if (inPipe)
 			isVertical = Mathf.Abs(self.bodyChunks[0].pos.x - self.bodyChunks[1].pos.x) < Mathf.Abs(self.bodyChunks[0].pos.y - self.bodyChunks[1].pos.y);
 		else
 			isVertical = (vertFrontInCorridor != vertRearInCorridor);
 		
-		bool topInCorridor = patch_Player.IsTileNarrowFloat(self as Creature, 0, 0f, BellyPlus.myFlipValY[lizNum]);
+		bool topInCorridor = patch_Player.IsTileNarrowFloat(self as Creature, 0, 0f, self.GetBelly().myFlipValY);
 		bool bottomInCorridor = patch_Player.IsTileNarrowFloat(self as Creature, 1, 0f, 0f);
 		bool pipeTwisting = topInCorridor && bottomInCorridor; // && self.backwardsCounter <= 0; //TO PREVENT FALSE JAMS FROM BENDS IN PIPES
 
@@ -602,40 +495,40 @@ public class patch_Lizard
 
 
 
-		if (BellyPlus.fwumpDelay[lizNum] > 0)
-			BellyPlus.fwumpDelay[lizNum]--;
+		if (self.GetBelly().fwumpDelay > 0)
+			self.GetBelly().fwumpDelay--;
 
 		//IF WE'RE NOT STUCK, RETURN
 		if (!wedgedInFront && !wedgedBehind && !vertStuck)
 		{
 			
 			//IF WE JUST CHEATED THE STUCK STRAIN, MAKE AN ATTEMPT TO POP US BACK INTO PLACE!
-			int myZard = lizNum;
+			// int critNum = [critNum]
 			bool backedOut = false;
-			if (BellyPlus.isStuck[myZard] && BellyPlus.stuckStrain[myZard] > 0 && BellyPlus.stuckCoords[myZard] != new Vector2(0, 0))
+			if (self.GetBelly().isStuck && self.GetBelly().stuckStrain > 0 && self.GetBelly().stuckCoords != new Vector2(0, 0))
 			{
 
-				Vector2 newCoords = BellyPlus.stuckCoords[myZard];
+				Vector2 newCoords = self.GetBelly().stuckCoords;
 				float nudge = inPipe ? 5 : -5f;
 				bool isClipping = self.IsTileSolid(1, 0, 0); //OKAY WEIRDO. WE NEED TO CHECK TO MAKE SURE OUR UNSTICK CAME FROM PHASING INTO THE WALL :/
-				if (!BellyPlus.verticalStuck[myZard])
+				if (!self.GetBelly().verticalStuck)
 				{
 					wedgedInFront = true;
-					if(BellyPlus.myFlipValX[myZard] == 1 && self.bodyChunks[1].pos.x > BellyPlus.stuckCoords[myZard].x || isClipping)
+					if(self.GetBelly().myFlipValX == 1 && self.bodyChunks[1].pos.x > self.GetBelly().stuckCoords.x || isClipping)
 						newCoords = new Vector2(newCoords.x - nudge, newCoords.y);
-					else if (BellyPlus.myFlipValX[myZard] == -1 && self.bodyChunks[1].pos.x < BellyPlus.stuckCoords[myZard].x || isClipping)
+					else if (self.GetBelly().myFlipValX == -1 && self.bodyChunks[1].pos.x < self.GetBelly().stuckCoords.x || isClipping)
 						newCoords = new Vector2(newCoords.x + nudge, newCoords.y);
 					else
 						backedOut = true;
-					// self.bodyChunks[0].pos = newCoords + new Vector2(5 * BellyPlus.myFlipValX[myZard], 0);
+					// self.bodyChunks[0].pos = newCoords + new Vector2(5 * self.GetBelly().myFlipValX, 0);
 					self.bodyChunks[0].pos.y = newCoords.y;
 				}
 				else
 				{
 					vertStuck = true;
-					if(BellyPlus.myFlipValY[myZard] == 1 && self.bodyChunks[1].pos.y > BellyPlus.stuckCoords[myZard].y || isClipping)
+					if(self.GetBelly().myFlipValY == 1 && self.bodyChunks[1].pos.y > self.GetBelly().stuckCoords.y || isClipping)
 						newCoords = new Vector2(newCoords.x, newCoords.y - nudge);
-					else if (BellyPlus.myFlipValY[myZard] == -1 && self.bodyChunks[1].pos.y < BellyPlus.stuckCoords[myZard].y || isClipping)
+					else if (self.GetBelly().myFlipValY == -1 && self.bodyChunks[1].pos.y < self.GetBelly().stuckCoords.y || isClipping)
 						newCoords = new Vector2(newCoords.x, newCoords.y + nudge);
 					else
 						backedOut = true;
@@ -644,22 +537,22 @@ public class patch_Lizard
 					
 				if (backedOut)
 				{
-					// Debug.Log("LZ! WE JUST BACKED OUT! NOTHING SPECIAL " + self.bodyChunks[1].pos + " STUCK COORDS:" + BellyPlus.stuckCoords[myZard] + " FLIPDIR:" + BellyPlus.myFlipValX[myZard] + "," + BellyPlus.myFlipValY[myZard] + " VERTSTK:" + BellyPlus.verticalStuck[myZard] + self.bodyChunks[0].terrainSqueeze);
-					BellyPlus.isStuck[lizNum] = false;
-					BellyPlus.stuckInShortcut[myZard] = false;
-					BellyPlus.verticalStuck[lizNum] = false;
-					BellyPlus.stuckCoords[myZard] = new Vector2(0, 0);
+					// Debug.Log("LZ! WE JUST BACKED OUT! NOTHING SPECIAL " + self.bodyChunks[1].pos + " STUCK COORDS:" + self.GetBelly().stuckCoords + " FLIPDIR:" + self.GetBelly().myFlipValX + "," + self.GetBelly().myFlipValY + " VERTSTK:" + self.GetBelly().verticalStuck + self.bodyChunks[0].terrainSqueeze);
+					self.GetBelly().isStuck = false;
+					self.GetBelly().stuckInShortcut = false;
+					self.GetBelly().verticalStuck = false;
+					self.GetBelly().stuckCoords = new Vector2(0, 0);
 					return;
 				}
 				else
 				{
 					float stretchMag = (self.bodyChunks[1].vel.magnitude / 1f);
-					// Debug.Log("LZ! REDIRECTING TO STUCK COORDS! " + BellyPlus.stuckCoords[myZard] + " CURRENT:" + self.bodyChunks[1].pos + " ADJST:" + newCoords + " STRETCH:" + stretchMag + " CLIPPING" + isClipping); // + " BODYCOORDS:" + self.bodyChunks[2].pos);
+					// Debug.Log("LZ! REDIRECTING TO STUCK COORDS! " + self.GetBelly().stuckCoords + " CURRENT:" + self.bodyChunks[1].pos + " ADJST:" + newCoords + " STRETCH:" + stretchMag + " CLIPPING" + isClipping); // + " BODYCOORDS:" + self.bodyChunks[2].pos);
 					
 					self.bodyChunks[1].HardSetPosition(newCoords);
 					
 					//OKAY, HOW BAD ARE WE STRETCHING? INCREASE STUCKSTRAIN BASED ON THAT.
-					BellyPlus.stuckStrain[myZard] += 5 + stretchMag; //MAYBE HELP
+					self.GetBelly().stuckStrain += 5 + stretchMag; //MAYBE HELP
 
                     //IT KEEPS TRYING TO SUCK THEIR TAILS IN FIRST IF THEY JUMP AHEAD. DONT LET THAT HAPPEN.
                     for (int i = 0; i < self.bodyChunks.Length; i++)
@@ -678,30 +571,30 @@ public class patch_Lizard
 					{
 						self.bodyChunks[i].vel = new Vector2(0, 0);
 					}
-					// Debug.Log("LZ!FWOMP!! EJECTED " + inPipe + "-" + BellyPlus.boostStrain[lizNum]);
+					// Debug.Log("LZ!FWOMP!! EJECTED " + inPipe + "-" + self.GetBelly().boostStrain);
 					PlayExternalSound(self, BPEnums.BPSoundID.Fwump1, 0.03f, 1f);
 					// self.Stun(20); //I THINK THIS MAKES THEM DROP THINGS
-					BellyPlus.boostStrain[myZard] /= 2; //MAYBE THIS WILL HELP THE REPEATING POPS
+					self.GetBelly().boostStrain /= 2; //MAYBE THIS WILL HELP THE REPEATING POPS
 				}
 			}
 			
 			else
 			{
-				//Debug.Log("LZ! NOT STUCK... " + inPipe + " - " + BellyPlus.stuckCoords[myZard]);
-				if (BellyPlus.stuckStrain[myZard] > 0)
-					BellyPlus.stuckStrain[myZard] -= 2;
+				//Debug.Log("LZ! NOT STUCK... " + inPipe + " - " + self.GetBelly().stuckCoords);
+				if (self.GetBelly().stuckStrain > 0)
+					self.GetBelly().stuckStrain = Mathf.Max(0, self.GetBelly().stuckStrain - 2f);
 				else
                 {
-					BellyPlus.isStuck[myZard] = false;
-					BellyPlus.stuckInShortcut[myZard] = false;
-					BellyPlus.stuckCoords[myZard] = new Vector2(0, 0);
+					self.GetBelly().isStuck = false;
+					self.GetBelly().stuckInShortcut = false;
+					self.GetBelly().stuckCoords = new Vector2(0, 0);
 				}
 				return; // NORMAL CASE OF NOT BEING STUCK
 			}
 		}
 
 		//DETERMINES THE VALUE THEY MUST PASS IN ORDER TO SLIDE THROUGH
-		Vector2 tilePosMod = new Vector2(vertStuck ? 0 : (2f * posMod * BellyPlus.myFlipValX[lizNum]), vertStuck ? (2f * posMod) * BellyPlus.myFlipValY[lizNum] : 0);
+		Vector2 tilePosMod = new Vector2(vertStuck ? 0 : (2f * posMod * self.GetBelly().myFlipValX), vertStuck ? (2f * posMod) * self.GetBelly().myFlipValY : 0);
 		// 60 * ((GetChubValue(self) - 1)
 		
 		//BIG LIZORDS GET TREATED AS BIGGER
@@ -793,17 +686,17 @@ public class patch_Lizard
 			myChub = Mathf.Max(0, myChub - 0.5f);
 		}
 		
-		BellyPlus.tileTightnessMod[lizNum] = 30 * (myChub + patch_Player.GetTileSizeMod(self, tilePosMod, GetMouseVector(self), tileSizeMod, inPipe, self.Submersion > 0, false));
-		float squeezeThresh = BellyPlus.tileTightnessMod[lizNum];
+		self.GetBelly().tileTightnessMod = 30 * (myChub + patch_Player.GetTileSizeMod(self, tilePosMod, GetMouseVector(self), tileSizeMod, inPipe, self.Submersion > 0, false));
+		float squeezeThresh = self.GetBelly().tileTightnessMod;
 
 		//IF OUR RESULT TURNS OUT TO BE 0 ANYWAYS, CANCEL THE STUCK
 		if (squeezeThresh <= 0)
 		{
-			BellyPlus.noStuck[lizNum] = 30;
+			self.GetBelly().noStuck = 30;
 			if (squeezeThresh == 0 || squeezeThresh == -0.5f) //IF IT WAS EXACTLY OUR SIZE, PLAY A FUNNY SOUND
 			{
 				self.room.PlaySound(BPEnums.BPSoundID.Squinch1, self.mainBodyChunk, false, 0.1f, 1f - GetChubValue(self) / 10f);
-				BellyPlus.shortStuck[lizNum] = 5; //TO ACCOMPANY THE SQUINCH~
+				//BellyPlus.shortStuck[critNum] = 5; //TO ACCOMPANY THE SQUINCH~
 				// Debug.Log("LZ!SQUINCH " + inPipe);
 			}
 			return;
@@ -811,7 +704,7 @@ public class patch_Lizard
 
 
 		//WE JUST NOW GOT STUCK --- PREPARE STUCK BWOMP!
-		if (!BellyPlus.isStuck[lizNum] && (vertStuck || wedgedInFront || wedgedBehind))
+		if (!self.GetBelly().isStuck && (vertStuck || wedgedInFront || wedgedBehind))
 		{
 			crashVel = self.bodyChunks[1].vel.magnitude;
 			// Debug.Log("LZ!PRE-PLUG VELOCITY! " + crashVel);
@@ -824,22 +717,22 @@ public class patch_Lizard
 			if (isVertical)
 			{
 				int flipper = (self.bodyChunks[1].vel.y > 0) ? 1 : -1; 
-				BellyPlus.stuckVector[lizNum] = new Vector2(0, flipper);
+				self.GetBelly().stuckVector = new Vector2(0, flipper);
 				crashVel = Mathf.Abs((self.bodyChunks[1].vel + (new Vector2(0, self.gravity) * 6f)).y) * 0.8f;
 			}
 			else
 			{
 				int flipper = (self.bodyChunks[1].vel.x > 0) ? 1 : -1; 
-				BellyPlus.stuckVector[lizNum] = new Vector2(flipper, 0);
+				self.GetBelly().stuckVector = new Vector2(flipper, 0);
 				crashVel = Mathf.Abs((self.bodyChunks[1].vel).x);
 			}
 			
 
-			BellyPlus.stuckCoords[lizNum] = self.room.MiddleOfTile(self.bodyChunks[1].pos);
+			self.GetBelly().stuckCoords = self.room.MiddleOfTile(self.bodyChunks[1].pos);
 			
 			//KEEP TRACK OF IF WE WERE COMING OUT OF A SHORTCUT
-			if (self.shortcutDelay > 0)//(BellyPlus.freshFromShortcut[lizNum] > 0)
-				BellyPlus.stuckInShortcut[lizNum] = true;
+			if (self.shortcutDelay > 0)//(BellyPlus.freshFromShortcut[critNum] > 0)
+				self.GetBelly().stuckInShortcut = true;
 			
 			//LIZARD LOUNGING FWUMP
 			if (self is Lizard && (self as Lizard).animation == Lizard.Animation.Lounge)
@@ -866,16 +759,16 @@ public class patch_Lizard
 			
 
 			//LIZARDS ALWAYS DO THIS
-			BellyPlus.fwumpDelay[lizNum] = 4;
-			//BellyPlus.terrSqzMemory[lizNum] = self.bodyChunks[0].terrainSqueeze; //WE NEED FAT LIZARDS TO REMEMBER THIS SO THAT THEIR TERRAIN SQUEEZE DOESN'T REVERT TO 0 AND SEND THEM FLYING BACK
+			self.GetBelly().fwumpDelay = 4;
+			//BellyPlus.terrSqzMemory[critNum] = self.bodyChunks[0].terrainSqueeze; //WE NEED FAT LIZARDS TO REMEMBER THIS SO THAT THEIR TERRAIN SQUEEZE DOESN'T REVERT TO 0 AND SEND THEM FLYING BACK
 			if (BPOptions.debugLogs.Value)
-				Debug.Log("NEW CRITTER STUCK VECTOR! " + BellyPlus.stuckVector[lizNum] + " SIZEMOD " + sizeMod );
+				Debug.Log("NEW CRITTER STUCK VECTOR! " + self.GetBelly().stuckVector + " SIZEMOD " + sizeMod );
 			patch_Player.GetTileSizeMod(self, tilePosMod, GetMouseVector(self), tileSizeMod, inPipe, self.Submersion > 0, true); //	JUST FOR LOGS
 		}
 
 
 		//STUCK BWOMP!
-		if (BellyPlus.fwumpDelay[lizNum] == 1)
+		if (self.GetBelly().fwumpDelay == 1)
         {
 			float velMag = 0.0f + Mathf.Sqrt(crashVel * 2f);
 			float vol = Mathf.Min((velMag / 5f), 0.25f);
@@ -886,51 +779,51 @@ public class patch_Lizard
 			{
 				Vector2 pos3 = self.bodyChunks[0].pos;
 				float xvel = 4;
-				self.room.AddObject(new WaterDrip(pos3, new Vector2((float)BellyPlus.myFlipValX[lizNum] * xvel, Mathf.Lerp(-2f, 6f, UnityEngine.Random.value)), false));
+				self.room.AddObject(new WaterDrip(pos3, new Vector2((float)self.GetBelly().myFlipValX * xvel, Mathf.Lerp(-2f, 6f, UnityEngine.Random.value)), false));
 			}
 		}
 		
 
 		//FROM THE DELAYED SHOVE
-		if (BellyPlus.fwumpDelay[lizNum] == 8)
+		if (self.GetBelly().fwumpDelay == 8)
 		{
-			BellyPlus.stuckStrain[lizNum] += 60f;
-			BellyPlus.fwumpDelay[lizNum] = 0;
+			self.GetBelly().stuckStrain += 60f;
+			self.GetBelly().fwumpDelay = 0;
 		}
 
 
 		//ASSISTED SQUEEZES VISUAL BOOST
-		if (BellyPlus.assistedSqueezing[lizNum])
+		if (self.GetBelly().assistedSqueezing)
 		{
-			if (BellyPlus.boostStrain[lizNum] < 8)
-				BellyPlus.boostStrain[lizNum] += 2;
+			if (self.GetBelly().boostStrain < 8)
+				self.GetBelly().boostStrain += 2;
 			//WE NEED TI IMPOSE SOME SORT OF LIMIT ON THIS...
-			BellyPlus.boostStrain[lizNum] = Math.Min(BellyPlus.boostStrain[lizNum], 18);
+			self.GetBelly().boostStrain = Math.Min(self.GetBelly().boostStrain, 18);
 		}
 
 
 
 		if (wedgedInFront || wedgedBehind)
 		{
-			BellyPlus.isStuck[lizNum] = true;
-			BellyPlus.verticalStuck[lizNum] = false;
-			float tileCheckOffset = (inPipe ? 0 : 10f) * BellyPlus.myFlipValX[lizNum]; //WELP, NOW IT WORKS WELL
-			float pushBack = (self.room.MiddleOfTile(self.bodyChunks[1].pos).x + tileCheckOffset - self.bodyChunks[1].pos.x); // * BellyPlus.myFlipValX[lizNum];
-			pushBack = (pushBack - (((xMove && !BellyPlus.lungsExhausted[lizNum]) ? 9.0f : 7.5f) * BellyPlus.myFlipValX[lizNum])) * 1.0f;
-			//Debug.Log("LZ!-----SQUEEZED AGAINST AN X ENTRANCE!: " + BellyPlus.myFlipValX[lizNum] + " " + BellyPlus.inPipeStatus[lizNum] + " " + pushBack + " " + " ORIG VELOCITY " + self.bodyChunks[1].vel.x + " FORCE APPLIED: " + (pushBack + (BellyPlus.boostStrain[lizNum] * BellyPlus.myFlipValX[lizNum] / 5f)));
+			self.GetBelly().isStuck = true;
+			self.GetBelly().verticalStuck = false;
+			float tileCheckOffset = (inPipe ? 0 : 10f) * self.GetBelly().myFlipValX; //WELP, NOW IT WORKS WELL
+			float pushBack = (self.room.MiddleOfTile(self.bodyChunks[1].pos).x + tileCheckOffset - self.bodyChunks[1].pos.x); // * self.GetBelly().myFlipValX;
+			pushBack = (pushBack - (((xMove && !self.GetBelly().lungsExhausted) ? 9.0f : 7.5f) * self.GetBelly().myFlipValX)) * 1.0f;
+			//Debug.Log("LZ!-----SQUEEZED AGAINST AN X ENTRANCE!: " + self.GetBelly().myFlipValX + " " + self.GetBelly().inPipeStatus + " " + pushBack + " " + " ORIG VELOCITY " + self.bodyChunks[1].vel.x + " FORCE APPLIED: " + (pushBack + (self.GetBelly().boostStrain * self.GetBelly().myFlipValX / 5f)));
 
 			if (Math.Abs(pushBack) > 15f)
 				pushBack = 0; //SOMETHINGS GONE HORRIBLY WRONG
 
 
-			if (xMove || BellyPlus.assistedSqueezing[lizNum])
+			if (xMove || self.GetBelly().assistedSqueezing)
 			{
 				//MAKE PROGRESS AS WE STRAIN. SELF STRUGGLING AND ASSISTED STRUGGLING CAN STACK
-				if (xMove && !BellyPlus.lungsExhausted[lizNum])
-					BellyPlus.stuckStrain[lizNum] += 2f;
+				if (xMove && !self.GetBelly().lungsExhausted)
+					self.GetBelly().stuckStrain += 2f;
 				//OUR PUSHERS STRAIN WILL BE ADED ELSEWHERE, WHERE WE CAN CHECK THAT THEY ARENT EXHAUSTED FIRST
 
-				if (BellyPlus.stuckStrain[lizNum] < squeezeThresh)
+				if (self.GetBelly().stuckStrain < squeezeThresh)
 				{
 					//NOW, DO WE WANT TO SLOW DOWN OUR MOVEMENT SPEED? OR OUR PHYSICAL VELOCITY?...
 					//IF WE DO CORRCLIMBSPEED, PUT THIS IN UPDATEBODYMODE. IF WE DO VELOCITY, PUT IT AT THE END OF NORMAL UPDATE, SO IT UPDATES IF PLAYERS GRAB US
@@ -939,40 +832,40 @@ public class patch_Lizard
 					//MOVED TAIL WAGGLE INTO THE GRAPHICS MODULE
 					
 					//MICE ONLY
-					if (self is LanternMouse && !BellyPlus.lungsExhausted[lizNum] && self.graphicsModule != null)
+					if (self is LanternMouse && !self.GetBelly().lungsExhausted && self.graphicsModule != null)
 					{
 						//NO TAIL WAGGLE. MICE GOT TEENY TAILS
 						self.bodyChunks[0].vel.y = 0;
 						//RE-ALIGN THE BODY CHUNKS (MOUSE SPECIFIC)
 						if (self.bodyChunks[0].pos.y < self.bodyChunks[1].pos.y)
 							self.bodyChunks[0].vel.y += 1f * wornOut;
-						self.graphicsModule.bodyParts[4].vel.y += (0.1f) * BellyPlus.myFlipValY[lizNum] * wornOut; //I THINK THIS IS TOO MUCH
+						self.graphicsModule.bodyParts[4].vel.y += (0.1f) * self.GetBelly().myFlipValY * wornOut; //I THINK THIS IS TOO MUCH
 					}
 
 					//LIZ TAILS
-					if (self is Lizard && BellyPlus.beingPushed[lizNum] > 0)
+					if (self is Lizard && self.GetBelly().beingPushed > 0)
 					{
 						self.bodyChunks[2].pos.y = self.bodyChunks[1].pos.y;
 					}
 				}
 				else
 				{
-					PopFree(self, BellyPlus.stuckStrain[lizNum], BellyPlus.inPipeStatus[lizNum]);
+					PopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
 					// Debug.Log("LZ!-----SLIIIIIIIIIDE THROUGH AN X ENTRANCE!: ");
 					pushBack = 0;
 				}
 			}
 			else
 			{
-				BellyPlus.stuckStrain[lizNum] = 0;
+				self.GetBelly().stuckStrain = 0;
 			}
 
 			//OK WE NEED A FORMULA WHERE THAT, WHEN OUR X >= 9.5 FROM MID, VOL APPROACHES 0
-			self.bodyChunks[1].vel.x += pushBack + (BellyPlus.boostStrain[lizNum] * BellyPlus.myFlipValX[lizNum] / 5f);
+			self.bodyChunks[1].vel.x += pushBack + (self.GetBelly().boostStrain * self.GetBelly().myFlipValX / 5f);
 			if (self is Lizard)
-					self.bodyChunks[2].vel.x += pushBack + (BellyPlus.boostStrain[lizNum] * BellyPlus.myFlipValX[lizNum] / 5f);
+					self.bodyChunks[2].vel.x += pushBack + (self.GetBelly().boostStrain * self.GetBelly().myFlipValX / 5f);
 			//CHECK IF WE'RE MOVING BACKWARDS WHILE PUSHING. IF WE ARE, CUT THE VEL IN HALF. WE DON'T WANT TO BE MOVING BACKWARDS
-			if (self.bodyChunks[1].vel.x < 0 != BellyPlus.stuckVector[lizNum].x < 0)
+			if (self.bodyChunks[1].vel.x < 0 != self.GetBelly().stuckVector.x < 0)
 				self.bodyChunks[1].vel.x /= 4; //THIS PREVENTS THE HEAVY JITTER WHILE STRUGGLING
 
 		}
@@ -981,44 +874,44 @@ public class patch_Lizard
 		//VERTICAL SQUEEZES
 		else if (vertStuck)
 		{
-			BellyPlus.isStuck[lizNum] = true;
-			BellyPlus.verticalStuck[lizNum] = true;
-			float tileCheckOffset = (inPipe ? 0 : 10f) * BellyPlus.myFlipValY[lizNum]; //WELP, NOW IT WORKS WELL
-			float pushBack = (self.room.MiddleOfTile(self.bodyChunks[1].pos).y + tileCheckOffset - self.bodyChunks[1].pos.y); // * BellyPlus.myFlipValY[lizNum];
-			pushBack = (pushBack - ((yMove ? 9.5f : 7.5f) * BellyPlus.myFlipValY[lizNum])) * 1.0f;
-			//Debug.Log("LZ!-----SQUEEZED AGAINST AN Y ENTRANCE!: " + " " + BellyPlus.inPipeStatus[lizNum] + " - " + pushBack + " YFLIP:" + BellyPlus.myFlipValY[lizNum] + " - " + BellyPlus.stuckStrain[lizNum] + " " + self.room.MiddleOfTile(self.bodyChunks[1].pos).y + " " + self.bodyChunks[1].pos.y);
+			self.GetBelly().isStuck = true;
+			self.GetBelly().verticalStuck = true;
+			float tileCheckOffset = (inPipe ? 0 : 10f) * self.GetBelly().myFlipValY; //WELP, NOW IT WORKS WELL
+			float pushBack = (self.room.MiddleOfTile(self.bodyChunks[1].pos).y + tileCheckOffset - self.bodyChunks[1].pos.y); // * self.GetBelly().myFlipValY;
+			pushBack = (pushBack - ((yMove ? 9.5f : 7.5f) * self.GetBelly().myFlipValY)) * 1.0f;
+			//Debug.Log("LZ!-----SQUEEZED AGAINST AN Y ENTRANCE!: " + " " + self.GetBelly().inPipeStatus + " - " + pushBack + " YFLIP:" + self.GetBelly().myFlipValY + " - " + self.GetBelly().stuckStrain + " " + self.room.MiddleOfTile(self.bodyChunks[1].pos).y + " " + self.bodyChunks[1].pos.y);
 
-			if (yMove || BellyPlus.assistedSqueezing[lizNum])
+			if (yMove || self.GetBelly().assistedSqueezing)
 			{
 				//MAKE PROGRESS AS WE STRAIN. SELF STRUGGLING AND ASSISTED STRUGGLING CAN STACK
-				if (yMove && !BellyPlus.lungsExhausted[lizNum])
-					BellyPlus.stuckStrain[lizNum] += 2;
+				if (yMove && !self.GetBelly().lungsExhausted)
+					self.GetBelly().stuckStrain += 2;
 
-				if (BellyPlus.stuckStrain[lizNum] < squeezeThresh)
+				if (self.GetBelly().stuckStrain < squeezeThresh)
 				{
 					//MOVED TAIL WAGGLE TO GRAPHICS MODULE
 					
 					//MICE ONLY
-					if (self is LanternMouse && !BellyPlus.lungsExhausted[lizNum] && self.graphicsModule != null)
+					if (self is LanternMouse && !self.GetBelly().lungsExhausted && self.graphicsModule != null)
 					{
 						float wornOut = 1 - GetExhaustionMod(self, 60);
-						if (BellyPlus.beingPushed[lizNum] < 1 && BellyPlus.myFlipValY[lizNum] < 0)
+						if (self.GetBelly().beingPushed < 1 && self.GetBelly().myFlipValY < 0)
 						{
-							self.graphicsModule.bodyParts[5].vel.y += Mathf.Sqrt(BellyPlus.stuckStrain[lizNum] / 30f) * -BellyPlus.myFlipValY[lizNum] * wornOut; //TAIL OUT
-							self.graphicsModule.bodyParts[5].vel.y += (BellyPlus.boostStrain[lizNum]) * -BellyPlus.myFlipValY[lizNum] * wornOut;
+							self.graphicsModule.bodyParts[5].vel.y += Mathf.Sqrt(self.GetBelly().stuckStrain / 30f) * -self.GetBelly().myFlipValY * wornOut; //TAIL OUT
+							self.graphicsModule.bodyParts[5].vel.y += (self.GetBelly().boostStrain) * -self.GetBelly().myFlipValY * wornOut;
 						}
-						else if (BellyPlus.myFlipValY[lizNum] > 0)
+						else if (self.GetBelly().myFlipValY > 0)
 						{
-							self.graphicsModule.bodyParts[5].vel.x += (BellyPlus.boostStrain[lizNum] / 2) * BellyPlus.myFlipValX[lizNum] * wornOut;
+							self.graphicsModule.bodyParts[5].vel.x += (self.GetBelly().boostStrain / 2) * self.GetBelly().myFlipValX * wornOut;
 							if (inPipe)
 								self.bodyChunks[0].pos.x = self.bodyChunks[1].pos.x; //KEEP THE HEAD LEVEL SO IT DOESNT SQUEEZE OUT DIAGONALLY
 						}
-						self.graphicsModule.bodyParts[4].vel.y += (Mathf.Min(Mathf.Sqrt(BellyPlus.stuckStrain[lizNum] / 30f), 6f) + (BellyPlus.boostStrain[lizNum] / 2f)) * BellyPlus.myFlipValY[lizNum] * wornOut; //SNOUT OUT
+						self.graphicsModule.bodyParts[4].vel.y += (Mathf.Min(Mathf.Sqrt(self.GetBelly().stuckStrain / 30f), 6f) + (self.GetBelly().boostStrain / 2f)) * self.GetBelly().myFlipValY * wornOut; //SNOUT OUT
 					}
 
 
 					//LIZ TAILS
-					if (self is Lizard && BellyPlus.beingPushed[lizNum] > 0)
+					if (self is Lizard && self.GetBelly().beingPushed > 0)
 					{
 						self.bodyChunks[2].pos.x = self.bodyChunks[1].pos.x;
 					}
@@ -1026,8 +919,8 @@ public class patch_Lizard
 				else
 				{
 					//HIGHER BOOST VALUE IF LAUNCHING UPWARDS
-					float boostVel = (self.bodyChunks[0].pos.y > self.bodyChunks[1].pos.y) ? BellyPlus.stuckStrain[lizNum] : BellyPlus.stuckStrain[lizNum] / 2f;
-					PopFree(self, boostVel, BellyPlus.inPipeStatus[lizNum]);
+					float boostVel = (self.bodyChunks[0].pos.y > self.bodyChunks[1].pos.y) ? self.GetBelly().stuckStrain : self.GetBelly().stuckStrain / 2f;
+					PopFree(self, boostVel, self.GetBelly().inPipeStatus);
 					// Debug.Log("LZ!-----SLIIIIIIIIIDE THROUGH AN Y ENTRANCE!: ");
 					pushBack = 0;
 					
@@ -1035,49 +928,49 @@ public class patch_Lizard
 			}
 			else
 			{
-				BellyPlus.stuckStrain[lizNum] = 0;
+				self.GetBelly().stuckStrain = 0;
 			}
 
 			//OK WE NEED A FORMULA WHERE THAT, WHEN OUR X >= 9.5 FROM MID, VOL APPROACHES 0
-			self.bodyChunks[1].vel.y += pushBack + (BellyPlus.boostStrain[lizNum] * BellyPlus.myFlipValY[lizNum] / 6f);
+			self.bodyChunks[1].vel.y += pushBack + (self.GetBelly().boostStrain * self.GetBelly().myFlipValY / 6f);
 			if (self is Lizard)
-				self.bodyChunks[2].vel.y += pushBack + (BellyPlus.boostStrain[lizNum] * BellyPlus.myFlipValY[lizNum] / 6f);
+				self.bodyChunks[2].vel.y += pushBack + (self.GetBelly().boostStrain * self.GetBelly().myFlipValY / 6f);
 			//CHECK IF WE'RE MOVING BACKWARDS WHILE PUSHING. IF WE ARE, CUT THE VEL IN HALF. WE DON'T WANT TO BE MOVING BACKWARDS
-			if (self.bodyChunks[1].vel.y < 0 != BellyPlus.stuckVector[lizNum].y < 0)
+			if (self.bodyChunks[1].vel.y < 0 != self.GetBelly().stuckVector.y < 0)
 				self.bodyChunks[1].vel.y /= 4; //THIS PREVENTS THE HEAVY JITTER WHILE STRUGGLING
 		}
 		
 
 
 		//------REDUCE STUCK STRAIN BASED ON THE FORMULA F(x) = (X(A-C))/500---------
-		if (BellyPlus.stuckStrain[lizNum] > 0)
+		if (self.GetBelly().stuckStrain > 0)
 		{
 			//A NEW VAR TO TRACK LOOSENING PROGRESS AS STRAINING CONTINUES
-			BellyPlus.loosenProg[lizNum] += Mathf.Sqrt(Mathf.Max(Mathf.Min(BellyPlus.stuckStrain[lizNum], 250) - 180f, 0)) / 1000f; //LIZARDS LOOSEN MUCH FASTER
-			//float counterStrain = (BellyPlus.stuckStrain[lizNum] * GetChubValue(self)) / 700f;
-			float counterStrain = (BellyPlus.stuckStrain[lizNum] * ((BellyPlus.tileTightnessMod[lizNum] / 30) - BellyPlus.loosenProg[lizNum])) / 500f; //500f
-			//Debug.Log("LZ!--------COUNTER STRAIN!: " + counterStrain + " TIGHTNESS: " + (BellyPlus.tileTightnessMod[lizNum] / 30) + " - " + (BellyPlus.tileTightnessMod[lizNum]) + " " + "STRAIN: " + BellyPlus.stuckStrain[lizNum] + "  EXHAUSTION:" + BellyPlus.corridorExhaustion[lizNum] + "  PROGRESS:" + BellyPlus.loosenProg[lizNum] + "  BOOST:" + BellyPlus.boostStrain[lizNum]);
-			BellyPlus.stuckStrain[lizNum] -= counterStrain;
+			self.GetBelly().loosenProg += Mathf.Sqrt(Mathf.Max(Mathf.Min(self.GetBelly().stuckStrain, 250) - 180f, 0)) / 1000f; //LIZARDS LOOSEN MUCH FASTER
+			//float counterStrain = (self.GetBelly().stuckStrain * GetChubValue(self)) / 700f;
+			float counterStrain = (self.GetBelly().stuckStrain * ((self.GetBelly().tileTightnessMod / 30) - self.GetBelly().loosenProg)) / 500f; //500f
+			//Debug.Log("LZ!--------COUNTER STRAIN!: " + counterStrain + " TIGHTNESS: " + (self.GetBelly().tileTightnessMod / 30) + " - " + (self.GetBelly().tileTightnessMod) + " " + "STRAIN: " + self.GetBelly().stuckStrain + "  EXHAUSTION:" + self.GetBelly().corridorExhaustion + "  PROGRESS:" + self.GetBelly().loosenProg + "  BOOST:" + self.GetBelly().boostStrain);
+			self.GetBelly().stuckStrain = Mathf.Max(0, self.GetBelly().stuckStrain - counterStrain);
 		}
 	}
 
 
 
 
-	public static void BPUUpdatePass1(Lizard self, int lizNum)
+	public static void BPUUpdatePass1(Lizard self, int critnum)
 	{
-		//Debug.Log("LZ!-----DEBUG!: " + BellyPlus.myFlipValX[lizNum] + " " + BellyPlus.inPipeStatus[lizNum] + " "  + " " + BellyPlus.stuckStrain[lizNum] + " " + +self.room.MiddleOfTile(self.bodyChunks[1].pos).x + " " + self.bodyChunks[1].pos.x);
-		float myRunSpeed = (1f - (GetChubValue(self) / 10f) - Mathf.Lerp(0f, 0.2f, (GetOverstuffed(self) / 12f))) * ((IsStuck(self) || BellyPlus.pushingOther[lizNum]) ? 0.03f : 1f);
+		//Debug.Log("LZ!-----DEBUG!: " + self.GetBelly().myFlipValX + " " + self.GetBelly().inPipeStatus + " "  + " " + self.GetBelly().stuckStrain + " " + +self.room.MiddleOfTile(self.bodyChunks[1].pos).x + " " + self.bodyChunks[1].pos.x);
+		float myRunSpeed = (1f - (GetChubValue(self) / 10f) - Mathf.Lerp(0f, 0.2f, (GetOverstuffed(self) / 12f))) * ((IsStuck(self) || self.GetBelly().pushingOther > 0) ? 0.03f : 1f);
 		//1.0 - 0.6 at chub 4.   0.4 at 12 overstuffed
 
 		//11-28-22 CAN WE MAKE THESE GUYS WEDGE TOO? ONLY IF ON SCREEN, TO SAVE RESOURCES
-		if (self.graphicsModule != null && BellyPlus.inPipeStatus[lizNum])
+		if (self.graphicsModule != null && self.GetBelly().inPipeStatus)
 			myRunSpeed *= patch_Player.CheckWedge(self, false);
 		
 		self.AI.runSpeed = Mathf.Min(self.AI.runSpeed, 1f * myRunSpeed);
 		
 		//DISABLE THIS BODY CHUNK WHEN STUCK IN SHORTCUT (IDK IF THIS ACTUALLY HELPS...)
-		self.bodyChunkConnections[2].active = !BellyPlus.stuckInShortcut[lizNum];
+		self.bodyChunkConnections[2].active = !self.GetBelly().stuckInShortcut;
 
         //HEY OUR AI DOESN'T RUN WHILE GRABBED! WE HAVE TO RUN THIS HERE
         if (self.grabbedBy.Count > 0 && (self.grabbedBy[0].grabber is Player) && (self.AI.friendTracker.friend != null && self.AI.friendTracker.friend is Player)) //IF OUR FRIEND IS A PLAYER, ASSUME ALL PLAYERS ARE CHILL
@@ -1088,40 +981,40 @@ public class patch_Lizard
 	}
 
 
-	public static void BPUUpdatePass2(Creature self, int lizNum)
+	public static void BPUUpdatePass2(Creature self, int critnum)
 	{
-		//Debug.Log("LZ LIZARD DEBUG!: NUM:" + lizNum + " BE:" + self.AI.behavior + " POS:" + self.bodyChunks[1].pos + " VEL:" + self.bodyChunks[1].vel + " STRAIN:" + BellyPlus.corridorExhaustion[lizNum] + " PIPE:" + BellyPlus.inPipeStatus[lizNum]);
+		//Debug.Log("LZ LIZARD DEBUG!: NUM:" + critnum + " BE:" + self.AI.behavior + " POS:" + self.bodyChunks[1].pos + " VEL:" + self.bodyChunks[1].vel + " STRAIN:" + self.GetBelly().corridorExhaustion + " PIPE:" + self.GetBelly().inPipeStatus);
 		
-		BellyPlus.assistedSqueezing[lizNum] = false;
+		self.GetBelly().assistedSqueezing = false;
 		//-----THE MAIN SQUEEZE CHECK-----
-		if ((patch_Player.IsGrabbedByHelper(self) || BellyPlus.beingPushed[lizNum] > 0) && GetChubValue(self) >= 0)
+		if ((patch_Player.IsGrabbedByHelper(self) || self.GetBelly().beingPushed > 0) && GetChubValue(self) >= 0)
 		{
 			//FIRST CHECK IF WE'RE BEING GRABBED BY A HELPER
 			if (patch_Player.IsCramped(self)) //(self.room.aimap.getAItile(self.mainBodyChunk.pos).narrowSpace)
 			{
-				BellyPlus.isSqueezing[lizNum] = true;
-				BellyPlus.assistedSqueezing[lizNum] = true;
+				self.GetBelly().isSqueezing = true;
+				self.GetBelly().assistedSqueezing = true;
 			}
 			else
 			{
-				BellyPlus.isSqueezing[lizNum] = false;
-				BellyPlus.assistedSqueezing[lizNum] = false;
+				self.GetBelly().isSqueezing = false;
+				self.GetBelly().assistedSqueezing = false;
 			}
 		}
 
 		//IF WE HAVE ANY STUCK STRAIN AT ALL
-		else if (BellyPlus.isStuck[lizNum] && BellyPlus.stuckStrain[lizNum] > 0)
-			BellyPlus.isSqueezing[lizNum] = true;
-		else if (BellyPlus.wedgeStrain[lizNum] > 0) //11/29/22 I THINK NPCS NEED THIS SPECIAL
-			BellyPlus.isSqueezing[lizNum] = true;
+		else if (self.GetBelly().isStuck && self.GetBelly().stuckStrain > 0)
+			self.GetBelly().isSqueezing = true;
+		else if (self.GetBelly().wedgeStrain > 0) //11/29/22 I THINK NPCS NEED THIS SPECIAL
+			self.GetBelly().isSqueezing = true;
 		else
 		{
-			BellyPlus.isSqueezing[lizNum] = false;
-			BellyPlus.assistedSqueezing[lizNum] = false;
+			self.GetBelly().isSqueezing = false;
+			self.GetBelly().assistedSqueezing = false;
 		}
 
 
-		if (BellyPlus.slicked[lizNum] > 0 )
+		if (self.GetBelly().slicked > 0 )
 		{
 			if (UnityEngine.Random.value < 0.25f)
             {
@@ -1135,7 +1028,7 @@ public class patch_Lizard
 					self.room.AddObject(new WaterDrip(pos2, new Vector2(0, 1), false));
 				}
 			}
-			BellyPlus.slicked[lizNum]--;
+			self.GetBelly().slicked--;
 		}
 
 
@@ -1144,7 +1037,7 @@ public class patch_Lizard
 		//{
 		//	for (int n = 0; n < 3; n++)
 		//	{
-		//		self.bodyChunks[n].terrainSqueeze = BellyPlus.terrSqzMemory[lizNum];
+		//		self.bodyChunks[n].terrainSqueeze = BellyPlus.terrSqzMemory[critNum];
 		//	}
 		//}
 
@@ -1159,7 +1052,7 @@ public class patch_Lizard
 	//ALRIGHT. MAYBE WE JUST NEED A VALUE TO MANUALLY REFRESH ALL STUCK SOUNDS
 	public static bool refreshSounds = false;
 
-	public static void BPUUpdatePass3(Creature self, int lizNum)
+	public static void BPUUpdatePass3(Creature self, int critnum)
 	{
 		bool offscreen = false;
 		if (self.graphicsModule == null) // || )
@@ -1167,35 +1060,35 @@ public class patch_Lizard
 			//Debug.Log("NO GRAPHICS MODULE! END THE SOUND");
             //return;
             offscreen = true;
-			if (BellyPlus.stuckLoop[lizNum] != null) //OTHERWISE WE CRASH
+			if (self.GetBelly().stuckLoop != null) //OTHERWISE WE CRASH
             {
-				BellyPlus.stuckLoop[lizNum].alive = false;
-				BellyPlus.stuckLoop[lizNum] = null;
+				self.GetBelly().stuckLoop.alive = false;
+				self.GetBelly().stuckLoop = null;
 			}
 		}
 		
 		//OK, --------SECOND ONE FOR STUCK LOOP --------
-		if (BellyPlus.stuckLoop[lizNum] != null && offscreen == false)
+		if (self.GetBelly().stuckLoop != null && offscreen == false)
 		{
-			if (BellyPlus.isSqueezing[lizNum] == false || !patch_Player.IsStuckOrWedged(self) || refreshSounds)
+			if (self.GetBelly().isSqueezing == false || !patch_Player.IsStuckOrWedged(self) || refreshSounds)
 			{
-				BellyPlus.stuckLoop[lizNum].alive = false;
-				BellyPlus.stuckLoop[lizNum] = null;
+				self.GetBelly().stuckLoop.alive = false;
+				self.GetBelly().stuckLoop = null;
 				if (refreshSounds)
 					refreshSounds = false;
 			}
 			else
 			{
 				float myVel = self.bodyChunks[1].vel.magnitude / 3f; //THIS IS SIMPLER
-				if (BellyPlus.lungsExhausted[lizNum]) //IF WE'RE OUT OF BREATH AND NOT BEING ASSISTED, CUT THE VOLUME. WE AREN'T MAKING PROGRESS.
+				if (self.GetBelly().lungsExhausted) //IF WE'RE OUT OF BREATH AND NOT BEING ASSISTED, CUT THE VOLUME. WE AREN'T MAKING PROGRESS.
 					myVel = 0f;
 				//TAKE THE VALUE HALFWAY BETWEEN OUR CURRENT VEL AND OUR PREVIOUS VALUE
 				float maxVol = 2.5f;  //2.0f
-				float speedVar = Mathf.Min(Mathf.Lerp(BellyPlus.myLastVel[lizNum], myVel, 0.3f), maxVol) + (BellyPlus.boostStrain[lizNum] / 100f) + (BellyPlus.assistedSqueezing[lizNum] ? 0.0f : 0f);
-				float squeezeThresh = BellyPlus.tileTightnessMod[lizNum]; //ONE UNNESSESARY VARIABLE COMING UP // 60 * (GetChubValue(self) - 1);
-				//speedVar += 4 * Mathf.Pow(((BellyPlus.stuckStrain[lizNum] - (squeezeThresh/3)) / squeezeThresh), 4); //f(x) = 4(x-(B/3)/B)^4  where B = 60
-				speedVar += 1f / (100f * Mathf.Pow((BellyPlus.stuckStrain[lizNum] / squeezeThresh) - 1.11f, 2f)); //f(x) = 1/(100*(x-1.11)^2) == 0.87f AT FULL THRESHOLD
-				//Debug.Log("LZ!-----MATH CHECK!: " + Mathf.Pow(((BellyPlus.stuckStrain[lizNum] - (squeezeThresh / 3)) / squeezeThresh), 4) + " " + squeezeThresh);
+				float speedVar = Mathf.Min(Mathf.Lerp(self.GetBelly().myLastVel, myVel, 0.3f), maxVol) + (self.GetBelly().boostStrain / 100f) + (self.GetBelly().assistedSqueezing ? 0.0f : 0f);
+				float squeezeThresh = self.GetBelly().tileTightnessMod; //ONE UNNESSESARY VARIABLE COMING UP // 60 * (GetChubValue(self) - 1);
+				//speedVar += 4 * Mathf.Pow(((self.GetBelly().stuckStrain - (squeezeThresh/3)) / squeezeThresh), 4); //f(x) = 4(x-(B/3)/B)^4  where B = 60
+				speedVar += 1f / (100f * Mathf.Pow((self.GetBelly().stuckStrain / squeezeThresh) - 1.11f, 2f)); //f(x) = 1/(100*(x-1.11)^2) == 0.87f AT FULL THRESHOLD
+				//Debug.Log("LZ!-----MATH CHECK!: " + Mathf.Pow(((self.GetBelly().stuckStrain - (squeezeThresh / 3)) / squeezeThresh), 4) + " " + squeezeThresh);
 
 				//MAIN CHARACTERS (PETS) GET A BOOST TO VOLUME!
 				float softenValue = 0.85f;
@@ -1204,11 +1097,11 @@ public class patch_Lizard
 				
 				
 				float volMod = 0;
-				if (BellyPlus.wedgeStrain[lizNum] > 0f)
+				if (self.GetBelly().wedgeStrain > 0f)
                 {
-					speedVar = ((myVel * 1f) + (BellyPlus.boostStrain[lizNum] / 50f)) / 1f; //+ BellyPlus.stuckLoop[lizNum].wedgeStrain
-					volMod = Mathf.Max(BellyPlus.wedgeStrain[lizNum] - 0.3f, 0) * 1.3f;
-					if (patch_Player.GetAxisMagnitude(self) < 0.04f && BellyPlus.boostStrain[lizNum] < 1)
+					speedVar = ((myVel * 1f) + (self.GetBelly().boostStrain / 50f)) / 1f; //+ self.GetBelly().stuckLoop.wedgeStrain
+					volMod = Mathf.Max(self.GetBelly().wedgeStrain - 0.3f, 0) * 1.3f;
+					if (patch_Player.GetAxisMagnitude(self) < 0.04f && self.GetBelly().boostStrain < 1)
                     {
 						volMod = -1f;
 					}
@@ -1219,41 +1112,41 @@ public class patch_Lizard
 				float pitchMod = (patch_Player.ObjIsSlick(self) ? 0.1f : 0f);
 
 				speedVar /= 2;//Mathf.Pow(speedVar, 2);
-				BellyPlus.stuckLoop[lizNum].alive = true;
-				BellyPlus.stuckLoop[lizNum].volume = Mathf.Lerp(0.24f + BPOptions.sfxVol.Value, 0.07f, speedVar - volMod) * softenValue;
-				BellyPlus.stuckLoop[lizNum].pitch = Mathf.Lerp(0.4f, maxVol, speedVar) + pitchMod;
-				BellyPlus.myLastVel[lizNum] = speedVar; //REMEMBER THAT VAL FOR NEXT TIME
+				self.GetBelly().stuckLoop.alive = true;
+				self.GetBelly().stuckLoop.volume = Mathf.Lerp(0.24f + BPOptions.sfxVol.Value, 0.07f, speedVar - volMod) * softenValue;
+				self.GetBelly().stuckLoop.pitch = Mathf.Lerp(0.4f, maxVol, speedVar) + pitchMod;
+				self.GetBelly().myLastVel = speedVar; //REMEMBER THAT VAL FOR NEXT TIME
 			}
 		}
-		else if (patch_Player.IsStuckOrWedged(self) && offscreen == false && (BellyPlus.isSqueezing[lizNum] || BellyPlus.assistedSqueezing[lizNum])) //(num > 0f)
+		else if (patch_Player.IsStuckOrWedged(self) && offscreen == false && (self.GetBelly().isSqueezing || self.GetBelly().assistedSqueezing)) //(num > 0f)
 		{
-			BellyPlus.stuckLoop[lizNum] = self.room.PlaySound(BPEnums.BPSoundID.SqueezeLoop, self.mainBodyChunk, true, 0f, 0f, true); //Vulture_Jet_LOOP
-			BellyPlus.stuckLoop[lizNum].requireActiveUpkeep = true;
+			self.GetBelly().stuckLoop = self.room.PlaySound(BPEnums.BPSoundID.SqueezeLoop, self.mainBodyChunk, true, 0f, 0f, true); //Vulture_Jet_LOOP
+			self.GetBelly().stuckLoop.requireActiveUpkeep = true;
 		}
 	}
 
 	
 	//STUCK CHECK
-	public static void BPUUpdatePass4(Creature self, int lizNum)
+	public static void BPUUpdatePass4(Creature self, int critnum)
 	{
 		int bdy = patch_Player.ObjGetBodyChunkID(self, "middle");
 		if (!IsStuck(self))
 		{
 			// FOR NPCS, THIS IS JUST ALWAYS BASED ON THE DIRECTION THEY'RE POINTING
-			BellyPlus.myFlipValX[lizNum] = (self.bodyChunks[0].pos.x > self.bodyChunks[1].pos.x) ? 1 : -1;
-			BellyPlus.myFlipValY[lizNum] = (self.bodyChunks[0].pos.y > self.bodyChunks[1].pos.y) ? 1 : -1;
+			self.GetBelly().myFlipValX = (self.bodyChunks[0].pos.x > self.bodyChunks[1].pos.x) ? 1 : -1;
+			self.GetBelly().myFlipValY = (self.bodyChunks[0].pos.y > self.bodyChunks[1].pos.y) ? 1 : -1;
 			
 			if (self is Scavenger)
 			{
 				if (self.bodyChunks[bdy].vel.x > 0.1f)
-					BellyPlus.myFlipValX[lizNum] = 1;
+					self.GetBelly().myFlipValX = 1;
 				else if (self.bodyChunks[bdy].vel.x < -0.1f)
-					BellyPlus.myFlipValX[lizNum]= -1;
+					self.GetBelly().myFlipValX= -1;
 				
 				if (self.bodyChunks[bdy].vel.y > 0.1f)
-					BellyPlus.myFlipValY[lizNum] = 1;
+					self.GetBelly().myFlipValY = 1;
 				else if (self.bodyChunks[bdy].vel.y < -0.1f)
-					BellyPlus.myFlipValY[lizNum] = -1;
+					self.GetBelly().myFlipValY = -1;
 			}
 		}
 
@@ -1263,8 +1156,8 @@ public class patch_Lizard
 		if (GetChubValue(self) >= -1 && self.room != null) //ALRIGHT, I GUESS THIS SHOULD RUN FOR EVERYONE...
 		{
 			//IF WE ENDED UP IN A SHORTCUT WAY TOO FAST, MAKE A FORCED SQUINCH SOUND
-			//if (!BellyPlus.inPipeStatus[lizNum] && self.inShortcut)
-			if (self.enteringShortCut != null && BellyPlus.noStuck[lizNum] <= 0 && (self.bodyChunks[bdy].vel.magnitude > 7f))
+			//if (!self.GetBelly().inPipeStatus && self.inShortcut)
+			if (self.enteringShortCut != null && self.GetBelly().noStuck <= 0 && (self.bodyChunks[bdy].vel.magnitude > 7f))
 			{
 				self.room.PlaySound(BPEnums.BPSoundID.Squinch1, self.mainBodyChunk, false, 0.15f, 1.3f);
 				PlayExternalSound(self, BPEnums.BPSoundID.Fwump1, 0.12f, 1f);
@@ -1275,33 +1168,31 @@ public class patch_Lizard
 
 
 			//BASIC CHECK TO SEE IF WE'RE ALL THE WAY INSIDE A CORRIDOR OR NOT.
-			if (!BellyPlus.isStuck[lizNum] && self.room != null && self.room.aimap != null)
+			if (!self.GetBelly().isStuck && self.room != null && self.room.aimap != null)
 			{
 				bool hipsInNarrow = self.room.aimap.getAItile(self.bodyChunks[1].pos).narrowSpace;
 				//bool torsoInNarrow = self.room.aimap.getAItile(self.bodyChunks[0].pos).narrowSpace;
 				bool torsoInNarrow = self.room.aimap.getAItile(self.mainBodyChunk.pos).narrowSpace;
-				if ((hipsInNarrow && torsoInNarrow && BellyPlus.timeInNarrowSpace[lizNum] > 20) || self.inShortcut)
+				if ((hipsInNarrow && torsoInNarrow && self.GetBelly().timeInNarrowSpace > 20) || self.inShortcut)
 				{
-					BellyPlus.inPipeStatus[lizNum] = true;
+					self.GetBelly().inPipeStatus = true;
 				}
 				else if (!hipsInNarrow && !torsoInNarrow)
 				{
-					BellyPlus.inPipeStatus[lizNum] = false;
-					BellyPlus.timeInNarrowSpace[lizNum] = 0;
+					self.GetBelly().inPipeStatus = false;
+					self.GetBelly().timeInNarrowSpace = 0;
 				}
 			}
-			if (self is Lizard)
-				CheckStuckage(self as Lizard);
-			else if (self is LanternMouse)
-				patch_LanternMouse.CheckStuckage(self as LanternMouse);
+			if (self is Lizard || self is LanternMouse)
+				CheckStuckage(self);
 			else
 				CheckStuckage(self);
 		}
 
 		//STRETCH OUT BASED ON STRAIN!
 		/*
-		float bodyStretch = Mathf.Min(BellyPlus.boostStrain[lizNum], 15f) * ((self.bodyMode == Player.BodyModeIndex.CorridorClimb) ? 2f : 0.7f );
-		if (BellyPlus.beingPushed[lizNum] > 0 || (BellyPlus.verticalStuck[lizNum] && BellyPlus.myFlipValY[lizNum] > 0))
+		float bodyStretch = Mathf.Min(self.GetBelly().boostStrain, 15f) * ((self.bodyMode == Player.BodyModeIndex.CorridorClimb) ? 2f : 0.7f );
+		if (self.GetBelly().beingPushed > 0 || (self.GetBelly().verticalStuck && self.GetBelly().myFlipValY > 0))
 			bodyStretch *= 0.6f;
 		self.bodyChunkConnections[0].distance += Mathf.Sqrt(bodyStretch);
 		*/
@@ -1313,15 +1204,15 @@ public class patch_Lizard
 	
 	
 	
-	public static void BPUUpdatePass5(Creature self, int lizNum)
+	public static void BPUUpdatePass5(Creature self, int critnum)
 	{
 		//----- CHECK IF WE'RE PUSHING ANOTHER CREATURE.------
-		if (BellyPlus.pushingOther[lizNum] && self.graphicsModule != null)
+		if (self.GetBelly().pushingOther > 0 && self.graphicsModule != null)
 		{
 			//CAN I TENCHINCALLY JUST PASTE THE PLAYER VERSION IN HERE AT THIS POINT?
 			Player myPartner = patch_Player.FindPlayerInRange(self);
 			// LanternMouse mousePartner = FindLizardInRange(self);
-			Lizard lizardPartner = FindLizardInRange(self);
+			Lizard lizardPartner = patch_Player.FindLizardInRange(self, 0, 1);
 			Scavenger scavPartner = null;
 			
 			Creature myObject = null;
@@ -1342,13 +1233,13 @@ public class patch_Lizard
 
 			if (myObject != null)
 			{
-				bool horzPushLine = patch_Player.ObjIsPushingOther(myObject) && BellyPlus.myFlipValX[lizNum] != 0 && BellyPlus.myFlipValX[lizNum] == patch_Player.ObjGetXFlipDirection(myObject);
-				bool vertPushLine = patch_Player.ObjIsPushingOther(myObject) && BellyPlus.myFlipValY[lizNum] != 0 && BellyPlus.myFlipValY[lizNum] == patch_Player.ObjGetYFlipDirection(myObject);
-				bool matchingShoveDir = ((patch_Player.ObjIsVerticalStuck(myObject) || vertPushLine) && BellyPlus.myFlipValY[lizNum] == patch_Player.ObjGetYFlipDirection(myObject)) || ((!patch_Player.ObjIsVerticalStuck(myObject) || horzPushLine) && BellyPlus.myFlipValX[lizNum] == patch_Player.ObjGetXFlipDirection(myObject));
+				bool horzPushLine = patch_Player.ObjIsPushingOther(myObject) && self.GetBelly().myFlipValX != 0 && self.GetBelly().myFlipValX == patch_Player.ObjGetXFlipDirection(myObject);
+				bool vertPushLine = patch_Player.ObjIsPushingOther(myObject) && self.GetBelly().myFlipValY != 0 && self.GetBelly().myFlipValY == patch_Player.ObjGetYFlipDirection(myObject);
+				bool matchingShoveDir = ((patch_Player.ObjIsVerticalStuck(myObject) || vertPushLine) && self.GetBelly().myFlipValY == patch_Player.ObjGetYFlipDirection(myObject)) || ((!patch_Player.ObjIsVerticalStuck(myObject) || horzPushLine) && self.GetBelly().myFlipValX == patch_Player.ObjGetXFlipDirection(myObject));
 
-				float slouch = 0f; //(Mathf.Max(Mathf.Min(bellyStats[playerNum].holdJump, 40) - 5f, 0f) / 2.5f) * (matchingShoveDir ? 1 : 0);
+				float slouch = 0f; //(Mathf.Max(Mathf.Min(bellyStats[critNum].holdJump, 40) - 5f, 0f) / 2.5f) * (matchingShoveDir ? 1 : 0);
 
-				if (!BellyPlus.lungsExhausted[lizNum] && matchingShoveDir)
+				if (!self.GetBelly().lungsExhausted && matchingShoveDir)
 				{
 					patch_Player.ObjGainStuckStrain(myObject, 0.5f);
 					
@@ -1363,8 +1254,8 @@ public class patch_Lizard
 						patch_Player.ObjGainBoostStrain(myObject, 5, 14, 16);
 						patch_Player.ObjGainSquishForce(myObject, 14, 16);
 						patch_Player.ObjGainHeat(myObject, 75);
-						BellyPlus.boostStrain[lizNum] += 10;
-						//BellyPlus.myHeat[lizNum] += 50;
+						self.GetBelly().boostStrain += 10;
+						//self.GetBelly().myHeat += 50;
 						self.room.PlaySound(SoundID.Slugcat_Normal_Jump, self.mainBodyChunk.pos, 1.2f, 0.6f);
 						self.room.PlaySound(SoundID.Slugcat_Terrain_Impact_Medium, self.mainBodyChunk.pos, 1.0f, 1f);
 					}
@@ -1376,34 +1267,34 @@ public class patch_Lizard
 					patch_Player.ObjGainStuckStrain(myObject, 0.25f);
 
 				//CALCULATE A BOOST STRAIN MODIFIER THAT LOOKS A BIT SMOOTHER
-				float pushBoostStrn = ((BellyPlus.boostStrain[lizNum] > 4) ? 4 : BellyPlus.boostStrain[lizNum]) + slouch;
+				float pushBoostStrn = ((self.GetBelly().boostStrain > 4) ? 4 : self.GetBelly().boostStrain) + slouch;
 
 				//WE NEED TWO SEPERATE FNS FOR VERTICAL/HORIZONTAL
 				if (vertPushLine || patch_Player.ObjIsVerticalStuck(myObject) && (matchingShoveDir || slouch > 0))
 				{
 					//ACTUALLY, WE SHOULD MAKE LIZARDS RUN ALL PUSH SEARCHES FOR REARS INSTEAD OF MIDDLES. BECAUSE LIZARDS ARE NOT COORDINATED ENOUGH TO FIND EACH OTHERS TAILS
-					float pushBack = 22f - Mathf.Abs(patch_Player.ObjGetBodyChunkPos(myObject, "middle").y - self.bodyChunks[0].pos.y) + (vertPushLine ? 10 : 0); // + (bellyStats[playerNum].boostStrain / 5f);
-					pushBack -= pushBoostStrn; // (bellyStats[playerNum].boostStrain / 2); //BOOST STRAIN VISUALS
+					float pushBack = 22f - Mathf.Abs(patch_Player.ObjGetBodyChunkPos(myObject, "middle").y - self.bodyChunks[0].pos.y) + (vertPushLine ? 10 : 0); // + (bellyStats[critNum].boostStrain / 5f);
+					pushBack -= pushBoostStrn; // (bellyStats[critNum].boostStrain / 2); //BOOST STRAIN VISUALS
 					// Debug.Log("LZ! ---I'M PUSHING Y! LETS SHOW SOME EFFORT: " + pushBack);
 					pushBack = Mathf.Max(pushBack, 0);
-					pushBack *= BellyPlus.myFlipValY[lizNum];
+					pushBack *= self.GetBelly().myFlipValY;
 					self.bodyChunks[0].vel.y -= pushBack;
 					
 					//CHECK IF WE'RE MOVING BACKWARDS WHILE PUSHING. IF WE ARE, CUT THE VEL IN HALF. WE DON'T WANT TO BE MOVING BACKWARDS
-					if (self.bodyChunks[0].vel.y < 0 != BellyPlus.myFlipValY[lizNum] < 0)
+					if (self.bodyChunks[0].vel.y < 0 != self.GetBelly().myFlipValY < 0)
 						self.bodyChunks[0].vel.y /= 3f;
 					
-					if (self.bodyChunks[1].vel.y < 0 != BellyPlus.myFlipValY[lizNum] < 0)
+					if (self.bodyChunks[1].vel.y < 0 != self.GetBelly().myFlipValY < 0)
 						self.bodyChunks[1].vel.y /= 3f;
 					
-					if (self.bodyChunks[2].vel.y < 0 != BellyPlus.myFlipValY[lizNum] < 0)
+					if (self.bodyChunks[2].vel.y < 0 != self.GetBelly().myFlipValY < 0)
 						self.bodyChunks[2].vel.y /= 3f;
 				}
 				else if (horzPushLine || !patch_Player.ObjIsVerticalStuck(myObject) && (matchingShoveDir  || slouch > 0))
 				{
 					float pushBack = Mathf.Max(25f - pushBoostStrn + (horzPushLine ? 10 : 0) - Mathf.Abs(patch_Player.ObjGetBodyChunkPos(myObject, "middle").x - self.bodyChunks[0].pos.x), 0f);
 					//pushBack = Mathf.Max(pushBack * (1f - slouch/20f), 0);
-					pushBack *= BellyPlus.myFlipValX[lizNum];
+					pushBack *= self.GetBelly().myFlipValX;
 					// Debug.Log("LZ!---I'M PUSHING X! LETS SHOW SOME EFFORT: " + pushBack + " " + self.bodyChunks[0].vel.x + " PUSHING LINE?" + horzPushLine);
 
 					//IF THEYRE A TILE ABOVE US, REDUCE ALL THIS
@@ -1416,10 +1307,10 @@ public class patch_Lizard
 					self.bodyChunks[2].vel.x -= pushBack * (1.8f); //LIZARD SPECIFIC
 
 					//CHECK IF WE'RE MOVING BACKWARDS WHILE PUSHING. IF WE ARE, CUT THE VEL IN HALF. WE DON'T WANT TO BE MOVING BACKWARDS
-					if (self.bodyChunks[0].vel.x < 0 != BellyPlus.myFlipValX[lizNum] < 0) //Mathf.Abs(self.bodyChunks[0].vel.x) > 4 || 
+					if (self.bodyChunks[0].vel.x < 0 != self.GetBelly().myFlipValX < 0) //Mathf.Abs(self.bodyChunks[0].vel.x) > 4 || 
 						self.bodyChunks[0].vel.x /= (matchingShoveDir ? 2.5f : 1); //THIS PREVENTS THE HEAVY JITTER WHILE STRUGGLING
 
-					if (self.bodyChunks[1].vel.x < 0 != BellyPlus.myFlipValX[lizNum] < 0) //Mathf.Abs(self.bodyChunks[0].vel.x) > 4 || 
+					if (self.bodyChunks[1].vel.x < 0 != self.GetBelly().myFlipValX < 0) //Mathf.Abs(self.bodyChunks[0].vel.x) > 4 || 
 						self.bodyChunks[1].vel.x /= (matchingShoveDir ? 2.8f : 1); //OK THEY NEED TO BE SEPERATE
 				
 					if (self.bodyChunks[2].vel.x < 0 != GetMouseVector(self).x < 0)
@@ -1447,8 +1338,8 @@ public class patch_Lizard
 			
 		}
 
-		if (BellyPlus.noStuck[lizNum] > 0)
-			BellyPlus.noStuck[lizNum]--;
+		if (self.GetBelly().noStuck > 0)
+			self.GetBelly().noStuck--;
 		
 	}
 
@@ -1456,22 +1347,22 @@ public class patch_Lizard
 	
 	
 	
-	public static void BPUUpdatePass5_2(Creature self, int lizNum)
+	public static void BPUUpdatePass5_2(Creature self, int critnum)
 	{
 		//LET CREATURES BOOST TOO! JUST DO IT DIFFERENTLY...
 		// bool matchingStuckDir = (IsVerticalStuck(self) && self.input[0].y != 0) || (!IsVerticalStuck(self) && self.input[0].x != 0);
-		if (((BellyPlus.boostTimer[lizNum] < 1 && BellyPlus.stuckStrain[lizNum] > 65) || (BellyPlus.SafariJumpButton(self) && BellyPlus.boostTimer[lizNum] < 10)) && !BellyPlus.lungsExhausted[lizNum] && ((BellyPlus.isStuck[lizNum] || patch_Player.ObjIsWedged(self)) || BellyPlus.pushingOther[lizNum] || BellyPlus.pullingOther[lizNum])) //self.AI.excitement > 0.4f && 
+		if (((self.GetBelly().boostCounter < 1 && self.GetBelly().stuckStrain > 65) || (BellyPlus.SafariJumpButton(self) && self.GetBelly().boostCounter < 10)) && !self.GetBelly().lungsExhausted && ((self.GetBelly().isStuck || patch_Player.ObjIsWedged(self)) || self.GetBelly().pushingOther > 0 || self.GetBelly().pullingOther)) //self.AI.excitement > 0.4f && 
 		{
 			if (patch_Player.ObjIsWedged(self))
-				BellyPlus.boostStrain[lizNum] += 4;
+				self.GetBelly().boostStrain += 4;
 			else
 				patch_Player.ObjGainBoostStrain(self, 0, 10, 18);
 
-			BellyPlus.corridorExhaustion[lizNum] += 22; //30
+			self.GetBelly().corridorExhaustion += 22; //30
 			int boostAmnt = 15;
 			// self.AerobicIncrease(1f);
 			float strainMag = 15f * GetExhaustionMod(self, 60);
-			// Debug.Log("LZ!----- LIZARD BOOSTING! " + lizNum + "- Pushing other?" + BellyPlus.pushingOther[lizNum]);
+			// Debug.Log("LZ!----- LIZARD BOOSTING! " + critnum + "- Pushing other?" + self.GetBelly().pushingOther);
 
 			//EXTRA STRAIN PARTICALS!
 
@@ -1483,36 +1374,35 @@ public class patch_Lizard
 					Vector2 pos = patch_Player.ObjGetHeadPos(self);
 					if (UnityEngine.Random.value < Mathf.InverseLerp(0f, 0.5f, self.room.roomSettings.CeilingDrips))
 					{
-						//self.room.AddObject(new WaterDrip(pos3, new Vector2((float)BellyPlus.myFlipValX[lizNum] * 10, Mathf.Lerp(-4f, 4f, UnityEngine.Random.value)), false));
-						//self.room.AddObject(new WaterDrip(pos3, new Vector2((float)BellyPlus.myFlipValX[lizNum] * -10, Mathf.Lerp(-4f, 4f, UnityEngine.Random.value)), false));
+						//self.room.AddObject(new WaterDrip(pos3, new Vector2((float)self.GetBelly().myFlipValX * 10, Mathf.Lerp(-4f, 4f, UnityEngine.Random.value)), false));
+						//self.room.AddObject(new WaterDrip(pos3, new Vector2((float)self.GetBelly().myFlipValX * -10, Mathf.Lerp(-4f, 4f, UnityEngine.Random.value)), false));
 						self.room.AddObject(new StrainSpark(pos, GetMouseAngle(self).ToVector2() + Custom.DegToVec(180f * UnityEngine.Random.value) * 6f * UnityEngine.Random.value, 15f, Color.white));
 					}
 				}
 			}
 			//self.slowMovementStun += 15;
 			// self.jumpChunkCounter = 15;
-			BellyPlus.boostTimer[lizNum] = 12 + (Mathf.FloorToInt(UnityEngine.Random.value * 10)); // - Mathf.FloorToInt(Mathf.Lerp(10, 30, self.AI.fear));
+			self.GetBelly().boostCounter = 12 + (Mathf.FloorToInt(UnityEngine.Random.value * 10)); // - Mathf.FloorToInt(Mathf.Lerp(10, 30, self.AI.fear));
 
-			if (BellyPlus.isStuck[lizNum])
+			if (self.GetBelly().isStuck)
 			{
-				BellyPlus.stuckStrain[lizNum] += boostAmnt;
-				//BellyPlus.loosenProg[lizNum] += boostAmnt / 1000f; //LIZARDS LOOSEN MUCH FASTER
+				self.GetBelly().stuckStrain += boostAmnt;
+				//self.GetBelly().loosenProg += boostAmnt / 1000f; //LIZARDS LOOSEN MUCH FASTER
 				patch_Player.ObjGainLoosenProg(self, (boostAmnt / 2000f));
             }
 			else if (patch_Player.ObjIsWedged(self))
 			{
-				BellyPlus.stuckStrain[lizNum] += boostAmnt;
-				BellyPlus.loosenProg[lizNum] += (boostAmnt * (patch_Player.ObjIsSlick(self) ? 3f : 1f)) / 8000; //boostAmnt / 2000f;
-				//bellyStats[playerNum].loosenProg += (boostAmnt * (ObjIsSlick(self) ? 3f : 1f)) / loosenMod;
-				self.room.PlaySound(SoundID.Slugcat_In_Corridor_Step, self.mainBodyChunk, false, 0.6f + BellyPlus.wedgeStrain[lizNum] * 2, 0.6f + BellyPlus.wedgeStrain[lizNum] / 2f);
+				self.GetBelly().stuckStrain += boostAmnt;
+				self.GetBelly().loosenProg += (boostAmnt * (patch_Player.ObjIsSlick(self) ? 3f : 1f)) / 8000; //boostAmnt / 2000f;
+				//bellyStats[critNum].loosenProg += (boostAmnt * (ObjIsSlick(self) ? 3f : 1f)) / loosenMod;
+				self.room.PlaySound(SoundID.Slugcat_In_Corridor_Step, self.mainBodyChunk, false, 0.6f + self.GetBelly().wedgeStrain * 2, 0.6f + self.GetBelly().wedgeStrain / 2f);
 				if (patch_Player.ObjIsSlick(self))
 					self.room.PlaySound(SoundID.Tube_Worm_Shoot_Tongue, self.mainBodyChunk, false, 1.0f, 1f);
 			}
-			if (BellyPlus.pushingOther[lizNum])
+			if (self.GetBelly().pushingOther > 0)
             {
 				Player myPartner = patch_Player.FindPlayerInRange(self);
 				Lizard lizardPartner = patch_Player.FindLizardInRange(self, 0, 2);
-				Scavenger scavPartner = null;
 
 				Creature myObject = null;
 				if (myPartner != null)
@@ -1521,7 +1411,7 @@ public class patch_Lizard
 					myObject = (lizardPartner as Creature);
 				else if (self is Scavenger)
 				{
-					scavPartner = patch_Scavenger.FindScavInRange(self);
+                    Scavenger scavPartner = patch_Scavenger.FindScavInRange(self);
 					if (scavPartner != null)
 						myObject = (scavPartner as Creature);
 				}
@@ -1546,7 +1436,7 @@ public class patch_Lizard
 					(self as Lizard).voice.MakeSound(LizardVoice.Emotion.Frustration, 0.8f);
 				}
 			}
-			else if (BellyPlus.pullingOther[lizNum] && self.grasps[0] != null && self.grasps[0].grabbed != null && self.grasps[0].grabbed is Creature)
+			else if (self.GetBelly().pullingOther && self.grasps[0] != null && self.grasps[0].grabbed != null && self.grasps[0].grabbed is Creature)
 			{
 				Creature myGrasped = self.grasps[0].grabbed as Creature;
 				patch_Player.PassDownBenifits(myGrasped, boostAmnt / 2f, 10, 14);
@@ -1570,40 +1460,37 @@ public class patch_Lizard
 	}
 	
 	
-	public static void BPUUpdatePass6(Creature self, int lizNum)
+	public static void BPUUpdatePass6(Creature self, int critnum)
 	{
 		//THIS PART WE CAN RUN LIKE A NORMAL PERSON
-		if (BellyPlus.boostStrain[lizNum] > 0)
-			BellyPlus.boostStrain[lizNum]--;
+		if (self.GetBelly().boostStrain > 0)
+			self.GetBelly().boostStrain--;
 		
-		if (BellyPlus.beingPushed[lizNum] > 0)
-			BellyPlus.beingPushed[lizNum]--;
+		if (self.GetBelly().beingPushed > 0)
+			self.GetBelly().beingPushed--;
 		
-		if (BellyPlus.shortStuck[lizNum] > 0)
-			BellyPlus.shortStuck[lizNum]--;
-		
-		if (BellyPlus.boostTimer[lizNum] > 0)
-			BellyPlus.boostTimer[lizNum]--;
+		if (self.GetBelly().boostCounter > 0)
+			self.GetBelly().boostCounter--;
 
-		if (!IsStuck(self) && BellyPlus.loosenProg[lizNum] > 0)
-			BellyPlus.loosenProg[lizNum] -= 1 / 2000f;
+		if (!IsStuck(self) && self.GetBelly().loosenProg > 0)
+			self.GetBelly().loosenProg -= 1 / 2000f;
 
 
-		if (BellyPlus.corridorExhaustion[lizNum] > 0 && !BellyPlus.lungsExhausted[lizNum])
+		if (self.GetBelly().corridorExhaustion > 0 && !self.GetBelly().lungsExhausted)
 		{
-			BellyPlus.corridorExhaustion[lizNum]--;
-			if (BellyPlus.corridorExhaustion[lizNum] > maxStamina)
+			self.GetBelly().corridorExhaustion--;
+			if (self.GetBelly().corridorExhaustion > maxStamina)
 			{
 				// Debug.Log("LZ!----- OOF, IM EXHAUSTED! ");
-				BellyPlus.lungsExhausted[lizNum] = true;
-				BellyPlus.corridorExhaustion[lizNum] = -200; //A LITTLE WEIRD BUT TRUST ME.
+				self.GetBelly().lungsExhausted = true;
+				self.GetBelly().corridorExhaustion = -200; //A LITTLE WEIRD BUT TRUST ME.
 			}
 		}
-		else if (BellyPlus.lungsExhausted[lizNum]) //IF EXHAUSTED, WE COUNT UPWARDS
+		else if (self.GetBelly().lungsExhausted) //IF EXHAUSTED, WE COUNT UPWARDS
 		{
-			BellyPlus.corridorExhaustion[lizNum]++;
-			if (BellyPlus.corridorExhaustion[lizNum] > 0)
-				BellyPlus.lungsExhausted[lizNum] = false; //LUNGS BACK TO NORMAL
+			self.GetBelly().corridorExhaustion++;
+			if (self.GetBelly().corridorExhaustion > 0)
+				self.GetBelly().lungsExhausted = false; //LUNGS BACK TO NORMAL
 		}
 		
 	}
@@ -1611,10 +1498,10 @@ public class patch_Lizard
 
 	public static void BPLizard_Update(On.Lizard.orig_Update orig, Lizard self, bool eu)
 	{
-		int lizNum = GetRef(self);
+		int critnum = GetRef(self);
 		int origTimeSpentTrying = self.timeSpentTryingThisMove;
 
-		BPUUpdatePass1(self, lizNum);
+		BPUUpdatePass1(self, critnum);
 
 		orig.Invoke(self, eu);
 
@@ -1627,19 +1514,19 @@ public class patch_Lizard
 			return;
 		}
 
-		//bool mlungsExhausted = BellyPlus.pushingOther[GetRef(self)];
+		//bool mlungsExhausted = self.GetBelly().pushingOther;
 		if (self.room != null)
 		{ 
-			BPUUpdatePass2(self, lizNum);
-			BPUUpdatePass3(self, lizNum);
-			BPUUpdatePass4(self, lizNum);
+			BPUUpdatePass2(self, critnum);
+			BPUUpdatePass3(self, critnum);
+			BPUUpdatePass4(self, critnum);
 			if (self.stun <= 0 )
 			{
-				BPUUpdatePass5(self, lizNum);
-				BPUUpdatePass5_2(self, lizNum);
+				BPUUpdatePass5(self, critnum);
+				BPUUpdatePass5_2(self, critnum);
 			}
 		}
-		BPUUpdatePass6(self, lizNum);
+		BPUUpdatePass6(self, critnum);
 	}
 
 
@@ -1648,35 +1535,35 @@ public class patch_Lizard
 
 	public static void PopFree(Creature self, float power, bool inPipe)
 	{
-		int lizNum = GetRef(self);
+		int critnum = GetRef(self);
 		float popMag = Mathf.Min(power / 120f, 2f); //CAP OUT AT 2
-		BellyPlus.noStuck[lizNum] = 25;
-		BellyPlus.loosenProg[lizNum] = 0;
+		self.GetBelly().noStuck = 25;
+		self.GetBelly().loosenProg = 0;
 		if (BPOptions.debugLogs.Value)
-			Debug.Log("LZ!-----POP!: " + popMag + " - " + BellyPlus.stuckStrain[lizNum]);
+			Debug.Log("LZ!-----POP!: " + popMag + " - " + self.GetBelly().stuckStrain);
 		float popVol = Mathf.Lerp(0.12f, 0.28f, Mathf.Min(popMag, 1f));
-		float stuckStrainMemory = BellyPlus.stuckStrain[lizNum];
-		BellyPlus.stuckStrain[lizNum] = 6; //FAST PASS TO FIX VOLUME N STUFF
-		BellyPlus.squeezeStrain[lizNum] = 0; //SO WE DON'T ALSO GET THE POP
-		BellyPlus.inPipeStatus[lizNum] = !BellyPlus.inPipeStatus[lizNum]; //FLIPFLOP OUR PIPE STATUS
-		BellyPlus.isStuck[lizNum] = false;
-		BellyPlus.verticalStuck[lizNum] = false;
-		BellyPlus.stuckInShortcut[lizNum] = false;
-		BellyPlus.stuckCoords[lizNum] = new Vector2(0, 0);
-		// BellyPlus.slicked[lizNum] /= 2;
+		float stuckStrainMemory = self.GetBelly().stuckStrain;
+		self.GetBelly().stuckStrain = 6; //FAST PASS TO FIX VOLUME N STUFF
+		// BellyPlus.squeezeStrain[critNum] = 0; //SO WE DON'T ALSO GET THE POP
+		self.GetBelly().inPipeStatus = !self.GetBelly().inPipeStatus; //FLIPFLOP OUR PIPE STATUS
+		self.GetBelly().isStuck = false;
+		self.GetBelly().verticalStuck = false;
+		self.GetBelly().stuckInShortcut = false;
+		self.GetBelly().stuckCoords = new Vector2(0, 0);
+		// self.GetBelly().slicked /= 2;
 
 
         //TELEPORT US 0.5 OUT THE HOLE B) - DOESN'T ACTUALLY SEEM TO MAKE A BIG DIFFERENCE... -okay, maybe they do... for dumb green lizards
-        self.bodyChunks[0].pos += BellyPlus.stuckVector[lizNum] * 10f;
-		self.bodyChunks[1].pos += BellyPlus.stuckVector[lizNum] * 10f; //new Vector2(GetMouseVector(self).x * 10f, GetMouseVector(self).y * 10f);
+        self.bodyChunks[0].pos += self.GetBelly().stuckVector * 10f;
+		self.bodyChunks[1].pos += self.GetBelly().stuckVector * 10f; //new Vector2(GetMouseVector(self).x * 10f, GetMouseVector(self).y * 10f);
 
 		
 		if (!inPipe)
 			self.room.PlaySound(SoundID.Slugcat_Turn_In_Corridor, self.mainBodyChunk, false, popMag, Mathf.Sqrt(popMag));
 		
 		float launchSpeed = inPipe ? 6f : 9f;
-		launchSpeed *= (BellyPlus.slicked[lizNum] > 0 ? 1.5f : 1f);
-		Vector2 inputVect = BellyPlus.stuckVector[lizNum] * launchSpeed * popMag;
+		launchSpeed *= (self.GetBelly().slicked > 0 ? 1.5f : 1f);
+		Vector2 inputVect = self.GetBelly().stuckVector * launchSpeed * popMag;
 		
 		for (int i = 0; i < self.bodyChunks.Length; i++)
 		{
@@ -1726,7 +1613,7 @@ public class patch_Lizard
 
 
 		//-------------POP SOUND-----------
-		popVol += (-0.1f + BPOptions.sfxVol.Value);
+		popVol += (-0.1f + Mathf.Max(0, BPOptions.sfxVol.Value));
 		PlayExternalSound(self, BPEnums.BPSoundID.Pop1, (popVol / (!inPipe ? 2.5f : 2f)) * softenValue, 1f);
 
 		//CREATE SOME FUN SPARK FX

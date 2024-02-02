@@ -2,6 +2,7 @@
 using RWCustom;
 using UnityEngine;
 
+namespace RotundWorld;
 public class patch_SlugcatHand
 {
     public static void Patch()
@@ -14,7 +15,7 @@ public class patch_SlugcatHand
     private static void Player_JollyPointUpdate(On.Player.orig_JollyPointUpdate orig, Player self)
     {
         //-- Not actually pointing, just reusing the input, so it is fair to not call orig in this case
-        if (patch_Player.bellyStats[patch_Player.GetPlayerNum(self)].tuching)
+        if (self.GetBelly().tuching)
             return;
         orig(self);
     }
@@ -35,7 +36,6 @@ public class patch_SlugcatHand
 		}
 
 		Player myPlayer = self.owner.owner as Player;
-		int playerNum = patch_Player.GetPlayerNum(myPlayer);
 		
 		/*
 		//OKAY NO DON'T DO THIS IF WE'RE PIGGYBACKED. THAT MAKES WEIRD THINGS HAPPEN
@@ -62,11 +62,11 @@ public class patch_SlugcatHand
 
 
         //RESET BEFORE EACH CALCULATION IS RUN - MOVED THIS TO PLAYERUPDATE WHERE IT BELONGS
-        // patch_Player.bellyStats[patch_Player.GetPlayerNum(myPlayer)].pushingOther = false;
+        // myPlayer.GetBelly().pushingOther = false;
 		*/
 		
 		//REACH OUT TO FEED
-		Player fedCrit = patch_Player.bellyStats[playerNum].frFeed;
+		Player fedCrit = myPlayer.GetBelly().frFeed;
 		if (fedCrit != null)
 		{
 			self.mode = Limb.Mode.HuntAbsolutePosition;
@@ -78,7 +78,7 @@ public class patch_SlugcatHand
 		}
 		
 		
-		Creature targetCrit = patch_Player.bellyStats[playerNum].pushingCreature;
+		Creature targetCrit = myPlayer.GetBelly().pushingCreature;
 		//IF WE'RE CLOSE ENOUGH TO A PLAYER, REACH OUT TO PUSH THEM
 		if (targetCrit != null)
 		{
@@ -136,7 +136,7 @@ public class patch_SlugcatHand
 		
 		
 		//ROLLING OUR PARTNER ALONG
-		if (patch_Player.bellyStats[playerNum].rollingOther > 0)
+		if (myPlayer.GetBelly().rollingOther > 0)
 		{
 			self.mode = Limb.Mode.HuntAbsolutePosition;
 			self.huntSpeed = 10f;
@@ -160,7 +160,7 @@ public class patch_SlugcatHand
 					self.absoluteHuntPos = myHelper.bodyChunks[1].pos - (Custom.DirVec(myPlayer.bodyChunks[0].pos, myHelper.bodyChunks[1].pos) * (myHelper.isSlugpup || myHelper.playerState.isPup ? 1.4f : 1)) + (armDir * 5f); // * (8f - reach);
 					
 					myPlayer.graphicsModule.BringSpritesToFront();
-					patch_Player.bellyStats[patch_Player.GetPlayerNum(myHelper)].tuchShift = armDir * 2f;
+					myHelper.GetBelly().tuchShift = armDir * 2f;
 
                     patch_Player.ObjFeatherHeat(myPlayer, (1 + (UnityEngine.Random.value < 0.5f ? 1 : 0)) * 2, 800);
                     if (armDir != new Vector2(0, 0))
@@ -171,14 +171,14 @@ public class patch_SlugcatHand
                     if ((self.owner as PlayerGraphics).blink <= 0 && UnityEngine.Random.value < 0.0125)
                         myPlayer.Blink(UnityEngine.Random.Range(40, 80));
 
-                    patch_Player.bellyStats[playerNum].tuching = true;
+                    myPlayer.GetBelly().tuching = true;
                     //UHH AND THEN RETURN BECAUSE THE ORIGINAL BREAKS AFTER IT RUNS. 
                     return false;
                 }
             }
             else
             {
-                patch_Player.bellyStats[playerNum].tuching = false;
+                myPlayer.GetBelly().tuching = false;
             }
         }
 		

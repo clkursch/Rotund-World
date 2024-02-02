@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using static Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics;
 
+namespace RotundWorld;
 
 public class patch_FoodMeter
 {
@@ -59,7 +60,7 @@ public class patch_FoodMeter
 						Player myPlayer = players[i].realizedCreature as Player;
 						if (myPlayer != null)
 						{
-							float foodCount = Mathf.Max(patch_Player.GetPersonalFood(myPlayer) + (patch_Player.bellyStats[i].externalMass / 2) - 1, 0); // + Mathf.CeilToInt(patch_Player.GetOverstuffed(myPlayer) / 2f) - 1; //self.hud.owner.CurrentFood
+							float foodCount = Mathf.Max(patch_Player.GetPersonalFood(myPlayer) + (myPlayer.abstractCreature.GetAbsBelly().externalMass / 2) - 1, 0); // + Mathf.CeilToInt(patch_Player.GetOverstuffed(myPlayer) / 2f) - 1; //self.hud.owner.CurrentFood
 							//Debug.Log("-ARROW HUD UPDATE! PLAYER" + i + " OTHER:" + (j * players.Count) + "  CAM: " + j + " DRAWPOS: " + myMeterPos.x + " ALPHA " + pipAlpha + " COLOR " + foodArrows[i + (j * players.Count)].color);
 							foodArrows[i + (j * players.Count)].alpha = pipAlpha;
 							if (!BellyPlus.individualFoodEnabled)
@@ -217,10 +218,6 @@ public class patch_FoodMeter
                 }
                     
 				Debug.Log("CREATING ARROW HUD! PNUM:" + myPlyrNum);
-
-				// this.playerIcons = new Dictionary<int, FSprite>(); //JollyMeter.PlayerIcon>();
-				//this.fContainer = fContainer;
-				//Debug.Log("CREATING ARROW HUD");
 
 				//ONLY P1 SHOULD RUN THIS (WHAT A MESS...)
 				if (myPlyrNum == 0)

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using RWCustom;
 using UnityEngine;
 
-
+namespace RotundWorld;
 
 public class patch_Vulture
 {
@@ -25,25 +25,12 @@ public class patch_Vulture
         orig(self, abstractCreature, world);
 
         int critNum = self.abstractCreature.ID.RandomSeed;
-        bool mouseExists = false;
-        try
-        {
-            patch_Vulture.vultureBook.Add(critNum, self); //ADD OURSELVES TO THE GUESTBOOK
-        }
-        catch (ArgumentException)
-        {
-            mouseExists = true;
-        }
-
-        if (mouseExists)
+        if (self.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
         {
             //Debug.Log("CREATURE ALREADY EXISTS! CANCELING: " + critNum);
-            patch_Vulture.vultureBook[critNum] = self;
             UpdateBellySize(self);
             return;
         }
-
-        BellyPlus.InitializeCreature(critNum);
 
         //NEW, LETS BASE OUR RANDOM VALUE ON OUR ABSTRACT CREATURE ID
         int seed = UnityEngine.Random.seed;
@@ -53,7 +40,7 @@ public class patch_Vulture
 		if (patch_DLL.CheckFattable(self) == false)
 			critChub = 0;
 		
-        BellyPlus.myFoodInStomach[critNum] = critChub;
+        self.abstractCreature.GetAbsBelly().myFoodInStomach = critChub;
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("CREATURE SPAWNED! CHUB SIZE: " + critChub);
 
@@ -78,7 +65,7 @@ public class patch_Vulture
         float baseWeight = self.IsMiros ? 1.8f : (1.2f * (self.IsKing ? 1.4f : 1f));
         float baseRad = 9.5f;
         float baseGrav = 0.9f;
-        int currentFood = BellyPlus.myFoodInStomach[GetRef(self)];
+        int currentFood = self.abstractCreature.GetAbsBelly().myFoodInStomach;
 
         switch (Math.Min(currentFood, 8))
         {

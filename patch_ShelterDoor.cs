@@ -3,6 +3,7 @@ using MonoMod.RuntimeDetour;
 using MoreSlugcats;
 using System;
 
+namespace RotundWorld;
 public class patch_ShelterDoor
 {
     public static void Patch()
@@ -47,7 +48,7 @@ public class patch_ShelterDoor
 
                             //STORE OUR LONG TERM FOOD VALUE FOR LATER
                             int myID = thisRoom.game.Players[i].ID.number;
-                            int myFood = patch_Player.bellyStats[myID].myFoodInStomach;
+                            int myFood = thisRoom.game.Players[i].GetAbsBelly().myFoodInStomach; //patch_Player.bellyStats[myID].myFoodInStomach;
                             int extraFoodCount = myFood - player.MaxFoodInStomach;
                             int hibernateCost = player.slugcatStats.foodToHibernate;
                             //SPECIAL EXCEPTIONS FOR INDIVIDUAL FOOD BARS MOD
@@ -90,7 +91,10 @@ public class patch_ShelterDoor
                             myFood -= hibernateCost; //BURN THE REST AT A 1-TO-1 RATE
 
                             //SET THIS VALUE SO THAT THE ACHEIVMENT TRACKERS CAN SAVE IT FOR LATER
-                            patch_Player.bellyStats[myID].myFoodInStomach = Math.Max(myFood, 0);
+                            //thisRoom.game.Players[i].GetAbsBelly().myFoodInStomach = Math.Max(myFood, 0);
+                            
+                            BellyPlus.foodMemoryBank[player.playerState.playerNumber] = Math.Max(myFood, 0);
+                            //Debug.Log("CHECKING FOOD BANK " + self.playerState.playerNumber + " FOOD:" + self.abstractCreature.GetAbsBelly().myFoodInStomach);
                             Debug.Log("-SAVING MY NEW FOOD AS: " + Math.Max(myFood, 0));
                             //DO THIS SO THE GAME DOESN'T ADJUST OUR FOOD
                             BellyPlus.lockEndFood = true;
@@ -173,10 +177,10 @@ public class patch_ShelterDoor
                         {
                             Lizard myLiz = thisRoom.abstractRoom.creatures[j].realizedCreature as Lizard;
                             //MAKE SURE IT'S A LARGER VALUE FIRST
-                            if (BellyPlus.myFoodInStomach[BellyPlus.GetRef(myLiz)] > BellyPlus.lizardFood)
+                            if (myLiz.abstractCreature.GetAbsBelly().myFoodInStomach > BellyPlus.lizardFood)
                             {
-                                BellyPlus.lizardFood = BellyPlus.myFoodInStomach[BellyPlus.GetRef(myLiz)];
-                                Debug.Log("LZ! REMEMBERING MY LIZARDS FOOD VALUE!" + BellyPlus.lizardFood);
+                                BellyPlus.lizardFood = myLiz.abstractCreature.GetAbsBelly().myFoodInStomach;
+                                //Debug.Log("LZ! REMEMBERING MY LIZARDS FOOD VALUE!" + BellyPlus.lizardFood);
                             }
                         }
                     }

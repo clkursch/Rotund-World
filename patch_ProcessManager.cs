@@ -6,23 +6,16 @@ using UnityEngine;
 using On;
 using Menu.Remix.MixedUI;
 //TO RUN OUR GARBAGE COLLECTOR FOR US
+
+namespace RotundWorld;
 public class patch_ProcessManager
 {
 	public static void Patch()
 	{
-		On.ProcessManager.PostSwitchMainProcess += BP_ProcessPatch; //UPDATED FOR DOWNPOUR
+		//On.ProcessManager.PostSwitchMainProcess += BP_ProcessPatch; //UPDATED FOR DOWNPOUR
 		On.OverWorld.WorldLoaded += BP_WorldLoaded;
 	}
 
-	public static void BP_ProcessPatch(On.ProcessManager.orig_PostSwitchMainProcess orig, ProcessManager pm, ProcessManager.ProcessID ID)
-	{
-		orig.Invoke(pm, ID);
-		bool flag = pm.currentMainLoop != null && ID != ProcessManager.ProcessID.Game;
-		if (flag)
-		{
-			BellyPlus.GarbageCollect();
-		}
-	}
 
 	public static void BP_WorldLoaded(On.OverWorld.orig_WorldLoaded orig, OverWorld world)
 	{

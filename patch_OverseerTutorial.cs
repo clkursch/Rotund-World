@@ -1,6 +1,6 @@
 ﻿using OverseerHolograms;
 
-
+namespace RotundWorld;
 public static class patch_OverseerTutorial
 {
 	public static void Patch()

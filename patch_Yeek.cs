@@ -4,10 +4,24 @@ using RWCustom;
 using UnityEngine;
 using MoreSlugcats;
 
+namespace RotundWorld;
 
 public class patch_Yeek
 {
-	
+    public static void Patch()
+    {
+        //On.MoreSlugcats.Yeek.GetSegmentRadForCollision += Yeek_GetSegmentRadForCollision;
+    }
+
+    
+
+    public static Yeek FindYeekInRange(Creature self)
+    {
+        
+        return null;
+    }
+
+    /*
 	public static void Patch()
 	{
 		On.MoreSlugcats.Yeek.ctor += BP_YeekPatch;
@@ -42,8 +56,6 @@ public class patch_Yeek
 		Debug.Log("YEEK IN DEN - EATING A TASTY SNACK! " + BellyPlus.myFoodInStomach[patch_Lizard.GetRef(mySelf)]);
 	}
 
-
-	public static Dictionary<int, Yeek> yeekBook = new Dictionary<int, Yeek>(0);
 
 	private static void BP_YeekPatch(On.MoreSlugcats.Yeek.orig_ctor orig, Yeek self, AbstractCreature abstractCreature, World world)
 	{
@@ -124,32 +136,7 @@ public class patch_Yeek
 		int currentFood = BellyPlus.myFoodInStomach[GetRef(self)];
 
 		//YEEKS CONSTANTLY UPDATE THEIR BODY MASS SO THIS WON'T WORK
-		/*
-		switch (Math.Min(currentFood, 8))
-		{
-			case 8:
-				self.bodyChunks[0].mass = baseWeight * 1.5f;
-				self.bodyChunks[1].mass = baseWeight * 1.5f;
-				break;
-			case 7:
-				self.bodyChunks[0].mass = baseWeight * 1.3f;
-				self.bodyChunks[1].mass = baseWeight * 1.3f;
-				break;
-			case 6:
-				self.bodyChunks[0].mass = baseWeight * 1.1f;
-				self.bodyChunks[1].mass = baseWeight * 1.1f;
-				break;
-			case 5:
-				self.bodyChunks[0].mass = baseWeight * 1f;
-				self.bodyChunks[1].mass = baseWeight * 1f;
-				break;
-			case 4:
-			default:
-				self.bodyChunks[0].mass = baseWeight;
-				self.bodyChunks[1].mass = baseWeight;
-				break;
-		}
-		*/
+		//
 		patch_Lizard.UpdateChubValue(self);
 	}
 	
@@ -200,7 +187,7 @@ public class patch_Yeek
 
 	public static void BPUUpdatePass1(Yeek self, int critNum)
 	{
-		//Debug.Log("MS!-----DEBUG!: " + self.AI.fear + " _ " + self.runSpeed + " _BE:" + self.AI.behavior + " _BT:" + BellyPlus.boostTimer[critNum] + " _BT:" + BellyPlus.lungsExhausted[critNum]);
+		//Debug.Log("MS!-----DEBUG!: " + self.AI.fear + " _ " + self.runSpeed + " _BE:" + self.AI.behavior + " _BT:" + BellyPlus.boostCounter[critNum] + " _BT:" + BellyPlus.lungsExhausted[critNum]);
 		
 		//if (self.currentlyLiftingPlayer)
 		//{
@@ -259,7 +246,7 @@ public class patch_Yeek
 		
 		//LET MICE BOOST TOO! JUST DO IT DIFFERENTLY...
 		// bool matchingStuckDir = (IsVerticalStuck(self) && self.input[0].y != 0) || (!IsVerticalStuck(self) && self.input[0].x != 0);
-		if (BellyPlus.boostTimer[critNum] < 1 && !BellyPlus.lungsExhausted[critNum] && (IsStuck(self) || isTowingOther)) //|| BellyPlus.pushingOther[critNum])
+		if (BellyPlus.boostCounter[critNum] < 1 && !BellyPlus.lungsExhausted[critNum] && (IsStuck(self) || isTowingOther)) //|| self.GetBelly().pushingOther)
 		{
 			if (patch_Player.ObjIsWedged(self))
 				BellyPlus.boostStrain[critNum] += 4;
@@ -284,7 +271,7 @@ public class patch_Yeek
 				}
 			}
 
-			BellyPlus.boostTimer[critNum] += 14 + (Mathf.FloorToInt(UnityEngine.Random.value * 4)); // - Mathf.FloorToInt(Mathf.Lerp(10, 30, self.AI.fear));
+			BellyPlus.boostCounter[critNum] += 14 + (Mathf.FloorToInt(UnityEngine.Random.value * 4)); // - Mathf.FloorToInt(Mathf.Lerp(10, 30, self.AI.fear));
 
 			if (IsStuck(self))
 			{
@@ -385,5 +372,5 @@ public class patch_Yeek
 		sLeaser.sprites[self.HeadSpritesStart + 1].scale = bodySize; // self.iVars.fatness;
         //sLeaser.sprites[self.BodySprite].scaleY = bodySize;
     }
-
+	*/
 }

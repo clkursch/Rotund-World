@@ -2,12 +2,13 @@
 using UnityEngine;
 using MoreSlugcats;
 using System.Collections.Generic;
-using static patch_Misc;
+//using static patch_Misc;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using System;
 using static Rewired.Controller;
 
+namespace RotundWorld;
 public class patch_SeedCob
 {
     public static int shrinkStalks = 0;
@@ -109,7 +110,7 @@ public class patch_SeedCob
 
         checkSucceedDest = cursor.MarkLabel();
 
-        //Plugin.Logger.LogWarning(cursor.Context);
+        //BellyPlus.Logger.LogWarning(cursor.Context);
         BellyPlus.Logger.LogInfo("BELLYPLUS - SEED COB UPDATE COMPLETE");
     }
 

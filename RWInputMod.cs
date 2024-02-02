@@ -6,7 +6,7 @@ using static PlayerMod;
 
 //using static CoopLeash.PlayerMod;
 
-//namespace BellyPlus;
+//namespace RotundWorld;
 
 //I DON'T TOTALLY UNDERSTANT HOW THIS WORKS BUT I'M JUST FOLLOWING SHAUMBAUM'S LEAD
 public static class PlayerMod

@@ -17,6 +17,7 @@ using static Expedition.ExpeditionProgression;
 using MoreSlugcats;
 using ExpeditionEnhanced; //FOR MOD COMPAT!
 
+namespace RotundWorld;
 public class patch_Misc
 {
     
@@ -36,7 +37,7 @@ public class patch_Misc
         On.Menu.CustomEndGameScreen.GetDataFromSleepScreen += BP_GetDataFromSleepScreen;
         //On.Expedition.ChallengeTools.GenerateAchievementScores += BP_GenerateAchievementScores;
 
-        On.Expedition.ExpeditionProgression.SetupBurdenGroups += ExpeditionProgression_SetupBurdenGroups;
+        
         On.Expedition.ExpeditionProgression.BurdenName += ExpeditionProgression_BurdenName;
         On.Expedition.ExpeditionProgression.BurdenManualDescription += ExpeditionProgression_BurdenManualDescription;
         On.Expedition.ExpeditionProgression.BurdenScoreMultiplier += ExpeditionProgression_BurdenScoreMultiplier;
@@ -79,57 +80,17 @@ public class patch_Misc
 			typeof(patch_Misc).GetMethod("BP_FireEgg_Editable", myMethodFlags2) // This gets our hook method
 		);
 
-		//NEED REWIRED_CORE REFERENCE FOR THIS ONE
-        //On.Menu.InputOptionsMenu.InputSelectButton.ButtonText += InputSelectButton_ButtonText;
-        //On.Menu.InputOptionsMenu.InputSelectButton.RefreshLabelText += InputSelectButton_RefreshLabelText;
     }
-
-    private static void InputSelectButton_RefreshLabelText(On.Menu.InputOptionsMenu.InputSelectButton.orig_RefreshLabelText orig, InputOptionsMenu.InputSelectButton self)
+	
+	
+	public static void PostPatch()
     {
-        Debug.Log("SHOW YOURSELF " + (self.menu as InputOptionsMenu).manager.rainWorld.options.playerToSetInputFor);
-        Debug.LogWarning("SHOW YOURSELF ");
-        orig(self);
-		//Debug.Log("SHOW YOURSELF 1 " + (self.menu as InputOptionsMenu).manager.rainWorld.options.playerToSetInputFor);
-		//Debug.Log("SHOW YOURSELF 2 " + self.index);
-		//self.textLabel.text = InputOptionsMenu.InputSelectButton.ButtonText(self.menu, self.gamepad, (self.menu as InputOptionsMenu).manager.rainWorld.options.playerToSetInputFor, self.index, false);
-		//public Options.ControlSetup CurrentControlSetup
-		//{
-		//	get
-		//	{
-		//		return this.manager.rainWorld.options.controls[this.manager.rainWorld.options.playerToSetInputFor];
-		//	}
-		//}
+		//RUN THIS AFTER ALL OF THE MODLOADER STUFF US DONE SO WE DON'T DOUBLE-ADD BUR-ROTUND
+		On.Expedition.ExpeditionProgression.SetupBurdenGroups += ExpeditionProgression_SetupBurdenGroups;
 	}
-	/*
-    private static string InputSelectButton_ButtonText(On.Menu.InputOptionsMenu.InputSelectButton.orig_ButtonText orig, Menu.Menu menu, bool gamePadBool, int player, int button, bool inputTesterDisplay)
-    {
-        Debug.Log("FLOATER 1 " + player);
-        Options.ControlSetup controlSetup = (menu as InputOptionsMenu).manager.rainWorld.options.controls[player];
-        Debug.Log("FLOATER 2 ");
-        bool flag = controlSetup.GetControlPreference() == Options.ControlSetup.ControlToUse.ANY && controlSetup.GetActiveController() != null && inputTesterDisplay;
-        Debug.Log("FLOATER 3 ");
-        if (!InputOptionsMenu.InputSelectButton.IsInputDeviceCurrentlyAvailable(menu, gamePadBool, player) && !flag)
-        {
-            return "-";
-        }
-        ActionElementMap actionElementMap = null;
-        Debug.Log("FLOATER 4 ");
-        for (int i = 0; i < (menu as InputOptionsMenu).inputActions[button].Length; i++)
-        {
-            actionElementMap = controlSetup.GetActionElement((menu as InputOptionsMenu).inputActions[button][0], (menu as InputOptionsMenu).inputActionCategories[button][0], (menu as InputOptionsMenu).inputAxesPositive[button]);
-            if (actionElementMap != null)
-            {
-                break;
-            }
-        }
-        Debug.Log("FLOATER 5 ");
-        if (actionElementMap == null)
-        {
-            return "???";
-        }
-        return actionElementMap.elementIdentifierName;
-    }
-	*/
+	
+
+    
     private static IntVector2 BPSlugcatStats_SlugcatFoodMeter(On.SlugcatStats.orig_SlugcatFoodMeter orig, SlugcatStats.Name slugcat)
     {
 		IntVector2 result = orig.Invoke(slugcat);
@@ -194,7 +155,7 @@ public class patch_Misc
     {
 		orig.Invoke(self);
 		if (self.Player != null) //APPARENTLY THIS CAN BE NULL HERE
-			patch_Player.bellyStats[self.playerNumber].myFoodInStomach = self.Player.playerState.foodInStomach; //UPDATE OUR FOOD VALUE AFTER HUNTER JUMPS ONSCREEN
+			self.Player.abstractCreature.GetAbsBelly().myFoodInStomach = self.Player.playerState.foodInStomach; //UPDATE OUR FOOD VALUE AFTER HUNTER JUMPS ONSCREEN
     }
 	
 	
@@ -582,13 +543,15 @@ public class patch_Misc
 	public static void SetTrackerVal(WinState.IntegerTracker intTrck, int plrNum)
 	{
 		//LUCKILY, myFoodInStomach VALUES REMAIN IN MEMORY LONG AFTER THE PLAYER HAS BEEN REMOVED FROM THE WORLD
-		int myFood = patch_Player.bellyStats[plrNum].myFoodInStomach;
+		// int myFood = patch_Player.bellyStats[plrNum].myFoodInStomach;
+		int myFood = BellyPlus.foodMemoryBank[plrNum];
         intTrck.SetProgress(myFood);
         //WE JUST NEED TO PRETEND WE NEVER MAKE PROGRESS OKAY?
         intTrck.showFrom = myFood;
         intTrck.lastShownProgress = myFood;
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("SAVING INDIVIDUAL PLAYER WEIGHT P:" + plrNum + " FOOD: " + myFood);
+		BellyPlus.foodMemoryBank[plrNum] = 0; //THEN PUT IT BACK
     }
 	
 	

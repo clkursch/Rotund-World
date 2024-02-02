@@ -4,32 +4,15 @@ using UnityEngine;
 using MonoMod.RuntimeDetour;
 using Pearlcat;
 
+namespace RotundWorld;
+
 public class patch_PlayerGraphics
 {
-    //static readonly int bl = 12;
 	//CURRENTLY THE ONLY PART OF THESE GRAPHICS THAT ARE GIVEN HARD SET VALUES ARE THE FACE SPRITE.SCALEY
     //EVERYTHING ELSE IS ADDITIVE OR MULT SO SHOULD BE COMPATIBLE WITH CHANGES FROM OTHER MODS
 
-    public struct BPgraph
-    {
-        public int randCycle;
-        public bool staring;
-		public int blSprt;
-		public Color blColor;
-		public int bodySprt;
-        public float lastSquish;
-        public float[] tailBase;
-        public float checkRad; //USED TO DETECT CHANGES IN RAD
-        public bool verified;
-        public bool cloakRipped;
-    }
-    public static BPgraph[] bpGraph;
-    public static int totalPlayerNum = 500;
-
     public static void Patch()
     {
-        bpGraph = new BPgraph[totalPlayerNum];
-		
 		On.PlayerGraphics.PlayerObjectLooker.HowInterestingIsThisObject += POL_HowInterestingIsThisObject;
         
 		//WE WANT THIS TO RUN LAST, AFTER OTHER MODS, TO CAPTURE ANYTHING THAT SETS TAIL THICKNESS
@@ -45,48 +28,36 @@ public class patch_PlayerGraphics
     public static void BPPlayerGraphics_ctor(On.PlayerGraphics.orig_ctor orig, PlayerGraphics self, PhysicalObject ow)
     {
         orig.Invoke(self, ow);
-        int playerNum = patch_Player.GetPlayerNum(self.player); // self.player.playerState.playerNumber;
 
         if (self.player.playerState.isGhost)
             return; //OH GOD DON'T LET THE GHOST SPAWNS RUN OUR TAIL INCREASE MULTIPLE TIMES
-
-        bpGraph[playerNum] = new BPgraph
-        {
-            randCycle = 1,
-            staring = false,
-            blSprt = 12,
-            bodySprt = 0,
-            blColor = Color.red,
-            lastSquish = 0f,
-            tailBase = new float[self.tail.Length],
-            verified = false,
-            checkRad = 1f,
-            cloakRipped = false,
-        };
+		
+		//SET THIS EVERY TIME
+        self.GetGraph().tailBase = new float[self.tail.Length];
 
         for (int i = 0; i < self.tail.Length; i++)
 		{
-			//bpGraph[playerNum].tailBase[i] = self.bodyParts[i].rad;
-			bpGraph[playerNum].tailBase[i] = self.tail[i].rad;
+			//self.GetGraph().tailBase[i] = self.bodyParts[i].rad;
+			self.GetGraph().tailBase[i] = self.tail[i].rad;
             if (i == 0)
-                bpGraph[playerNum].checkRad = self.tail[0].rad; //REMEMBER THE SIZE OF OUR FIRST SEGMENT AS A CHECK
+                self.GetGraph().checkRad = self.tail[0].rad; //REMEMBER THE SIZE OF OUR FIRST SEGMENT AS A CHECK
         }
     }
 	
 	//FOR MODDERS TO SET THEIR CUSTOM SLUGCAT'S COLOR
     public static void SetBloodColor(Player player, Color color) 
     {
-        bpGraph[patch_Player.GetPlayerNum(player)].blColor = color;
+        (player.graphicsModule as PlayerGraphics).GetGraph().blColor = color;
     }
 
-    public static void GetDMSBloodColor(Player player)
+    public static void GetDMSBloodColor(PlayerGraphics self)
     {
-        int playerNum = patch_Player.GetPlayerNum(player);
-        if (DressMySlugcat.Customization.For(player).CustomSprites.Count > 0)
+        // int playerNum = patch_Player.GetPlayerNum(player);
+        if (DressMySlugcat.Customization.For(self.player).CustomSprites.Count > 0)
         {
-            string SpriteSheetName = DressMySlugcat.Customization.For(player).CustomSprites[0].SpriteSheetID;
+            string SpriteSheetName = DressMySlugcat.Customization.For(self.player).CustomSprites[0].SpriteSheetID;
             if (SpriteSheetName == "dressmyslugcat.crypt" || SpriteSheetName == "dressmyslugcat.cryptid" || SpriteSheetName == "snowbean" || SpriteSheetName == "snowberry")
-                bpGraph[playerNum].blColor = new Color(120f / 225f, 0 / 225f, 255 / 225f);
+                self.GetGraph().blColor = new Color(120f / 225f, 0 / 225f, 255 / 225f);
         }
         
     }
@@ -105,12 +76,10 @@ public class patch_PlayerGraphics
 
     public static void BP_InitiateSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
     {
-		int playerNum = patch_Player.GetPlayerNum(self.player);
-
         orig.Invoke(self, sLeaser, rCam);
 
         //DOUBLE CHECK OUR TAIL SPRITES WERENT TINKERED WITH
-        if (self.tail.Length != bpGraph[playerNum].tailBase.Length)
+        if (self.tail.Length != self.GetGraph().tailBase.Length)
         {
             TailBaseRefresh(self);
         }
@@ -127,8 +96,7 @@ public class patch_PlayerGraphics
 
     private static void PlayerGraphics_AddToContainer(On.PlayerGraphics.orig_AddToContainer orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, FContainer newContatiner)
     {
-        int playerNum = patch_Player.GetPlayerNum(self.player);
-        int bls = bpGraph[playerNum].blSprt;
+        int bls = self.GetGraph().blSprt;
 
         orig(self, sLeaser, rCam, newContatiner);
 
@@ -148,20 +116,18 @@ public class patch_PlayerGraphics
 
     public static void PB_InitiateExtraFx(PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam) //, bool stealMark)
     {
-        int playerNum = patch_Player.GetPlayerNum(self.player);
-
         Array.Resize<FSprite>(ref sLeaser.sprites, sLeaser.sprites.Length + 1);
         int bls = sLeaser.sprites.Length - 1;
         sLeaser.sprites[bls] = new FSprite("Futile_White", true);
 
-        bpGraph[playerNum].blSprt = bls;
+        self.GetGraph().blSprt = bls;
         sLeaser.sprites[bls].shader = rCam.game.rainWorld.Shaders["FlatLightNoisy"];
 		
 		if (self.player?.slugcatStats?.name?.value == "Guide") //GUIDE GETS A UNIQUE COLOR
-            bpGraph[playerNum].blColor = new Color(0.0f, 0.78f, 1f);
+            self.GetGraph().blColor = new Color(0.0f, 0.78f, 1f);
 
         if (BellyPlus.dressMySlugcatEnabled) //FOR DMS SPECIFIC ONES
-            GetDMSBloodColor(self.player);
+            GetDMSBloodColor(self);
 
         self.AddToContainer(sLeaser, rCam, null);
     }
@@ -172,14 +138,13 @@ public class patch_PlayerGraphics
         if (self.player.playerState.isGhost)
             return; //OH GOD DON'T LET THE GHOST SPAWNS RUN OUR TAIL INCREASE MULTIPLE TIMES
 
-        int playerNum = patch_Player.GetPlayerNum(self.player);
         if (BPOptions.debugLogs.Value)
             Debug.Log("OUR TAIL LENGTH WAS TINKERED WITH! RECALCULATE IT ");
-		bpGraph[playerNum].tailBase = new float[self.tail.Length];
+		self.GetGraph().tailBase = new float[self.tail.Length];
 		//STORE THE TAIL THICKNESS INFO!
 		for (int i = 0; i < self.tail.Length; i++)
 		{
-			bpGraph[playerNum].tailBase[i] = self.tail[i].rad;
+			self.GetGraph().tailBase[i] = self.tail[i].rad;
         }
     }
 	
@@ -207,8 +172,6 @@ public class patch_PlayerGraphics
         if (self.player.playerState.isGhost)
             return; //OH GOD DON'T LET THE GHOST SPAWNS RUN OUR TAIL INCREASE MULTIPLE TIMES
 
-        int playerNum = patch_Player.GetPlayerNum(self.player); // self.player.playerState.playerNumber;
-
         //ACTUALLY, NO NO... WE COULD TOTALLY MAKE THIS A STATIC ADDITION INSTEAD OF MULT. WE WOULDN'T WANT TO MULT REALLY FAT TAILS
         //UM, WELL... EXCEPT THEN THE TAIL TIP WILL BE ALL FUNKY... RIGHT?
         //OKAY, HOW ABOUT ON INITIALIZE, WE SET A "PREVIOUS CHUB" VALUE EQUAL TO OUR CHUB (MAYBE FLOOR 0?)
@@ -223,7 +186,7 @@ public class patch_PlayerGraphics
 		
 		
 		//WE SHOULD HAVE ADDED THIS SAFTEY NET LONG AGO! MAKE SURE WE'RE NOT ABOUT TO UPDATE NON EXISTING TAIL SIZES
-		if (self.tail.Length != bpGraph[playerNum].tailBase.Length)
+		if (self.tail.Length != self.GetGraph().tailBase.Length)
 			TailBaseRefresh(self);
 
         //(0-4) DON'T LET THIS BE NEGATIVE. WE DON'T HAVE NEGATIVE ARRAY VALUES
@@ -238,9 +201,9 @@ public class patch_PlayerGraphics
             float tailThickMult = (self.player?.slugcatStats?.name?.value == "Guide") ? tailThickChartB[newChubVal] : tailThickChartA[newChubVal];
             if (self.player?.slugcatStats?.name?.value == "Cloudtail")
                 tailThickMult = tailThickChartC[newChubVal];
-            self.tail[i].rad = bpGraph[playerNum].tailBase[i] * tailThickMult + bonusChubVal;
+            self.tail[i].rad = self.GetGraph().tailBase[i] * tailThickMult + bonusChubVal;
             if (i == 0)
-                bpGraph[playerNum].checkRad = self.tail[0].rad; //REMEMBER THE SIZE OF OUR FIRST SEGMENT AS A CHECK
+                self.GetGraph().checkRad = self.tail[0].rad; //REMEMBER THE SIZE OF OUR FIRST SEGMENT AS A CHECK
         }
     }
 
@@ -249,10 +212,10 @@ public class patch_PlayerGraphics
     {
         if (Pearlcat.ModOptions.DisableCosmetics.Value)
             return;
-        int playerNum = patch_Player.GetPlayerNum(self.player);
+
         if (self.owner.bodyChunks[1].mass > 0.55f)
         {
-            if (!bpGraph[playerNum].cloakRipped && self.player.room != null)
+            if (!self.GetGraph().cloakRipped && self.player.room != null)
             {
                 self.owner.room.PlaySound(SoundID.Tentacle_Plant_Grab_Other, self.owner.firstChunk.pos, 1.0f, 0.5f);
                 self.owner.room.PlaySound(SoundID.Seed_Cob_Open, self.owner.firstChunk.pos, 1.6f, 2.0f);
@@ -282,7 +245,7 @@ public class patch_PlayerGraphics
                 
             }
 
-            bpGraph[playerNum].cloakRipped = true;
+            self.GetGraph().cloakRipped = true;
         }
     }
 
@@ -298,8 +261,7 @@ public class patch_PlayerGraphics
         var sleeveLSprite = sLeaser.sprites[playerModule.SleeveLSprite];
         var sleeveRSprite = sLeaser.sprites[playerModule.SleeveRSprite];
 
-        int playerNum = patch_Player.GetPlayerNum(self.player);
-        if (bpGraph[playerNum].cloakRipped)
+        if (self.GetGraph().cloakRipped)
         {
             sLeaser.sprites[0].alpha = 1.0f;
             cloakSprite.isVisible = false;
@@ -312,7 +274,6 @@ public class patch_PlayerGraphics
 
     public static void BP_DrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
     {
-        int playerNum = patch_Player.GetPlayerNum(self.player);
 
         orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
 
@@ -321,7 +282,7 @@ public class patch_PlayerGraphics
             return;
 
         //MAKE SURE TAIL SIZES HAVE NOT BEEN TINKERED WITH ALL OF A SUDDEN!
-        if (self.tail.Length > 0 && bpGraph[playerNum].checkRad != self.tail[0].rad)
+        if (self.tail.Length > 0 && self.GetGraph().checkRad != self.tail[0].rad)
         {
             TailBaseRefresh(self); //RE-CALCULATE OUR BASE VALUES
             UpdateTailThickness(self); //RE-APPLY THE WEIGHT
@@ -329,7 +290,7 @@ public class patch_PlayerGraphics
             
 
         //TORSO SPRITE ARRAY POSITION CAN VARY
-        int ct = bpGraph[playerNum].bodySprt; //CENTER TORSO (?)
+        int ct = self.GetGraph().bodySprt; //CENTER TORSO (?)
 		int hp = ct + 1;	//HIP
 
         float hipScale = 0;
@@ -434,7 +395,7 @@ public class patch_PlayerGraphics
         //BODY SQUASH AND STRETCH!
         if (patch_Player.IsStuck(self.player) && hipScale > 8)
         {
-            float stuckPerc = patch_Player.GetProgress(self.player) / Mathf.Max(((patch_Player.bellyStats[playerNum].tileTightnessMod) / 30) - 1, 0.1f);
+            float stuckPerc = patch_Player.GetProgress(self.player) / Mathf.Max(((self.player.GetBelly().tileTightnessMod) / 30) - 1, 0.1f);
             stuckPerc = 1f - Mathf.Max(0, stuckPerc);
             hipScale = Mathf.Lerp(7f, hipScale, stuckPerc);
         }
@@ -462,7 +423,7 @@ public class patch_PlayerGraphics
                 frc += ((frc - 5) / 2f);
             float boostPerc = Mathf.InverseLerp(0, 8, frc);
 
-            if (bpGraph[playerNum].lastSquish == 0) //SINGLE FRAME OF TWEEN SO IT'S LESS JARRING
+            if (self.GetGraph().lastSquish == 0) //SINGLE FRAME OF TWEEN SO IT'S LESS JARRING
                 boostPerc *= 0.75f;
 				
 			//5-10-23 WE WAN'T THE SQUISH TO SCALE A BIT MORE AT LOWER SIZES. IT'S HARDLY VISIBLE
@@ -474,7 +435,7 @@ public class patch_PlayerGraphics
 				sLeaser.sprites[hp].ScaleAroundPointRelative(new Vector2(0, 8), Mathf.Lerp(1f, 1f + sqScl, boostPerc), Mathf.Lerp(1f, 1f - sqScl, boostPerc));
             self.tail[0].pos += patch_Player.ObjGetStuckVector(self.player) * (3f + (0.05f * hipScale)) * (boostPerc) * (sqScl * 5f);
         }
-        bpGraph[playerNum].lastSquish = frc;
+        self.GetGraph().lastSquish = frc;
 
 
 
@@ -485,14 +446,14 @@ public class patch_PlayerGraphics
         bool exhaustionFxToggle = BPOptions.blushEnabled.Value && !(self.player.isNPC && self.player.isSlugpup) && !BellyPlus.VisualsOnly();
         float heatVal = 0;
         
-        if (exhaustionFxToggle && rCam.cameraNumber == 0 && sLeaser.sprites.Length > bpGraph[playerNum].blSprt)
+        if (exhaustionFxToggle && rCam.cameraNumber == 0 && sLeaser.sprites.Length > self.GetGraph().blSprt)
         {
-            int bl = bpGraph[playerNum].blSprt;
+            int bl = self.GetGraph().blSprt;
 
             sLeaser.sprites[bl].scale = 1.8f;
             sLeaser.sprites[bl].scaleY = 0.8f;
             sLeaser.sprites[bl].rotation = sLeaser.sprites[9].rotation;
-            sLeaser.sprites[bl].color = bpGraph[playerNum].blColor; //Color.red;
+            sLeaser.sprites[bl].color = self.GetGraph().blColor; //Color.red;
 
             sLeaser.sprites[bl].x = sLeaser.sprites[9].x; // + Custom.DirVec(self.drawPositions[0, 0], self.objectLooker.mostInterestingLookPoint).x;
             sLeaser.sprites[bl].y = sLeaser.sprites[9].y -= 0.5f; // + Custom.DirVec(self.drawPositions[0, 0], self.objectLooker.mostInterestingLookPoint).y;
@@ -518,7 +479,7 @@ public class patch_PlayerGraphics
                 self.player.aerobicLevel = Mathf.Min(0.85f, Mathf.Max(self.player.aerobicLevel, heatVal));
 
             //RELAXED EYES
-            if (heatVal >= 0.7f && bpGraph[playerNum].randCycle < 3)
+            if (heatVal >= 0.7f && self.GetGraph().randCycle < 3)
             {
                 //sLeaser.sprites[9].element = Futile.atlasManager.GetElementWithName("Face" + ((!self.player.dead) ? "B" : "Dead"));
                 self.player.Blink(5);
@@ -537,7 +498,7 @@ public class patch_PlayerGraphics
                 self.player.room.PlaySound(SoundID.Slugcat_Rocket_Jump, self.player.mainBodyChunk.pos, huffVol, 1.6f - (heatVal/2f) + Mathf.Lerp(-.2f, .2f, UnityEngine.Random.value));
 
                 //ROLL THE DICE
-                bpGraph[playerNum].randCycle = Mathf.FloorToInt(Mathf.Lerp(0f, 4f, UnityEngine.Random.value));
+                self.GetGraph().randCycle = Mathf.FloorToInt(Mathf.Lerp(0f, 4f, UnityEngine.Random.value));
 
 
                 //CHECK CHANCE
@@ -570,7 +531,7 @@ public class patch_PlayerGraphics
             
 			if (exhaustionFxToggle && rCam.cameraNumber == 0)
             {
-                int bl = bpGraph[playerNum].blSprt;
+                int bl = self.GetGraph().blSprt;
                 sLeaser.sprites[bl].y += shift;
                 sLeaser.sprites[bl].scaleY += 0.4f;
                 float alphaBoost = (Mathf.Min(patch_Player.GetWideEyes(self.player), 25f) / 25f) * 0.3f;
@@ -606,7 +567,7 @@ public class patch_PlayerGraphics
                 if (self.player.input[0].IntVec != new IntVector2(0, 0))
                 {
                     self.objectLooker.LookAtPoint(self.player.bodyChunks[0].pos + self.player.input[0].IntVec.ToVector2() * 50, 1f);
-                    bpGraph[playerNum].staring = true; //SO WE CAN TURN IT OFF LATER
+                    self.GetGraph().staring = true; //SO WE CAN TURN IT OFF LATER
                 }   
             }
 
@@ -619,7 +580,7 @@ public class patch_PlayerGraphics
             //IF WE'RE PANTING AND OUR EYES ARE CLOSED, MAKE EM EXTRA BIG!
             if (heatVal >= 0.7f && !self.player.lungsExhausted)
             {
-                if (bpGraph[playerNum].randCycle < 3f)
+                if (self.GetGraph().randCycle < 3f)
                 {
                     sLeaser.sprites[9].scaleY = 1.7f;
                     self.player.Blink(5);
@@ -663,7 +624,7 @@ public class patch_PlayerGraphics
 
         //QUIT STARING OFF INTO SPACE!
         //if (self.player.bodyMode == Player.BodyModeIndex.CorridorClimb && !(patch_Player.ObjIsWedged(self.player) && self.player.input[0].IntVec != new IntVector2(0,0)))
-        if (bpGraph[playerNum].staring && !patch_Player.IsStuckOrWedged(self.player) || self.player.input[0].IntVec == new IntVector2(0, 0))
+        if (self.GetGraph().staring && !patch_Player.IsStuckOrWedged(self.player) || self.player.input[0].IntVec == new IntVector2(0, 0))
         {
             if (self.objectLooker.lookAtPoint != null && UnityEngine.Random.value < 0.01f)
                 self.objectLooker.lookAtPoint = null;
@@ -671,7 +632,7 @@ public class patch_PlayerGraphics
 		
 		
 		//FOR THOSE PESKY GRAPHICS MODS...
-		bpGraph[playerNum].verified = true;
+		self.GetGraph().verified = true;
 
         
         bool debugBar = false;
@@ -709,16 +670,10 @@ public class patch_PlayerGraphics
     {
         orig(self);
         //TUMMY RUBS
-        self.drawPositions[1, 0] += patch_Player.bellyStats[patch_Player.GetPlayerNum(self.player)].tuchShift;
+        self.drawPositions[1, 0] += self.player.GetBelly().tuchShift;
 
         if (self.player?.slugcatStats?.name?.value == "Pearlcat")
             CloakCheck(self);
-    }
-
-    public static bool InspectGraphics(PlayerGraphics self)
-    {
-        int playerNum = patch_Player.GetPlayerNum(self.player);
-		return bpGraph[playerNum].verified;
     }
 	
 	

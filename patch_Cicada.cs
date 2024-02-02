@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using RWCustom;
 using UnityEngine;
 
-
+namespace RotundWorld;
 
 public class patch_Cicada
 {
@@ -18,49 +18,29 @@ public class patch_Cicada
 		
 	}
 
-
-	public static Dictionary<int, Cicada> cicadaBook = new Dictionary<int, Cicada>(0);
-
 	private static void BP_CicadaPatch(On.Cicada.orig_ctor orig, Cicada self, AbstractCreature abstractCreature, World world, bool gender)
 	{
 		orig(self, abstractCreature, world, gender);
-		
-		int critNum = self.abstractCreature.ID.RandomSeed;
 
-		//MAKE SURE THERE ISN'T ALREADY A MOUSE WITH OUR NAME ON THIS!
-		bool mouseExists = false;
-        try
+        if (self.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
         {
-			//ADD OURSELVES TO THE GUESTBOOK
-			patch_Cicada.cicadaBook.Add(critNum, self);
-		}
-		catch (ArgumentException)
-        {
-			mouseExists = true;
-		}
-
-		if (mouseExists)
-        {
-			//Debug.Log("CICADA ALREADY EXISTS! CANCELING: " + critNum);
-			patch_Cicada.cicadaBook[critNum] = self; //WELL HOLD ON! WE STALL NEED THE REFERENCE FROM THAT BOOK TO POINT TO US!
-			UpdateBellySize(self);
-			return;
-		}
+            UpdateBellySize(self);
+            return;
+        }
 		
-		BellyPlus.InitializeCreature(critNum);
+		//BellyPlus.InitializeCreature(critNum);
 
 		//NEW, LETS BASE OUR RANDOM VALUE ON OUR ABSTRACT CREATURE ID
-		int seed = UnityEngine.Random.seed;
-		UnityEngine.Random.seed = critNum;
-		
-		int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
+		UnityEngine.Random.seed = self.abstractCreature.ID.RandomSeed;
+
+        int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
 		if (patch_DLL.CheckFattable(self) == false)
 			critChub = 0;
 		
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("CREATURE SPAWNED! CHUB SIZE: " + critChub);
 		
-		BellyPlus.myFoodInStomach[critNum] = critChub;
+		self.abstractCreature.GetAbsBelly().myFoodInStomach = critChub;
 		
 		UpdateBellySize(self);
 	}
@@ -92,27 +72,29 @@ public class patch_Cicada
 	//FIND THE NEAREST MOUSEY~
 	public static Cicada FindCicadaInRange(Creature self)
 	{
-		foreach(KeyValuePair<int, Cicada> kvp in patch_Cicada.cicadaBook)
+        if (self.room == null)
+            return null; 
+		
+		for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++)
         {
-            if (
-				kvp.Value != null
-				&& kvp.Value != self
-				&& kvp.Value.room == self.room
-				&& kvp.Value.dead == false
-				&& Custom.DistLess(self.mainBodyChunk.pos, kvp.Value.bodyChunks[1].pos, 35f)
-			)
-			{
-				return kvp.Value as Cicada;
-			}
+            if (self.room.abstractRoom.creatures[i].realizedCreature != null
+                && self.room.abstractRoom.creatures[i].realizedCreature is Cicada crit
+                && crit != self && crit.room != null && crit.room == self.room && !crit.dead
+                && Custom.DistLess(self.mainBodyChunk.pos, crit.bodyChunks[1].pos, 35f)
+            )
+            {
+                return crit;
+            }
         }
-		return null;
+
+        return null;
 	}
 
 
 	public static void UpdateBellySize(Cicada self)
 	{
 		float baseWeight = 0.2f; //I THINK...
-		int currentFood = BellyPlus.myFoodInStomach[GetRef(self)];
+		int currentFood = self.abstractCreature.GetAbsBelly().myFoodInStomach;
 		patch_Lizard.UpdateChubValue(self);
 		
 		if (BellyPlus.VisualsOnly())
@@ -154,7 +136,7 @@ public class patch_Cicada
 	public static bool IsStuck(Cicada self)
 	{
 		//PRESSED AGAINST AN ENTRANCE
-		return BellyPlus.isStuck[GetRef(self)];
+		return self.GetBelly().isStuck;
 	}
 
 	public static void Cicada_SpitOutOfShortCut(On.Cicada.orig_SpitOutOfShortCut orig, Cicada self, IntVector2 pos, Room newRoom, bool spitOutAllSticks)
@@ -165,7 +147,7 @@ public class patch_Cicada
 
 	public static void BP_Die(On.Cicada.orig_Die orig, Cicada self)
 	{
-		BellyPlus.isStuck[GetRef(self)] = false;
+		self.GetBelly().isStuck = false;
 		orig.Invoke(self);
 	}
 	
@@ -192,7 +174,7 @@ public class patch_Cicada
 
 	public static void BPUUpdatePass1(Cicada self, int critNum)
 	{
-		//Debug.Log("MS!-----DEBUG!: " + self.AI.fear + " _ " + self.runSpeed + " _BE:" + self.AI.behavior + " _BT:" + BellyPlus.boostTimer[critNum] + " _BT:" + BellyPlus.lungsExhausted[critNum]);
+		//Debug.Log("MS!-----DEBUG!: " + self.AI.fear + " _ " + self.runSpeed + " _BE:" + self.AI.behavior + " _BT:" + self.GetBelly().boostCounter + " _BT:" + self.GetBelly().lungsExhausted);
 		
 		if (self.currentlyLiftingPlayer)
 		{
@@ -204,7 +186,7 @@ public class patch_Cicada
 		}
 		
 		//RECALCULATE RUN SPEED
-		if (BellyPlus.isStuck[critNum])
+		if (self.GetBelly().isStuck)
         {
 			self.flyingPower = Mathf.Min(self.flyingPower, 0.1f);
 			//MAKE THEM FACE THE WAY THEY NEED TO
@@ -249,14 +231,14 @@ public class patch_Cicada
 		
 		//LET MICE BOOST TOO! JUST DO IT DIFFERENTLY...
 		// bool matchingStuckDir = (IsVerticalStuck(self) && self.input[0].y != 0) || (!IsVerticalStuck(self) && self.input[0].x != 0);
-		if (BellyPlus.boostTimer[critNum] < 1 && !BellyPlus.lungsExhausted[critNum] && (IsStuck(self) || isTowingOther)) //|| BellyPlus.pushingOther[critNum])
+		if (self.GetBelly().boostCounter < 1 && !self.GetBelly().lungsExhausted && (IsStuck(self) || isTowingOther)) //|| self.GetBelly().pushingOther)
 		{
 			if (patch_Player.ObjIsWedged(self))
-				BellyPlus.boostStrain[critNum] += 4;
+				self.GetBelly().boostStrain += 4;
 			else
-				BellyPlus.boostStrain[critNum] += 10;
+				self.GetBelly().boostStrain += 10;
 
-			BellyPlus.corridorExhaustion[critNum] += 30;
+			self.GetBelly().corridorExhaustion += 30;
 			int boostAmnt = 15;
 			float strainMag = 15f * GetExhaustionMod(self, 60);
 			//Debug.Log("MS!----- BOOSTING! ");
@@ -274,12 +256,12 @@ public class patch_Cicada
 				}
 			}
 
-			BellyPlus.boostTimer[critNum] += 14 + (Mathf.FloorToInt(UnityEngine.Random.value * 4)); // - Mathf.FloorToInt(Mathf.Lerp(10, 30, self.AI.fear));
+			self.GetBelly().boostCounter += 14 + (Mathf.FloorToInt(UnityEngine.Random.value * 4)); // - Mathf.FloorToInt(Mathf.Lerp(10, 30, self.AI.fear));
 
 			if (IsStuck(self))
 			{
-				BellyPlus.stuckStrain[critNum] += boostAmnt;
-				BellyPlus.loosenProg[critNum] += boostAmnt / 4000f;
+				self.GetBelly().stuckStrain += boostAmnt;
+				self.GetBelly().loosenProg += boostAmnt / 4000f;
 			}
 			else if (isTowingOther)
             {

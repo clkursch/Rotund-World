@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+namespace RotundWorld;
 public class patch_ScavengerGraphics
 {
     
@@ -16,7 +17,7 @@ public class patch_ScavengerGraphics
     private static void ScavengerGraphics_ctor(On.ScavengerGraphics.orig_ctor orig, ScavengerGraphics self, PhysicalObject ow)
     {
         orig.Invoke(self, ow);
-        float scavFatness = BellyPlus.myFatness[patch_Scavenger.GetRef(self.scavenger)];
+        float scavFatness = self.scavenger.GetBelly().myFatness;
         self.iVars.fatness *= scavFatness;
         self.iVars.narrowWaist = Mathf.Lerp(Mathf.Lerp(Random.value, 1f - self.iVars.fatness, Random.value), 1f - self.scavenger.abstractCreature.personality.energy, Random.value);
         self.iVars.neckThickness = Mathf.Lerp(Mathf.Pow(Random.value, 1.5f - self.scavenger.abstractCreature.personality.aggression), 1f - self.iVars.fatness, Random.value * 0.5f);
@@ -32,7 +33,7 @@ public class patch_ScavengerGraphics
     private static void ScavengerGraphics_InitiateSprites(On.ScavengerGraphics.orig_InitiateSprites orig, ScavengerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
     {
         orig.Invoke(self, sLeaser, rCam);
-        float myFat = BellyPlus.myFatness[patch_Scavenger.GetRef(self.scavenger)];
+        float myFat = self.scavenger.GetBelly().myFatness;
         sLeaser.sprites[self.ChestSprite].scaleX *= myFat;
         sLeaser.sprites[self.ChestSprite].scaleY *= myFat;
         sLeaser.sprites[self.HipSprite].scale *= myFat;
@@ -45,24 +46,25 @@ public class patch_ScavengerGraphics
         if (self.scavenger.room == null || BellyPlus.VisualsOnly())
             return;
 
-        int myCrit = patch_Scavenger.GetRef(self.scavenger);
+        int critNum = patch_Scavenger.GetRef(self.scavenger);
 
-        if (BellyPlus.pullingOther[myCrit] && self.scavenger.grasps[0] != null && self.scavenger.grasps[0].grabbed != null && self.scavenger.grasps[0].grabbed is Player)
+        if (self.scavenger.GetBelly().pullingOther && self.scavenger.grasps[0] != null && self.scavenger.grasps[0].grabbed != null && self.scavenger.grasps[0].grabbed is Player)
         {
             Limb myHand = self.hands[0];
             myHand.mode = Limb.Mode.HuntAbsolutePosition;
             myHand.absoluteHuntPos = self.scavenger.grasps[0].grabbedChunk.pos;
             myHand.pos = self.scavenger.grasps[0].grabbedChunk.pos;
         }
-            
+
 
 
 
         //RESET
-        BellyPlus.pushingOther[myCrit] = false;
-		
-		//STOLEN FROM SLUGCAT HANDS
-		Creature myHelper = patch_Player.FindPlayerInRange(self.scavenger);
+        if (self.scavenger.GetBelly().pushingOther > 0)
+            self.scavenger.GetBelly().pushingOther--;
+
+        //STOLEN FROM SLUGCAT HANDS
+        Creature myHelper = patch_Player.FindPlayerInRange(self.scavenger);
         if (myHelper == null)
             myHelper = patch_Scavenger.FindScavInRange(self.scavenger);
 		if (myHelper == null)
@@ -86,7 +88,7 @@ public class patch_ScavengerGraphics
                 // || (vertStuck && patch_LanternMouse.GetMouseAngle(self.scavenger).y == patch_LanternMouse.GetMouseAngle(myHelper).y))
                 //FORGET THAT. JUST ALWAYS PUSH IF WE'RE CLOSE ENOUGH
                 patch_Player.ObjPushedOn(myHelper);
-				patch_Lizard.PushedOther(self.scavenger);
-			}
+                self.scavenger.GetBelly().pushingOther = 3;
+            }
     }
 }

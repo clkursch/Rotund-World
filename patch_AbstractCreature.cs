@@ -2,6 +2,8 @@
 using UnityEngine;
 using SprobParasiticScug;
 
+namespace RotundWorld;
+
 public class patch_AbstractCreature
 {
     public static void Patch()
@@ -64,12 +66,12 @@ public class patch_AbstractCreature
             {
                 //int bonusFat = patch_Player.GetOverstuffed(self.vars().controller) / 2;
                 Player paras = self.vars().controller;
-                bonusFat = Mathf.Max(patch_Player.bellyStats[patch_Player.GetPlayerNum(paras)].myFoodInStomach - paras.slugcatStats.maxFood, 0) / 1; //LIZARDS ALREADY DEVIDE BY LIKE 25
+                bonusFat = Mathf.Max(paras.abstractCreature.GetAbsBelly().myFoodInStomach - paras.slugcatStats.maxFood, 0) / 1; //LIZARDS ALREADY DEVIDE BY LIKE 25
             }
-            BellyPlus.myFoodInStomach[BellyPlus.GetRef(self.realizedCreature)] = self.vars().food + foodFloor + bonusFat;
+            self.GetAbsBelly().myFoodInStomach = self.vars().food + foodFloor + bonusFat;
 
             if (self.vars().controller != null)
-                Debug.Log("--PARASITE CREATURE EATING A TASTY SNACK! " + BellyPlus.myFoodInStomach[BellyPlus.GetRef(self.realizedCreature)]);
+                Debug.Log("--PARASITE CREATURE EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
 
             //CreatureTemplate.Type.Deer
             if (self.realizedCreature is Lizard liz)
@@ -115,9 +117,9 @@ public class patch_AbstractCreature
             {
                 if (creature.grasps[0] != null && creature.grasps[0].grabbed is Creature)  // && creature.Template.CreatureRelationship(creature.grasps[0].grabbed as Creature).type == CreatureTemplate.Relationship.Type.Eats)
                 {
-                    BellyPlus.myFoodInStomach[BellyPlus.GetRef(creature)] += 1;
+                    creature.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
                     patch_Lizard.ObjUpdateBellySize(creature);
-                    Debug.Log("CREATURE DRAGGED PREY OFFSCREEN - EATING A TASTY SNACK! " + BellyPlus.myFoodInStomach[patch_Lizard.GetRef(creature)]);
+                    Debug.Log("CREATURE DRAGGED PREY OFFSCREEN - EATING A TASTY SNACK! " + creature.abstractCreature.GetAbsBelly().myFoodInStomach);
                 }
 
             }
@@ -157,27 +159,27 @@ public class patch_AbstractCreature
 					if (mySelf.grasps[0].grabbed is Player player)
 						fatGained += Mathf.Min((patch_Player.GetOverstuffed(player) / 2f), 4f);
 						
-					BellyPlus.myFoodInStomach[BellyPlus.GetRef(mySelf)] += Mathf.CeilToInt(fatGained);
+					self.GetAbsBelly().myFoodInStomach += Mathf.CeilToInt(fatGained);
 					patch_Lizard.ObjUpdateBellySize(mySelf as Creature); //CICADAS CAN'T DO THIS... WAIT YES THEY CAN!!
-					Debug.Log("CREATURE IN DEN - EATING A TASTY SNACK! " + BellyPlus.myFoodInStomach[patch_Lizard.GetRef(mySelf)]);
+					Debug.Log("CREATURE IN DEN - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
 				}
 
 				//MINI CREATURE UPDATES
 				if (self.realizedCreature is DropBug)
 				{
 					Creature mySelf = self.realizedCreature as Creature;
-					int amnt = (BellyPlus.myFoodInStomach[BellyPlus.GetRef(mySelf)] >= 4) ? 1 : 2; //PAST TWO MEALS, SLOW DOWN THE CHONK
+					int amnt = (self.GetAbsBelly().myFoodInStomach >= 4) ? 1 : 2; //PAST TWO MEALS, SLOW DOWN THE CHONK
 					//GAIN 2 IF HUNGRY. ONLY 1 IF FAT
-					BellyPlus.myFoodInStomach[BellyPlus.GetRef(mySelf)] += amnt;
+					self.GetAbsBelly().myFoodInStomach += amnt;
 					patch_DLL.UpdateBellySize(mySelf as DropBug, amnt);
-					Debug.Log("MINI CREATURE IN DEN - EATING A TASTY SNACK! " + BellyPlus.myFoodInStomach[patch_Lizard.GetRef(mySelf)]);
+					Debug.Log("MINI CREATURE IN DEN - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
 				}
 				
 				if (self.realizedCreature is JetFish fish && fish.AI != null && fish.AI.behavior == JetFishAI.Behavior.ReturnPrey)
 				{
-					BellyPlus.myFoodInStomach[BellyPlus.GetRef(fish)] += 2;
+					self.GetAbsBelly().myFoodInStomach += 2;
 					patch_Lizard.ObjUpdateBellySize(fish);
-					Debug.Log("JETFISH - EATING A TASTY SNACK! " + BellyPlus.myFoodInStomach[patch_Lizard.GetRef(fish)]);
+					Debug.Log("JETFISH - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
 				}
 			}
         }

@@ -13,7 +13,7 @@ public class patch_VirtualMicrophone
 	public static void BP_NewRoom(On.VirtualMicrophone.orig_NewRoom orig, VirtualMicrophone self, Room room)
 	{
         orig.Invoke(self, room);
-		patch_Lizard.refreshSounds = true;
+		//patch_Lizard.refreshSounds = true;
         
 	}
 

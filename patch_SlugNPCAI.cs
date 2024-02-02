@@ -5,11 +5,7 @@ using MoreSlugcats;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 
-// --garrito
-// --babs eating
-// --bab tail
-// --check bab size
-// --fixed tail resizing
+namespace RotundWorld;
 
 public class patch_SlugNPCAI
 {
@@ -54,7 +50,7 @@ public class patch_SlugNPCAI
 
     public static void FixFood(SlugNPCAI self)
 	{
-		self.cat.playerState.foodInStomach = patch_Player.bellyStats[patch_Player.GetPlayerNum(self.cat)].myFoodInStomach;
+		self.cat.playerState.foodInStomach = self.cat.abstractCreature.GetAbsBelly().myFoodInStomach;
 	}
 	
 	public static bool WantsToOvereat(SlugNPCAI self)

@@ -3,13 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using RWCustom;
 using UnityEngine;
+using MoreSlugcats;
 
-
+namespace RotundWorld;
 public class patch_DLL
 {
-    //I CAN'T BELEIVE I'M DOING THIS...
-    public static Dictionary<int, BigEel> leviathanBook = new Dictionary<int, BigEel>(0);
-    public static Dictionary<int, Creature> miscBook = new Dictionary<int, Creature>(0);
 
     public static void Patch()
 	{
@@ -52,7 +50,16 @@ public class patch_DLL
 
         On.Deer.ctor += Deer_ctor;
         On.Deer.Act += Deer_Act;
-        //On.Deer.DrawSprites += ;
+        On.DeerGraphics.DrawSprites += DeerGraphics_DrawSprites;
+
+        On.MoreSlugcats.Yeek.ctor += Yeek_ctor;
+        On.MoreSlugcats.YeekState.Feed += YeekState_Feed;
+        On.MoreSlugcats.Yeek.SetPlayerHoldingBodyMass += Yeek_SetPlayerHoldingBodyMass;
+        On.MoreSlugcats.Yeek.GetSegmentRadForCollision += Yeek_GetSegmentRadForCollision;
+
+        On.Leech.ctor += Leech_ctor;
+        On.Leech.Attached += Leech_Attached;
+        On.LeechGraphics.Radius += LeechGraphics_Radius;
 
         On.StaticWorld.InitStaticWorld += StaticWorld_InitStaticWorld;
     }
@@ -119,51 +126,54 @@ public class patch_DLL
 			return false;
 		if (crit is BigEel && !BPOptions.fatEels.Value)
 			return false;
-		
-		return true;
+        if (crit is JetFish && !BPOptions.fatJets.Value)
+            return false;
+        if (crit is Deer && !BPOptions.fatDeer.Value)
+            return false;
+        if (crit is Yeek && !BPOptions.fatYeeks.Value)
+            return false;
+        if (crit is Leech && !BPOptions.fatLeechs.Value)
+            return false;
+
+        return true;
 	}
 
 
-    public static void CheckIn(Creature self, Dictionary<int, Creature> guestBook)
+    public static void CheckIn(Creature self)
 	{
         int critNum = self.abstractCreature.ID.RandomSeed;
         bool guestExists = false;
-        try
+
+        if (self.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
         {
-            guestBook.Add(critNum, self); //ADD OURSELVES TO THE GUESTBOOK
-        }
-        catch (ArgumentException)
-        {
-            Debug.Log("--ALREADY EXISTS ");
             guestExists = true;
         }
+
         if (guestExists)
         {
             //ALREADY EXISTS
-            guestBook[critNum] = self;
-            //UpdateBellySize(self);  //, BellyPlus.myFoodInStomach[GetRef(self)]
             if (self is BigEel)
-                FeedBigEel(self as BigEel, BellyPlus.myFoodInStomach[GetRef(self)]);
+                FeedBigEel(self as BigEel, self.abstractCreature.GetAbsBelly().myFoodInStomach);
             //else if (self is DropBug) //I GUESS THEIR BELLY SIZE IS JUST REMEMBERED AUTOMARICALLY??? HUH...
-            //    UpdateBellySize(self as DropBug, BellyPlus.myFoodInStomach[critNum]);
+            //    UpdateBellySize(self as DropBug, self.abstractCreature.GetAbsBelly().myFoodInStomach);
             else if (self is DropBug) //BUT THEY HAVE ANOTHER REALLY ANNOYING ISSUE WITH THEIR DICTIONARY VALUES NOT ALWAYS EXISTING >:(
-                BellyPlus.InitializeCreatureMini(critNum); //WE SHOULD DO THIS ANYWAYS
+                BellyPlus.InitializeCreatureMini(self); //WE SHOULD DO THIS ANYWAYS
             return;
         }
-        BellyPlus.InitializeCreatureMini(critNum);
+        BellyPlus.InitializeCreatureMini(self);
 
         if (self is DropBug && CheckFattable(self))
         {
             int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
             if (critChub == 8)
-                BellyPlus.myFoodInStomach[critNum] = 3; //DROPWIGS DON'T GET A 1 TO 1 RATIO
-            //BellyPlus.myFoodInStomach[critNum] = critChub;
-            //UpdateBellySize(self as DropBug, BellyPlus.myFoodInStomach[critNum]);
+                self.abstractCreature.GetAbsBelly().myFoodInStomach = 3; //DROPWIGS DON'T GET A 1 TO 1 RATIO
+            //self.abstractCreature.GetAbsBelly().myFoodInStomach = critChub;
+            //UpdateBellySize(self as DropBug, self.abstractCreature.GetAbsBelly().myFoodInStomach);
         }
 
         else if (CheckFattable(self))
         {
-            BellyPlus.myFoodInStomach[critNum] = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
+            self.abstractCreature.GetAbsBelly().myFoodInStomach = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
         }
     }
 
@@ -177,10 +187,13 @@ public class patch_DLL
 	
 		else if (self is Deer)
 		{
-			float massMod = 1f + Mathf.Max(0f, (BellyPlus.myFoodInStomach[GetRef(self)] - 6) / 20f);
+			float massMod = 1f + Mathf.Max(0f, (self.abstractCreature.GetAbsBelly().myFoodInStomach - 2) / 20f);
 			for (int i = 1; i < 5; i++)
 			{
-				self.bodyChunks[i].rad *= massMod;
+                float num = (float)i / 4f;
+                num = (1f - num) * 0.5f + Mathf.Sin(Mathf.Pow(num, 0.5f) * 3.1415927f) * 0.5f;
+                num = Mathf.Pow(Mathf.Max(0f, Mathf.Lerp(num, 1f, 0.2f)), 0.7f);
+                self.bodyChunks[i].rad = Mathf.Lerp(10f, 35f, num) * massMod;
 			}
 		}
     }
@@ -191,31 +204,20 @@ public class patch_DLL
     {
 		orig(self, abstractCreature, world);
 
-        int critNum = self.abstractCreature.ID.RandomSeed;
-        bool mouseExists = false;
-        try
-        {
-            patch_DLL.leviathanBook.Add(critNum, self); //ADD OURSELVES TO THE GUESTBOOK
-        }
-        catch (ArgumentException)
-        {
-            mouseExists = true;
-        }
-        if (mouseExists)
+        if (self.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
         {
             //ALREADY EXISTS
-			patch_DLL.leviathanBook[critNum] = self;
-            FeedBigEel(self, BellyPlus.myFoodInStomach[GetRef(self)]);
+            FeedBigEel(self, self.abstractCreature.GetAbsBelly().myFoodInStomach);
             return;
         }
-        BellyPlus.InitializeCreatureMini(critNum);
+        BellyPlus.InitializeCreatureMini(self);
 		
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("--SPAWNING BIGEEL " + self.bodyChunks[0].rad);
 
         if (GetChub(self) >= 4 && CheckFattable(self))
 		{
-			BellyPlus.myFoodInStomach[GetRef(self)] += 2;
+			self.abstractCreature.GetAbsBelly().myFoodInStomach += 2;
             FeedBigEel(self, 2);
 		}
 	}
@@ -227,7 +229,7 @@ public class patch_DLL
 		{
 			if (self.clampedObjects[i].chunk.owner is Creature && !(self.clampedObjects[i].chunk.owner as Creature).Template.smallCreature && CheckFattable(self))
 			{
-				BellyPlus.myFoodInStomach[GetRef(self)] += 1;
+				self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
                 FeedBigEel(self, 1);
 			}
 		}
@@ -236,7 +238,7 @@ public class patch_DLL
 	
 	public static void FeedBigEel(BigEel self, int amnt)
 	{
-		//int amnt = BellyPlus.myFoodInStomach[GetRef(self)];
+		//int amnt = self.abstractCreature.GetAbsBelly().myFoodInStomach;
 
         for (int i = 0; i < self.bodyChunks.Length; i++)
 		{
@@ -444,7 +446,7 @@ public class patch_DLL
     {
         orig.Invoke(self, abstractCreature, world);
 
-        CheckIn(self, miscBook);
+        CheckIn(self);
     }
 
 
@@ -453,7 +455,7 @@ public class patch_DLL
         bool ceilingJump = self.fromCeilingJump;
         orig(self, eu);
         //IF WE JUST STOPPED A FROMCEILINJUMP AND WE'RE FAT, MAKE A BIG IMPACT
-        if (self.graphicsModule != null && ceilingJump != self.fromCeilingJump && !self.fromCeilingJump && BellyPlus.myFoodInStomach[BellyPlus.GetRef(self)] >= 3)
+        if (self.graphicsModule != null && ceilingJump != self.fromCeilingJump && !self.fromCeilingJump && self.abstractCreature.GetAbsBelly().myFoodInStomach >= 3)
         {
             self.room.PlaySound(SoundID.Lizard_Heavy_Terrain_Impact, self.mainBodyChunk, false, 1, 1);
             self.room.game.cameras[0].screenShake += 0.5f;
@@ -464,7 +466,7 @@ public class patch_DLL
     {
         orig(self, moveTo);
 
-        if (self.graphicsModule != null && self.Footing && !BellyPlus.VisualsOnly() && BellyPlus.myFoodInStomach[BellyPlus.GetRef(self)] >= 2)
+        if (self.graphicsModule != null && self.Footing && !BellyPlus.VisualsOnly() && self.abstractCreature.GetAbsBelly().myFoodInStomach >= 2)
         {
             self.bodyChunks[0].vel *= 0.8f;
             self.bodyChunks[1].vel *= 0.8f;
@@ -486,8 +488,8 @@ public class patch_DLL
     private static void JetFish_ctor(On.JetFish.orig_ctor orig, JetFish self, AbstractCreature abstractCreature, World world)
     {
         orig.Invoke(self, abstractCreature, world);
-        CheckIn(self, miscBook);
-        float massMod = 1f + Mathf.Max(0f, (BellyPlus.myFoodInStomach[GetRef(self)] - 6) / 10f);
+        CheckIn(self);
+        float massMod = 1f + Mathf.Max(0f, (self.abstractCreature.GetAbsBelly().myFoodInStomach - 6) / 10f);
         self.bodyChunks[0].mass *= massMod;
         self.bodyChunks[1].mass *= massMod;
     }
@@ -495,7 +497,7 @@ public class patch_DLL
 	private static void JetFishGraphics_InitiateSprites(On.JetFishGraphics.orig_InitiateSprites orig, JetFishGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
     {
         orig(self, sLeaser, rCam);
-		sLeaser.sprites[self.BodySprite].scale *= Custom.LerpMap(BellyPlus.myFoodInStomach[GetRef(self.fish)], 3f, 10f, 1f, 2f);
+		sLeaser.sprites[self.BodySprite].scale *= Custom.LerpMap(self.fish.abstractCreature.GetAbsBelly().myFoodInStomach, 3f, 10f, 1f, 2f);
         //sLeaser.sprites[self.BodySprite].scaleY *= 3f;
     }
 	
@@ -504,9 +506,9 @@ public class patch_DLL
         MovementConnection movementConnection = (self.AI.pathFinder as FishPather).FollowPath(self.room.GetWorldCoordinate(self.mainBodyChunk.pos), true);
         if (movementConnection != null && (movementConnection.type == MovementConnection.MovementType.ShortCut || movementConnection.type == MovementConnection.MovementType.NPCTransportation))
         {
-            if (ModManager.MMF && self.AI.denFinder.GetDenPosition() != null && movementConnection.destinationCoord == self.AI.denFinder.GetDenPosition() && self.AI.behavior == JetFishAI.Behavior.ReturnPrey && self.grasps[0] != null && !(self.grasps[0].grabbed is Creature))
+            if (CheckFattable(self) && ModManager.MMF && self.AI.denFinder.GetDenPosition() != null && movementConnection.destinationCoord == self.AI.denFinder.GetDenPosition() && self.AI.behavior == JetFishAI.Behavior.ReturnPrey && self.grasps[0] != null && !(self.grasps[0].grabbed is Creature))
             {
-                BellyPlus.myFoodInStomach[BellyPlus.GetRef(self)] += 1;
+                self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
                 UpdateBellySize(self, 0);
                 self.graphicsModule.Reset();
                 //self.graphicsModule.
@@ -523,7 +525,7 @@ public class patch_DLL
 		{
 			for (int k = 0; k < self.tails.GetLength(1); k++)
 			{
-				self.tails[i, k].rad *= 1 + Mathf.Max(0f, (BellyPlus.myFoodInStomach[GetRef(self.fish)] - 6) / 2f);
+				self.tails[i, k].rad *= 1 + Mathf.Max(0f, (self.fish.abstractCreature.GetAbsBelly().myFoodInStomach - 6) / 2f);
                 //self.tails[i, k].rad *= 5f;
 
             }
@@ -534,37 +536,104 @@ public class patch_DLL
     private static void Deer_ctor(On.Deer.orig_ctor orig, Deer self, AbstractCreature abstractCreature, World world)
     {
         orig.Invoke(self, abstractCreature, world);
-        CheckIn(self, miscBook);
+        CheckIn(self);
         UpdateBellySize(self, 0);
         self.Template.meatPoints = 30;
     }
 
     private static void Deer_Act(On.Deer.orig_Act orig, Deer self, bool eu, float support, float forwardPower)
     {
-        if (self.eatCounter == 50)
+        if (self.eatCounter == 50 && CheckFattable(self))
         {
-            BellyPlus.myFoodInStomach[BellyPlus.GetRef(self)] += 1;
+            self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
             UpdateBellySize(self, 0);
-            self.graphicsModule.Reset();
+            //self.graphicsModule.Reset();
             //self.graphicsModule.
         }
         orig(self, eu, support, forwardPower);
     }
-    
-	
-	/*
-	public override void DrawSprites(RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
-	{
-		orig(self, sLeaser, rCam);
-		
-		//UPDATE THIS EVERY FRAME NOW
-		for (int i = 0; i < 5; i++)
-		{
-			sLeaser.sprites[self.BodySprite(i)].scaleX = self.owner.bodyChunks[i].rad / 8f * 1.05f;
-			sLeaser.sprites[self.BodySprite(i)].scaleY = self.owner.bodyChunks[i].rad / 8f * 1.3f;
-		}
-	}
-	*/
+
+
+    private static void DeerGraphics_DrawSprites(On.DeerGraphics.orig_DrawSprites orig, DeerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        orig(self, sLeaser, rCam, timeStacker, camPos);
+
+        //IT'S MESSY BUT IT'LL DO. A SMALL WINDOW WHERE SPRITES CAN RESIZE
+        if (self.deer.eatCounter < 50 && self.deer.eatCounter > 40)
+        { //THIS IS JUST A COPY OF WHAT THE CTOR DOES
+            for (int i = 0; i < 5; i++)
+            {
+                sLeaser.sprites[self.BodySprite(i)].scaleX = self.owner.bodyChunks[i].rad / 8f * 1.05f;
+                sLeaser.sprites[self.BodySprite(i)].scaleY = self.owner.bodyChunks[i].rad / 8f * 1.3f;
+            }
+        }
+    }
+
+
+    private static void Yeek_ctor(On.MoreSlugcats.Yeek.orig_ctor orig, Yeek self, AbstractCreature abstractCreature, World world)
+    {
+        orig(self, abstractCreature, world);
+        CheckIn(self);
+        //elf.creature.GetAbsBelly().myFoodInStomach = 10;
+    }
+
+    private static void YeekState_Feed(On.MoreSlugcats.YeekState.orig_Feed orig, YeekState self, int CycleTimer)
+    {
+        //if (CheckFattable())
+        if (BPOptions.fatYeeks.Value)
+            self.creature.GetAbsBelly().myFoodInStomach += 2;
+        //Debug.Log(" YEEKERTON " + self.creature.GetAbsBelly().myFoodInStomach);
+    }
+
+
+    private static float Yeek_GetSegmentRadForCollision(On.MoreSlugcats.Yeek.orig_GetSegmentRadForCollision orig, Yeek self, int seg)
+    {
+        float fatMod = 1f + Mathf.Max(0f, (self.abstractCreature.GetAbsBelly().myFoodInStomach - 5) / 5f);
+        return orig(self, seg) * fatMod;
+    }
+
+    private static void Yeek_SetPlayerHoldingBodyMass(On.MoreSlugcats.Yeek.orig_SetPlayerHoldingBodyMass orig, Yeek self)
+    {
+        bool wasStandard = self.usingStandardMass;
+        orig(self);
+        if (wasStandard)
+        {
+            float fatMod = 1f + Mathf.Max(0f, (self.abstractCreature.GetAbsBelly().myFoodInStomach - 5) / 10f);
+            for (int i = 0; i < self.bodyChunks.Length; i++)
+            {
+                self.bodyChunks[i].mass *= fatMod;
+            }
+        }
+    }
+
+
+    private static void Leech_ctor(On.Leech.orig_ctor orig, Leech self, AbstractCreature abstractCreature, World world)
+    {
+        orig(self, abstractCreature, world);
+        CheckIn(self);
+    }
+
+    private static float LeechGraphics_Radius(On.LeechGraphics.orig_Radius orig, LeechGraphics self, float bodyPos)
+    {
+        float fatMod = 1f + Mathf.Max(0f, (self.leech.abstractCreature.GetAbsBelly().myFoodInStomach - 6) / 10f);
+        return orig(self, bodyPos) * fatMod;
+    }
+
+    private static void Leech_Attached(On.Leech.orig_Attached orig, Leech self)
+    {
+        orig(self);
+        float drainRate = 0.015f;
+        if (self.jungleLeech)
+            drainRate *= 0.1f;
+        if (self.abstractCreature.GetAbsBelly().myFoodInStomach >= 20)
+            drainRate *= 0.1f;
+
+        if (UnityEngine.Random.value < drainRate && CheckFattable(self))
+        {
+            self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
+            //Debug.Log("BLOAT " + self.abstractCreature.GetAbsBelly().myFoodInStomach);
+        }
+    }
 
 
     public static void Centipede_ctor(On.Centipede.orig_ctor orig, Centipede self, AbstractCreature abstractCreature, World world)

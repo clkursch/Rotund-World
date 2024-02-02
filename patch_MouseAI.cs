@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 
+namespace RotundWorld;
+
 public class patch_MouseAI
 {
 
@@ -15,7 +17,7 @@ public class patch_MouseAI
         //RELAAAAX A LITTLE...
         float heatFloor = 500;
         float heatCeil = 1000;
-        float heatVal = Mathf.Min(Mathf.Max(BellyPlus.myHeat[BellyPlus.GetRef(self.mouse)] - heatFloor, 0), heatCeil) / heatCeil;
+        float heatVal = Mathf.Min(Mathf.Max(self.mouse.GetBelly().myHeat - heatFloor, 0), heatCeil) / heatCeil;
         if (heatVal > 0)
         {
             self.fear *= (1f - heatVal);

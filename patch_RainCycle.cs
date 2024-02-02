@@ -1,6 +1,6 @@
 ﻿
+namespace RotundWorld;
 
-//RainCycle(World world, float minutes)
 public class patch_RainCycle
 {
     public static void Patch()

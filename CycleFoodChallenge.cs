@@ -8,6 +8,8 @@ using RWCustom;
 using HUD;
 using Rewired.ControllerExtensions;
 
+//namespace RotundWorld;
+
 namespace Expedition
 {
 	
@@ -74,9 +76,9 @@ namespace Expedition
 		{
 			base.Update();
 
-			if (this.score != BellyPlus.bonusFood)
+			if (this.score != RotundWorld.BellyPlus.bonusFood)
 			{
-				this.score = BellyPlus.bonusFood;
+				this.score = RotundWorld.BellyPlus.bonusFood;
 				 this.UpdateDescription();
 			}
 
