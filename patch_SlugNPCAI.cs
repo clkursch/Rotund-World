@@ -156,7 +156,6 @@ public class patch_SlugNPCAI
 	
 	public static Player FindStuckFriend(Creature self)
 	{
-		Player closestPlayer = null;
 		for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++)
 		{
 			Player checkPlayer = null;

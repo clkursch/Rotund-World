@@ -123,7 +123,7 @@ This item can only be swallowed if there are no items stored in your belly.
 namespace RotundWorld;
 
 
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.9.0")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.9.02")]
 //[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin
@@ -147,30 +147,19 @@ public class BellyPlus : BaseUnityPlugin
 			On.RainWorld.OnModsInit += RainWorld_OnModsInit;
             On.RainWorld.OnModsDisabled += RainWorld_OnModsDisabled;
 			On.RainWorld.PostModsInit += RainWorld_PostModsInit;
-			//if (ModManager.InstalledMods)
-
-			//On.RainWorld.Start += BP_RainWorld_Start;
 			
 			patch_Player.Patch();
 			patch_PlayerGraphics.Patch();
 			patch_SlugNPCAI.Patch();
 
 			patch_LanternMouse.Patch();
-			patch_MouseGraphics.Patch();
-			patch_MouseAI.Patch();
-
 			patch_Lizard.Patch();
 			patch_LizardGraphics.Patch();
 			patch_LizardAI.Patch();
-
 			patch_Scavenger.Patch();
-			patch_ScavengerGraphics.Patch();
-
 			patch_Cicada.Patch();
-			patch_CicadaGraphics.Patch();
-			
-			patch_Yeek.Patch(); //MAYBE SOMEDAY...
-			patch_DLL.Patch();
+
+			patch_MiscCreatures.Patch();
 
             patch_AbstractCreature.Patch();
 			
@@ -183,7 +172,6 @@ public class BellyPlus : BaseUnityPlugin
 			patch_FoodMeter.Patch();
 			patch_SaveState.Patch();
 
-			patch_VirtualMicrophone.Patch(); //DUNNO IF THIS ACTUALLY WORKED
 			patch_ShelterDoor.Patch();//HOW DID I MISS THIS???
 			patch_RainCycle.Patch();
 			//------
@@ -194,13 +182,6 @@ public class BellyPlus : BaseUnityPlugin
 			patch_OracleBehavior.Patch(); //THESE COUNT AS VISUALS. THE CHANGES CAN STAY
 			patch_OverseerTutorial.Patch();
 			
-			//OUTDATED 
-			// BellyPlus.theThinOnes.Add(0, false);
-			// BellyPlus.theThinOnes.Add(1, false);
-			// BellyPlus.theThinOnes.Add(2, false);
-			// BellyPlus.theThinOnes.Add(3, false);
-			//IT WILL ALWAYS BE 4, SO WE WON'T NEED TO FIDDLE WITH RESETS 
-
 		}
 		catch (Exception arg)
 		{
@@ -257,6 +238,10 @@ public class BellyPlus : BaseUnityPlugin
             {
                 improvedInputEnabled = true;
             }
+            if (ModManager.ActiveMods[i].id == "vigaro.yeekfix")
+            {
+				YeekFixContent();
+            }
         }
 
         //OKAY WE'VE GOT A FEW HOOKS THAT NEED TO GO IN HERE FOR LOAD ORDER REASONS
@@ -307,6 +292,11 @@ public class BellyPlus : BaseUnityPlugin
     public void ExpdEnhancedContent()
     {
         ExpeditionsEnhanced.RegisterExpeditionContent(new Obese(), new FoodLover());
+    }
+
+    public void YeekFixContent()
+    {
+        //patch_MiscCreatures.YeekFixPatch();
     }
 
 
@@ -382,7 +372,7 @@ public class BellyPlus : BaseUnityPlugin
     public static void InitPSFoodValues(AbstractCreature self)
     {
         //THIS ONE IS TO SET THEIR INTERNAL FOOD BASED ON OUR FATNESS INSTEAD OF THE OTHER WAY AROUND
-        if (self.vars() != null) //&& !CheckForParasite(self) //patch_DLL.CheckFattable(self.realizedCreature) && 
+        if (self.vars() != null) //&& !CheckForParasite(self) //patch_MiscCreatures.CheckFattable(self.realizedCreature) && 
         {
 			float spawningChub = patch_Lizard.GetChubValue(self.realizedCreature);
             if (spawningChub > 1f) //IF WE'RE SKINNY, DON'T START US WITH MUCH EXTRA FOOD
@@ -517,7 +507,8 @@ public static class BellyClass
 		public int squeezeStrain;       //Collective effort spent sliding through a corridor
 		public int targetStuck;
 		public int fwumpFlag;
-		public IntVector2 autoPilot;	//Held direction
+		public IntVector2 autoPilot;    //Held direction
+		public int pilotTimer;			//How long until auto pilot deactivates
 		public float holdJump;          //Frames of continously held jump (up to a cap)
 		public int struggleHintCount;
 		public bool breakfasted;

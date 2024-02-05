@@ -11,12 +11,14 @@ public class patch_LanternMouse
 	public static void Patch()
 	{
 		On.LanternMouse.ctor += (MousePatch);
-		
 		On.LanternMouse.Update += BPLanternMouse_Update;
 		On.LanternMouse.SpitOutOfShortCut += LanternMouse_SpitOutOfShortCut;
 		On.LanternMouse.Die += BP_Die;
-		
-	}
+
+        On.MouseGraphics.DrawSprites += PG_DrawSprites;
+        On.MouseGraphics.Update += MouseGraphics_Update;
+
+    }
 
 	private static void MousePatch(On.LanternMouse.orig_ctor orig, LanternMouse self, AbstractCreature abstractCreature, World world)
 	{
@@ -33,7 +35,7 @@ public class patch_LanternMouse
 		UnityEngine.Random.seed = self.abstractCreature.ID.RandomSeed;
 
         int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
-		if (patch_DLL.CheckFattable(self) == false)
+		if (patch_MiscCreatures.CheckFattable(self) == false)
 			critChub = 0;
 		
 		if (BPOptions.debugLogs.Value)
@@ -48,10 +50,6 @@ public class patch_LanternMouse
     }
 
 	
-	public static IntVector2 GetMouseAngle(LanternMouse self)
-	{
-		return patch_Lizard.GetMouseAngle(self);
-	}
 
 	//I DON'T ACTUALLY KNOW IF WE CAN USE THE LIZARD VERSION FOR THIS OR NOT...
 	public static IntVector2 GetMouseVector(LanternMouse self)
@@ -152,7 +150,7 @@ public class patch_LanternMouse
 	}
 
 
-	public static void BPUUpdatePass1(LanternMouse self, int critNum)
+	public static void BPUUpdatePass1(LanternMouse self)
 	{
 		//VERSION FOR MICE!
 		if ((self.GetBelly().isStuck || self.GetBelly().pushingOther > 0) && self.runCycle > 0)
@@ -187,28 +185,24 @@ public class patch_LanternMouse
 	}
 
 	
-	public static void BPUUpdatePass2(LanternMouse self, int critNum)
+	public static void BPUUpdatePass2(LanternMouse self)
 	{
 		//LIZARDS ACTUALLY WORKS FOR US TOO! DON'T MIND IF I DO...
-		patch_Lizard.BPUUpdatePass2(self, critNum);
+		patch_Lizard.BPUUpdatePass2(self);
 	}
 	
-	
-	
-	public static void BPUUpdatePass3(LanternMouse self, int critNum)
+	public static void BPUUpdatePass3(LanternMouse self)
 	{
 		//LIZARDS ACTUALLY WORKS FOR US TOO! DON'T MIND IF I DO...
-		patch_Lizard.BPUUpdatePass3(self, critNum);
+		patch_Lizard.BPUUpdatePass3(self);
 	}
 	
-	
-	public static void BPUUpdatePass4(LanternMouse self, int critNum)
+	public static void BPUUpdatePass4(LanternMouse self)
 	{
-		patch_Lizard.BPUUpdatePass4(self, critNum);
+		patch_Lizard.BPUUpdatePass4(self);
 	}
 	
-	
-	public static void BPUUpdatePass5(LanternMouse self, int critNum)
+	public static void BPUUpdatePass5(LanternMouse self)
 	{
 		//----- CHECK IF WE'RE PUSHING ANOTHER CREATURE.------
 		if (self.GetBelly().pushingOther > 0)
@@ -280,7 +274,7 @@ public class patch_LanternMouse
 	}
 		
 		
-	public static void BPUUpdatePass5_2(LanternMouse self, int critNum)
+	public static void BPUUpdatePass5_2(LanternMouse self)
 	{
 		//LET MICE BOOST TOO! JUST DO IT DIFFERENTLY...
 		if (((self.GetBelly().boostCounter < 1 && self.GetBelly().stuckStrain > 65) || (BellyPlus.SafariJumpButton(self) && self.GetBelly().boostCounter < 10))&& !self.GetBelly().lungsExhausted && (IsStuck(self) || self.GetBelly().pushingOther > 0))
@@ -333,12 +327,10 @@ public class patch_LanternMouse
 	}
 	
 	
-	public static void BPUUpdatePass6(LanternMouse self, int critNum)
+	public static void BPUUpdatePass6(LanternMouse self)
 	{
-		patch_Lizard.BPUUpdatePass6(self, critNum);
+		patch_Lizard.BPUUpdatePass6(self);
 	}
-
-
 
 	public static void BPLanternMouse_Update(On.LanternMouse.orig_Update orig, LanternMouse self, bool eu)
 	{
@@ -347,10 +339,8 @@ public class patch_LanternMouse
 			orig.Invoke(self, eu);
 			return;
 		}
-		
-		int critNum = self.abstractCreature.ID.RandomSeed;
 
-		BPUUpdatePass1(self, critNum);
+		BPUUpdatePass1(self);
 		
 		orig.Invoke(self, eu);
 
@@ -360,19 +350,135 @@ public class patch_LanternMouse
 		
 		if (self.room != null)
 		{ 
-			BPUUpdatePass2(self, critNum);
-			BPUUpdatePass3(self, critNum);
-			BPUUpdatePass4(self, critNum);
-			BPUUpdatePass5(self, critNum);
-			BPUUpdatePass5_2(self, critNum);
+			BPUUpdatePass2(self);
+			BPUUpdatePass3(self);
+			BPUUpdatePass4(self);
+			BPUUpdatePass5(self);
+			BPUUpdatePass5_2(self);
 		}
-		BPUUpdatePass6(self, critNum);
+		BPUUpdatePass6(self);
 	}
 
 
-	public static void PopFree(LanternMouse self, float power, bool inPipe)
-	{
-		patch_Lizard.PopFree(self, power, inPipe);
-	}
+
+    private static void MouseGraphics_Update(On.MouseGraphics.orig_Update orig, MouseGraphics self)
+    {
+        orig(self);
+
+        if (self.mouse.room == null)
+            return;
+
+        //DEAL WITH THIS IN HERE, SO IT DOESN'T RUN OFF SCREEN.
+        //self.mouse.bodyChunkConnections[0].distance = 12f + (4 + patch_Lizard.GetChubValue(self.mouse) / 4); //EW WHY DID I BUILD IT LIKE THIS
+        self.mouse.bodyChunkConnections[0].distance = 12f + Mathf.Max(0, patch_Lizard.GetChubValue(self.mouse));
+
+        //STRETCH OUT BASED ON STRAIN!
+        float bodyStretch = Mathf.Min(self.mouse.GetBelly().boostStrain, 15f) * 1.5f;
+        if ((patch_LanternMouse.IsVerticalStuck(self.mouse) && patch_Player.GetYFlipDirection(self.mouse) > 0))
+            bodyStretch *= 0.6f;
+        self.mouse.bodyChunkConnections[0].distance += Mathf.Sqrt(bodyStretch);
+
+
+        //RESET
+        if (self.mouse.GetBelly().pushingOther > 0)
+            self.mouse.GetBelly().pushingOther--;
+
+        //STOLEN FROM SLUGCAT HANDS
+        LanternMouse myHelper = patch_LanternMouse.FindMouseInRange(self.mouse);
+        if (myHelper != null && !BellyPlus.VisualsOnly())
+        {
+            if (patch_Player.IsStuckOrWedged(myHelper) || patch_Player.ObjIsPushingOther(myHelper))
+            {
+                //SPRITE ROTATION HAS TO HAPPEN IN DRAWSPRITES
+
+                //JUST PUSH IF CLOSE ENOUGH, NO NEED TO CHECK IF ANGLE LINES UP OR ANYTHING
+                patch_Player.ObjPushedOn(myHelper);
+                self.mouse.GetBelly().pushingOther = 3;
+            }
+        }
+    }
+
+
+    public static void PG_DrawSprites(On.MouseGraphics.orig_DrawSprites orig, MouseGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
+
+        if (self.mouse.GetBelly().pushingOther > 0 && self.mouse.room != null)
+        {
+            LanternMouse myHelper = patch_LanternMouse.FindMouseInRange(self.mouse);
+            if (myHelper != null && (patch_Player.IsStuckOrWedged(myHelper) || patch_Player.ObjIsPushingOther(myHelper)))
+            {
+                //WAIT... WHAT ABOUT THIS. OK THAT'S EASIER
+                for (int l = 0; l < 2; l++)
+                {
+                    self.limbs[0, l].pos += (myHelper.bodyChunks[1].pos - self.mouse.bodyChunks[0].pos) / 2;
+                    //ISN'T THIS BACKWARDS? BUT OK
+                    sLeaser.sprites[self.LimbSprite(0, l)].rotation = Custom.AimFromOneVectorToAnother(myHelper.bodyChunks[1].pos, self.mouse.bodyChunks[0].pos);
+                }
+            }
+        }
+
+        //IF THEY'RE STUCK, MAYBE DON'T SHOW THEIR FORELEGS?
+        if (patch_LanternMouse.IsStuck(self.mouse))
+        {
+            // sLeaser.sprites[this.LimbSprite(l, m)] //L:0 = FRONT LEGS. L:1 = HIND LEGS
+            //sLeaser.sprites[self.LimbSprite(0, 0)].isVisible = false; 
+            //sLeaser.sprites[self.LimbSprite(0, 1)].isVisible = false;
+        }
+
+        float hipScale = 0;
+        switch (patch_Lizard.GetChubValue(self.mouse))
+        {
+            case 0:
+                hipScale = 0f;
+                break;
+            case 1:
+                hipScale = 0f;
+                break;
+            case 2:
+                hipScale = 2f;
+                break;
+            case 3:
+                hipScale = 5f;
+                break;
+            case 4:
+                hipScale = 10f;
+                break;
+        }
+
+        //OK, WE MIGHT NEED TO CHEAT A BIT WITH THE MICE...
+        float stuckBonus = 1;
+        if (patch_LanternMouse.IsStuck(self.mouse))
+        {
+            stuckBonus = 1.8f;
+        }
+
+        sLeaser.sprites[self.BodySprite(0)].scaleX = 1 + 0.03f * stuckBonus * hipScale;
+        //THESE REFRESH EVERY FRAME, SO JUST ADD TO THEM
+        sLeaser.sprites[self.BodySprite(1)].scaleX += 0.065f * stuckBonus * hipScale;
+        sLeaser.sprites[self.BodySprite(1)].scaleY += 0.04f * hipScale;
+        sLeaser.sprites[self.HeadSprite].scaleX += 0.015f * hipScale;
+        //Debug.Log("----SQUEAK!: " + sLeaser.sprites[self.BodySprite(1)].scaleX);
+
+
+        if (self.mouse.GetBelly().lungsExhausted)
+        {
+            //self.blink = -15; //WE'RE EXHAUSTED! EYES CLOSED...
+            self.ouchEyes = 10; //THAT'S THE WRONG EXPRESSION
+        }
+
+        else if (((patch_LanternMouse.IsStuck(self.mouse)) || patch_Player.ObjIsPushingOther(self.mouse))) // && !self.mouse.lungsExhausted)
+        {
+            //THIS IS ALL WE NEED
+            self.ouchEyes = 10;
+            if (!patch_LanternMouse.IsVerticalStuck(self.mouse))
+            {
+                for (int num = 15; num < 19; num++)
+                {
+                    sLeaser.sprites[num].rotation += 180; //FLIP THE EYES!
+                }
+            }
+        }
+    }
 
 }

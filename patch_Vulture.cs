@@ -37,7 +37,7 @@ public class patch_Vulture
         UnityEngine.Random.seed = critNum;
 
         int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
-		if (patch_DLL.CheckFattable(self) == false)
+		if (patch_MiscCreatures.CheckFattable(self) == false)
 			critChub = 0;
 		
         self.abstractCreature.GetAbsBelly().myFoodInStomach = critChub;

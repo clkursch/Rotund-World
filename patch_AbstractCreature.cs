@@ -56,7 +56,7 @@ public class patch_AbstractCreature
 
     public static void PSFoodValues(AbstractCreature self)
     {
-        if (patch_DLL.CheckFattable(self.realizedCreature) && self.vars() != null)
+        if (patch_MiscCreatures.CheckFattable(self.realizedCreature) && self.vars() != null)
         {
             int bonusFat = 0;
             int foodFloor = 8 - self.vars().maxFood;
@@ -97,7 +97,7 @@ public class patch_AbstractCreature
     public static void InitPSFoodValues(AbstractCreature self)
     {
         //THIS ONE IS TO SET THEIR INTERNAL FOOD BASED ON OUR FATNESS INSTEAD OF THE OTHER WAY AROUND
-        if (patch_DLL.CheckFattable(self.realizedCreature) && self.vars() != null && !CheckForParasite(self))
+        if (patch_MiscCreatures.CheckFattable(self.realizedCreature) && self.vars() != null && !CheckForParasite(self))
         {
             self.vars().food = self.vars().maxFood - 4 + patch_Lizard.GetChubValue(self.realizedCreature);
             Debug.Log("STARTING CHUB! " + self.vars().food);
@@ -113,7 +113,7 @@ public class patch_AbstractCreature
             if (BellyPlus.parasiticEnabled)
                 isParasitic = CheckForParasite(creature.abstractCreature);
 
-            if (creature is Vulture && patch_DLL.CheckFattable(creature) && !isParasitic)
+            if (creature is Vulture && patch_MiscCreatures.CheckFattable(creature) && !isParasitic)
             {
                 if (creature.grasps[0] != null && creature.grasps[0].grabbed is Creature)  // && creature.Template.CreatureRelationship(creature.grasps[0].grabbed as Creature).type == CreatureTemplate.Relationship.Type.Eats)
                 {
@@ -147,7 +147,7 @@ public class patch_AbstractCreature
 				
 
 			
-			if (self.realizedCreature != null && patch_DLL.CheckFattable(self.realizedCreature) && !isParasitic)
+			if (self.realizedCreature != null && patch_MiscCreatures.CheckFattable(self.realizedCreature) && !isParasitic)
 			{
 				//OH, I GUESS CICADAS DO THIS TOO!
 				//YEEKS DO NOT, THEY CATCH FRUIT SO THIS WON'T RUN. HANDLED IN YEEKSTATE INSTEAD
@@ -171,7 +171,7 @@ public class patch_AbstractCreature
 					int amnt = (self.GetAbsBelly().myFoodInStomach >= 4) ? 1 : 2; //PAST TWO MEALS, SLOW DOWN THE CHONK
 					//GAIN 2 IF HUNGRY. ONLY 1 IF FAT
 					self.GetAbsBelly().myFoodInStomach += amnt;
-					patch_DLL.UpdateBellySize(mySelf as DropBug, amnt);
+					patch_MiscCreatures.UpdateBellySize(mySelf as DropBug, amnt);
 					Debug.Log("MINI CREATURE IN DEN - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
 				}
 				

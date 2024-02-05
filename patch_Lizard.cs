@@ -26,28 +26,24 @@ public class patch_Lizard
 	private static void MainPatch(On.Lizard.orig_ctor orig, Lizard self, AbstractCreature abstractCreature, World world)
 	{
 		orig(self, abstractCreature, world);
-		int lizardNum = self.abstractCreature.ID.RandomSeed;
 
 		if (self.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
         {
-			Debug.Log("LIZARD ALREADY EXISTS! CANCELING: ");
+			//Debug.Log("LIZARD ALREADY EXISTS! CANCELING: ");
 			UpdateBellySize(self);
 			return;
 		}
         
-
-        // int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
         //NEW, LETS BASE OUR RANDOM VALUE ON OUR ABSTRACT CREATURE ID
-        int seed = UnityEngine.Random.seed;
-		UnityEngine.Random.seed = lizardNum;
-		int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
+		UnityEngine.Random.seed = self.abstractCreature.ID.RandomSeed;
+		int critChub = Mathf.FloorToInt(Mathf.Lerp(2, 9, UnityEngine.Random.value));
 
 		if (self.Template.type == CreatureTemplate.Type.YellowLizard)
 			critChub += 1; //BECAUSE IT'S HILARIOUS
 		else if (self.Template.type == MoreSlugcatsEnums.CreatureTemplateType.SpitLizard)
-			critChub = UnityEngine.Random.Range(3, 8);
+			critChub = UnityEngine.Random.Range(2, 8);
 		
-		if (patch_DLL.CheckFattable(self) == false)
+		if (patch_MiscCreatures.CheckFattable(self) == false)
 			critChub = 0;
 		
 		if (BPOptions.debugLogs.Value)
@@ -59,13 +55,6 @@ public class patch_Lizard
         if (BellyPlus.parasiticEnabled)
             BellyPlus.InitPSFoodValues(abstractCreature);
     }
-
-
-	void OnEnable()
-	{
-
-	}
-	
 	
 	
 	public static int GetRef(Creature self)
@@ -115,7 +104,7 @@ public class patch_Lizard
 	//WEIGHTINESS
 	public static void UpdateChubValue(Creature self)
 	{
-		int critNum = GetRef(self);
+		
 		int currentFood = Math.Min(self.abstractCreature.GetAbsBelly().myFoodInStomach, 8);
 		
 		switch (currentFood)
@@ -269,7 +258,7 @@ public class patch_Lizard
 	
 	public static void Creature_SpitOutOfShortCut(Creature self, IntVector2 pos, Room newRoom)
 	{
-		int critNum = GetRef(self);
+		
 		self.GetBelly().inPipeStatus = true;
 		self.GetBelly().noStuck = 0;
 		self.GetBelly().boostStrain = 0;
@@ -329,16 +318,16 @@ public class patch_Lizard
                 if (GetChubValue(self) == 4)
                     self.State.meatLeft = Mathf.FloorToInt(self.State.meatLeft * 1.5f);
             }
-            else if (self is MirosBird && patch_DLL.GetChub(self as MirosBird) >= 4)
+            else if (self is MirosBird && patch_MiscCreatures.GetChub(self as MirosBird) >= 4)
             {
 				self.State.meatLeft = Mathf.FloorToInt(self.State.meatLeft * 1.5f);
             }
             else if (self is BigNeedleWorm)
             {
-                if (patch_DLL.GetChub(self as NeedleWorm) == 4)
+                if (patch_MiscCreatures.GetChub(self as NeedleWorm) == 4)
                     self.State.meatLeft += 2;
             }
-			else if (self is Centipede && patch_DLL.GetChub(self as Centipede) == 4)
+			else if (self is Centipede && patch_MiscCreatures.GetChub(self as Centipede) == 4)
 			{
 				if ((self as Centipede).Centiwing) // || self.Small)
                     self.State.meatLeft += 2;  //self.abstractCreature.state.meatLeft += 2;
@@ -426,7 +415,7 @@ public class patch_Lizard
 	private static float crashVel = 0f;
 	public static void CheckStuckage(Creature self)
 	{
-		int critnum = GetRef(self);
+		
 		bool inPipe = self.GetBelly().inPipeStatus;
 		float posMod = inPipe ? 0.5f : 0f;
 
@@ -957,7 +946,7 @@ public class patch_Lizard
 
 
 
-	public static void BPUUpdatePass1(Lizard self, int critnum)
+	public static void BPUUpdatePass1(Lizard self)
 	{
 		//Debug.Log("LZ!-----DEBUG!: " + self.GetBelly().myFlipValX + " " + self.GetBelly().inPipeStatus + " "  + " " + self.GetBelly().stuckStrain + " " + +self.room.MiddleOfTile(self.bodyChunks[1].pos).x + " " + self.bodyChunks[1].pos.x);
 		float myRunSpeed = (1f - (GetChubValue(self) / 10f) - Mathf.Lerp(0f, 0.2f, (GetOverstuffed(self) / 12f))) * ((IsStuck(self) || self.GetBelly().pushingOther > 0) ? 0.03f : 1f);
@@ -981,7 +970,7 @@ public class patch_Lizard
 	}
 
 
-	public static void BPUUpdatePass2(Creature self, int critnum)
+	public static void BPUUpdatePass2(Creature self)
 	{
 		//Debug.Log("LZ LIZARD DEBUG!: NUM:" + critnum + " BE:" + self.AI.behavior + " POS:" + self.bodyChunks[1].pos + " VEL:" + self.bodyChunks[1].vel + " STRAIN:" + self.GetBelly().corridorExhaustion + " PIPE:" + self.GetBelly().inPipeStatus);
 		
@@ -1031,28 +1020,13 @@ public class patch_Lizard
 			self.GetBelly().slicked--;
 		}
 
-
-		//FAT LIZARDS NEED TO CONTINUE TO SUCK IN THEIR GUT AND NOT GET LAUNCHED OUT 
-		//if (IsStuck(self))
-		//{
-		//	for (int n = 0; n < 3; n++)
-		//	{
-		//		self.bodyChunks[n].terrainSqueeze = BellyPlus.terrSqzMemory[critNum];
-		//	}
-		//}
-
-		//for (int n = 0; n < 3; n++)
-		//{
-		//	self.bodyChunks[n].terrainSqueeze = 1f;
-		//}
-
 	}
 
 
 	//ALRIGHT. MAYBE WE JUST NEED A VALUE TO MANUALLY REFRESH ALL STUCK SOUNDS
 	public static bool refreshSounds = false;
 
-	public static void BPUUpdatePass3(Creature self, int critnum)
+	public static void BPUUpdatePass3(Creature self)
 	{
 		bool offscreen = false;
 		if (self.graphicsModule == null) // || )
@@ -1127,7 +1101,7 @@ public class patch_Lizard
 
 	
 	//STUCK CHECK
-	public static void BPUUpdatePass4(Creature self, int critnum)
+	public static void BPUUpdatePass4(Creature self)
 	{
 		int bdy = patch_Player.ObjGetBodyChunkID(self, "middle");
 		if (!IsStuck(self))
@@ -1204,7 +1178,7 @@ public class patch_Lizard
 	
 	
 	
-	public static void BPUUpdatePass5(Creature self, int critnum)
+	public static void BPUUpdatePass5(Creature self)
 	{
 		//----- CHECK IF WE'RE PUSHING ANOTHER CREATURE.------
 		if (self.GetBelly().pushingOther > 0 && self.graphicsModule != null)
@@ -1347,7 +1321,7 @@ public class patch_Lizard
 	
 	
 	
-	public static void BPUUpdatePass5_2(Creature self, int critnum)
+	public static void BPUUpdatePass5_2(Creature self)
 	{
 		//LET CREATURES BOOST TOO! JUST DO IT DIFFERENTLY...
 		// bool matchingStuckDir = (IsVerticalStuck(self) && self.input[0].y != 0) || (!IsVerticalStuck(self) && self.input[0].x != 0);
@@ -1460,7 +1434,7 @@ public class patch_Lizard
 	}
 	
 	
-	public static void BPUUpdatePass6(Creature self, int critnum)
+	public static void BPUUpdatePass6(Creature self)
 	{
 		//THIS PART WE CAN RUN LIKE A NORMAL PERSON
 		if (self.GetBelly().boostStrain > 0)
@@ -1498,10 +1472,10 @@ public class patch_Lizard
 
 	public static void BPLizard_Update(On.Lizard.orig_Update orig, Lizard self, bool eu)
 	{
-		int critnum = GetRef(self);
+		
 		int origTimeSpentTrying = self.timeSpentTryingThisMove;
 
-		BPUUpdatePass1(self, critnum);
+		BPUUpdatePass1(self);
 
 		orig.Invoke(self, eu);
 
@@ -1517,16 +1491,16 @@ public class patch_Lizard
 		//bool mlungsExhausted = self.GetBelly().pushingOther;
 		if (self.room != null)
 		{ 
-			BPUUpdatePass2(self, critnum);
-			BPUUpdatePass3(self, critnum);
-			BPUUpdatePass4(self, critnum);
+			BPUUpdatePass2(self);
+			BPUUpdatePass3(self);
+			BPUUpdatePass4(self);
 			if (self.stun <= 0 )
 			{
-				BPUUpdatePass5(self, critnum);
-				BPUUpdatePass5_2(self, critnum);
+				BPUUpdatePass5(self);
+				BPUUpdatePass5_2(self);
 			}
 		}
-		BPUUpdatePass6(self, critnum);
+		BPUUpdatePass6(self);
 	}
 
 
@@ -1535,7 +1509,7 @@ public class patch_Lizard
 
 	public static void PopFree(Creature self, float power, bool inPipe)
 	{
-		int critnum = GetRef(self);
+		
 		float popMag = Mathf.Min(power / 120f, 2f); //CAP OUT AT 2
 		self.GetBelly().noStuck = 25;
 		self.GetBelly().loosenProg = 0;

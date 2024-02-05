@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using RWCustom;
 using UnityEngine;
 using MoreSlugcats;
+using MonoMod.RuntimeDetour;
 
 namespace RotundWorld;
-public class patch_DLL
+public class patch_MiscCreatures
 {
 
     public static void Patch()
@@ -64,7 +65,14 @@ public class patch_DLL
         On.StaticWorld.InitStaticWorld += StaticWorld_InitStaticWorld;
     }
 
-    
+    /*
+    public static void YeekFixPatch()
+    {
+        //On.Y
+        _ = new Hook(typeof(YeekFix.FixedYeekGraphics).GetMethod(nameof(YeekFix.FixedYeekGraphics.GraphSegmentRad)), FixedYeekGraphics_GraphSegmentRad);
+        _ = new Hook(typeof(YeekFix.FixedYeekState).GetMethod(nameof(YeekFix.FixedYeekState.Feed)), FixedYeekState_Feed);
+    }
+    */
 
     private static void StaticWorld_InitStaticWorld(On.StaticWorld.orig_InitStaticWorld orig)
     {
@@ -81,13 +89,6 @@ public class patch_DLL
 
     
 
-    
-    public static int GetRef(Creature self)
-    {
-        return self.abstractCreature.ID.RandomSeed;
-    }
-	
-	
 	public static int GetChub(Creature self)
 	{
 		if (CheckFattable(self) == false)
@@ -185,7 +186,7 @@ public class patch_DLL
         if (self is DropBug)
 			(self.graphicsModule as DropBugGraphics).bodyThickness += 0.3f * amnt;
 	
-		else if (self is Deer)
+		else if (self is Deer && !BellyPlus.VisualsOnly())
 		{
 			float massMod = 1f + Mathf.Max(0f, (self.abstractCreature.GetAbsBelly().myFoodInStomach - 2) / 20f);
 			for (int i = 1; i < 5; i++)
@@ -510,8 +511,6 @@ public class patch_DLL
             {
                 self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
                 UpdateBellySize(self, 0);
-                self.graphicsModule.Reset();
-                //self.graphicsModule.
             }
         }
         orig(self);
@@ -596,7 +595,7 @@ public class patch_DLL
     {
         bool wasStandard = self.usingStandardMass;
         orig(self);
-        if (wasStandard)
+        if (wasStandard && !BellyPlus.VisualsOnly())
         {
             float fatMod = 1f + Mathf.Max(0f, (self.abstractCreature.GetAbsBelly().myFoodInStomach - 5) / 10f);
             for (int i = 0; i < self.bodyChunks.Length; i++)
@@ -604,6 +603,20 @@ public class patch_DLL
                 self.bodyChunks[i].mass *= fatMod;
             }
         }
+    }
+
+    //FOR THE YEEKFIX VERSION (soon to be the real version)
+    public static float FixedYeekGraphics_GraphSegmentRad(Func<YeekFix.FixedYeekGraphics, int, float> orig, YeekFix.FixedYeekGraphics self, int i)
+    {
+        float fatMod = 1f + Mathf.Max(0f, (self.myYeek.abstractCreature.GetAbsBelly().myFoodInStomach - 5) / 5f);
+        return orig(self, i) * fatMod;
+    }
+
+    public static void FixedYeekState_Feed(Action<YeekFix.FixedYeekState, int> orig, YeekFix.FixedYeekState self, int CycleTimer)
+    {
+
+        orig(self, CycleTimer);
+        self.creature.GetAbsBelly().myFoodInStomach += 2;
     }
 
 
@@ -622,10 +635,10 @@ public class patch_DLL
     private static void Leech_Attached(On.Leech.orig_Attached orig, Leech self)
     {
         orig(self);
-        float drainRate = 0.015f;
+        float drainRate = 0.012f;
         if (self.jungleLeech)
             drainRate *= 0.1f;
-        if (self.abstractCreature.GetAbsBelly().myFoodInStomach >= 20)
+        if (self.abstractCreature.GetAbsBelly().myFoodInStomach >= 16)
             drainRate *= 0.1f;
 
         if (UnityEngine.Random.value < drainRate && CheckFattable(self))

@@ -264,7 +264,7 @@ public class BPOptions : OptionInterface
         chkBox5.description = dsc5;
 
 
-        string dscArmor = BPTranslate("Increase resistance to bites based on how fat you are");
+        string dscArmor = BPTranslate("Increase resistance to bites based on how fat you are") + ", as well as spears, stuns, and coldness";
         OpCheckBox chkBoxArmor = new OpCheckBox(BPOptions.fatArmor, new Vector2(15f + indenting, lineCount));
         Tabs[0].AddItems(chkBoxArmor, new OpLabel(45f + indenting, lineCount, BPTranslate("Fat Armor")) { bumpBehav = chkBoxArmor.bumpBehav, description = dscArmor });
         chkBoxArmor.description = dscArmor;

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using RWCustom;
 using UnityEngine;
@@ -19,8 +18,12 @@ public class patch_Scavenger
 		//On.Scavenger.Collide += BP_Collide;
 		On.Scavenger.PickUpAndPlaceInInventory += Scavenger_PickUpAndPlaceInInventory;
 
-		//TO EDIT THEIR MOVEMENT SPEED FLOAT
-		BindingFlags propFlags = BindingFlags.Instance | BindingFlags.Public;
+        On.ScavengerGraphics.ctor += ScavengerGraphics_ctor;
+        On.ScavengerGraphics.InitiateSprites += ScavengerGraphics_InitiateSprites;
+        On.ScavengerGraphics.DrawSprites += PG_DrawSprites;
+
+        //TO EDIT THEIR MOVEMENT SPEED FLOAT
+        BindingFlags propFlags = BindingFlags.Instance | BindingFlags.Public;
 		BindingFlags myMethodFlags = BindingFlags.Static | BindingFlags.Public;
 
 		Hook myMovespdHook = new Hook(
@@ -43,8 +46,6 @@ public class patch_Scavenger
 	private static void ScavPatch(On.Scavenger.orig_ctor orig, Scavenger self, AbstractCreature abstractCreature, World world)
 	{
 		orig(self, abstractCreature, world);
-		
-		int critNum = self.abstractCreature.ID.RandomSeed;
 
 		if (self.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
         {
@@ -53,14 +54,11 @@ public class patch_Scavenger
 			return;
 		}
 		
-		BellyPlus.InitializeCreature(critNum);
-		
-		
 		//NEW, LETS BASE OUR RANDOM VALUE ON OUR ABSTRACT CREATURE ID
-		UnityEngine.Random.seed = critNum;
+		UnityEngine.Random.seed = self.abstractCreature.ID.RandomSeed;
 
-		int mouseChub = Mathf.FloorToInt(Mathf.Lerp(2, 9, UnityEngine.Random.value));
-		if (mouseChub != 8 || !patch_DLL.CheckFattable(self))
+        int mouseChub = Mathf.FloorToInt(Mathf.Lerp(2, 9, UnityEngine.Random.value));
+		if (mouseChub != 8 || !patch_MiscCreatures.CheckFattable(self))
 			mouseChub = 4;
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("SCAV SPAWNED! CHUB SIZE: " + mouseChub);
@@ -72,23 +70,18 @@ public class patch_Scavenger
             BellyPlus.InitPSFoodValues(abstractCreature);
     }
 	
-	public static int GetRef(Creature self)
-	{
-		return self.abstractCreature.ID.RandomSeed;
-	}
-	
 	
 	
 	public static void UpdateBellySize(Scavenger self)
 	{
-		int critNum = GetRef(self);
+		
 		float baseWeight = 0.5f; //I THINK...
 		float baseRad = 9.5f;
 		int currentFood = self.abstractCreature.GetAbsBelly().myFoodInStomach;
 
 		//new BodyChunk(this, 0, new Vector2(0f, 0f), 9.5f, 0.5f);
 		float newMass = baseWeight;
-		switch (Math.Min(currentFood, 8))
+		switch (System.Math.Min(currentFood, 8))
         {
             case 8:
                 newMass = baseWeight * 1.4f;
@@ -167,7 +160,7 @@ public class patch_Scavenger
 	
 	
 	//OKAY, THESE GUYS CAN HAVE ONE STEP.
-	public static void BPUUpdatePass1(Scavenger self, int critNum)
+	public static void BPUUpdatePass1(Scavenger self)
 	{
 		//Debug.Log("SC!-----DEBUG!: " + self.GetBelly().myFlipValX + " " + self.GetBelly().inPipeStatus + " "  + " " + self.GetBelly().stuckStrain + " " + +self.room.MiddleOfTile(self.bodyChunks[1].pos).x + " " + self.bodyChunks[1].pos.x);
 		
@@ -249,24 +242,103 @@ public class patch_Scavenger
 		
 		if (self.room != null && self.graphicsModule != null && self.stun < 1)
 		{
-			// BPUUpdatePass5(self, critNum);
-			BPUUpdatePass1(self, critNum);
+			// BPUUpdatePass5(self);
+			BPUUpdatePass1(self);
 			
 			if (patch_Lizard.GetChubValue(self) >= 3)
 			{
-				patch_Lizard.BPUUpdatePass2(self, critNum);
-				patch_Lizard.BPUUpdatePass3(self, critNum);
-				patch_Lizard.BPUUpdatePass4(self, critNum);
+				patch_Lizard.BPUUpdatePass2(self);
+				patch_Lizard.BPUUpdatePass3(self);
+				patch_Lizard.BPUUpdatePass4(self);
 			}
 			
 			
-			patch_Lizard.BPUUpdatePass5(self, critNum);
-			patch_Lizard.BPUUpdatePass5_2(self, critNum);
+			patch_Lizard.BPUUpdatePass5(self);
+			patch_Lizard.BPUUpdatePass5_2(self);
 
 			if (self.GetBelly().pushingOther > 0 || self.GetBelly().pullingOther)
 				self.bodyChunks[0].vel.y += 0.2f;
 		}
-		patch_Lizard.BPUUpdatePass6(self, critNum);
+		patch_Lizard.BPUUpdatePass6(self);
 	}
+
+
+
+
+    private static void ScavengerGraphics_ctor(On.ScavengerGraphics.orig_ctor orig, ScavengerGraphics self, PhysicalObject ow)
+    {
+        orig.Invoke(self, ow);
+        float scavFatness = self.scavenger.GetBelly().myFatness;
+        self.iVars.fatness *= scavFatness;
+        self.iVars.narrowWaist = Mathf.Lerp(Mathf.Lerp(Random.value, 1f - self.iVars.fatness, Random.value), 1f - self.scavenger.abstractCreature.personality.energy, Random.value);
+        self.iVars.neckThickness = Mathf.Lerp(Mathf.Pow(Random.value, 1.5f - self.scavenger.abstractCreature.personality.aggression), 1f - self.iVars.fatness, Random.value * 0.5f);
+        self.iVars.armThickness = Mathf.Lerp(Random.value, Mathf.Lerp(self.scavenger.abstractCreature.personality.dominance, self.iVars.fatness, 0.5f), Random.value);
+
+        self.iVars.neckThickness *= scavFatness;
+        self.iVars.armThickness *= scavFatness;
+        self.iVars.narrowWaist *= scavFatness;
+        //sLeaser.sprites[this.NeckSprite] = TriangleMesh.MakeLongMesh(4, false, true);
+    }
+
+
+    private static void ScavengerGraphics_InitiateSprites(On.ScavengerGraphics.orig_InitiateSprites orig, ScavengerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
+    {
+        orig.Invoke(self, sLeaser, rCam);
+        float myFat = self.scavenger.GetBelly().myFatness;
+        sLeaser.sprites[self.ChestSprite].scaleX *= myFat;
+        sLeaser.sprites[self.ChestSprite].scaleY *= myFat;
+        sLeaser.sprites[self.HipSprite].scale *= myFat;
+    }
+
+    public static void PG_DrawSprites(On.ScavengerGraphics.orig_DrawSprites orig, ScavengerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
+
+        if (self.scavenger.room == null || BellyPlus.VisualsOnly())
+            return;
+
+        if (self.scavenger.GetBelly().pullingOther && self.scavenger.grasps[0] != null && self.scavenger.grasps[0].grabbed != null && self.scavenger.grasps[0].grabbed is Player)
+        {
+            Limb myHand = self.hands[0];
+            myHand.mode = Limb.Mode.HuntAbsolutePosition;
+            myHand.absoluteHuntPos = self.scavenger.grasps[0].grabbedChunk.pos;
+            myHand.pos = self.scavenger.grasps[0].grabbedChunk.pos;
+        }
+
+
+
+
+        //RESET
+        if (self.scavenger.GetBelly().pushingOther > 0)
+            self.scavenger.GetBelly().pushingOther--;
+
+        //STOLEN FROM SLUGCAT HANDS
+        Creature myHelper = patch_Player.FindPlayerInRange(self.scavenger);
+        if (myHelper == null)
+            myHelper = patch_Scavenger.FindScavInRange(self.scavenger);
+        if (myHelper == null)
+            myHelper = patch_LanternMouse.FindMouseInRange(self.scavenger);
+
+        if (myHelper != null)
+            if (patch_Player.IsStuckOrWedged(myHelper) || patch_Player.ObjIsPushingOther(myHelper))
+            {
+
+                // for (int l = 0; l < 2; l++)
+                if (UnityEngine.Random.value < 0.125f)
+                {
+                    self.hands[0].pos = myHelper.bodyChunks[1].pos;
+                    self.hands[0].lastPos = myHelper.bodyChunks[1].pos;
+                    self.hands[0].vel *= 0f;
+                }
+
+
+                // bool vertStuck = patch_LanternMouse.IsVerticalStuck(myHelper);
+                // if (!vertStuck && patch_LanternMouse.GetMouseAngle(self.scavenger).x == patch_LanternMouse.GetMouseAngle(myHelper).x
+                // || (vertStuck && patch_LanternMouse.GetMouseAngle(self.scavenger).y == patch_LanternMouse.GetMouseAngle(myHelper).y))
+                //FORGET THAT. JUST ALWAYS PUSH IF WE'RE CLOSE ENOUGH
+                patch_Player.ObjPushedOn(myHelper);
+                self.scavenger.GetBelly().pushingOther = 3;
+            }
+    }
 
 }

@@ -11,12 +11,14 @@ public class patch_Cicada
 	public static void Patch()
 	{
 		On.Cicada.ctor += BP_CicadaPatch;
-
 		On.Cicada.Update += BPCicada_Update;
 		On.Cicada.SpitOutOfShortCut += Cicada_SpitOutOfShortCut;
 		On.Cicada.Die += BP_Die;
-		
-	}
+		On.Cicada.Collide += BP_Collide;
+
+        On.CicadaGraphics.InitiateSprites += CicadaGraphics_InitiateSprites;
+
+    }
 
 	private static void BP_CicadaPatch(On.Cicada.orig_ctor orig, Cicada self, AbstractCreature abstractCreature, World world, bool gender)
 	{
@@ -34,7 +36,7 @@ public class patch_Cicada
 		UnityEngine.Random.seed = self.abstractCreature.ID.RandomSeed;
 
         int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
-		if (patch_DLL.CheckFattable(self) == false)
+		if (patch_MiscCreatures.CheckFattable(self) == false)
 			critChub = 0;
 		
 		if (BPOptions.debugLogs.Value)
@@ -45,31 +47,8 @@ public class patch_Cicada
 		UpdateBellySize(self);
 	}
 	
-	public static int GetRef(Cicada self)
-	{
-		return self.abstractCreature.ID.RandomSeed;
-	}
 
-	//I DON'T ACTUALLY KNOW IF WE CAN USE THE LIZARD VERSION FOR THIS OR NOT...
-	public static IntVector2 GetMouseVector(Cicada self)
-	{
-		Vector2 mouseVec = Custom.DirVec(self.bodyChunks[1].pos, self.bodyChunks[0].pos);
-		int xVec = Math.Max(Mathf.FloorToInt(mouseVec.x * 2f), -1);
-		int yVec = Math.Max(Mathf.FloorToInt(mouseVec.y * 2f), -1);
-		IntVector2 vector = new IntVector2(xVec, yVec);
-		return vector;
-	}
-
-
-
-	//SOUNDS THAT DON'T GET INTERRUPTED!
-	public static void PlayExternalSound(Cicada self, SoundID soundId, float sVol, float sPitch)
-	{
-		Vector2 pos = self.mainBodyChunk.pos;
-		self.room.PlaySound(soundId, pos, sVol, sPitch);
-	}
 	
-	//FIND THE NEAREST MOUSEY~
 	public static Cicada FindCicadaInRange(Creature self)
 	{
         if (self.room == null)
@@ -154,9 +133,9 @@ public class patch_Cicada
 	public static void BP_Collide(On.Cicada.orig_Collide orig, Cicada self, PhysicalObject otherObject, int myChunk, int otherChunk)
 	{
 		
-		if (self.Charging && otherObject is Creature && patch_Player.ObjIsStuckable(otherObject as Creature) && patch_Player.ObjIsStuck(otherObject as Creature))
+		if (self.Charging && otherObject != null && otherObject is Creature && patch_Player.ObjIsStuckable(otherObject as Creature) && patch_Player.ObjIsStuck(otherObject as Creature))
 		{
-			patch_Player.ObjSetFwumpDelay(otherObject as Creature, 12);
+			//patch_Player.ObjSetFwumpDelay(otherObject as Creature, 12);
 			patch_Player.ObjGainBoostStrain(otherObject as Creature, 5, 15, 22);
 			patch_Player.ObjGainSquishForce(otherObject as Creature, 15, 22);
 			self.chargeCounter = 0;
@@ -165,14 +144,8 @@ public class patch_Cicada
 		orig.Invoke(self, otherObject, myChunk, otherChunk);
 	}
 
-	public static void CheckStuckage(Cicada self)
-	{
-		patch_Lizard.CheckStuckage(self); //WE CAN MERGE THESE... NICE
-	}
 
-
-
-	public static void BPUUpdatePass1(Cicada self, int critNum)
+	public static void BPUUpdatePass1(Cicada self)
 	{
 		//Debug.Log("MS!-----DEBUG!: " + self.AI.fear + " _ " + self.runSpeed + " _BE:" + self.AI.behavior + " _BT:" + self.GetBelly().boostCounter + " _BT:" + self.GetBelly().lungsExhausted);
 		
@@ -198,34 +171,34 @@ public class patch_Cicada
 	}
 
 	
-	public static void BPUUpdatePass2(Cicada self, int critNum)
+	public static void BPUUpdatePass2(Cicada self)
 	{
 		//LIZARDS ACTUALLY WORKS FOR US TOO! DON'T MIND IF I DO...
-		patch_Lizard.BPUUpdatePass2(self, critNum);
+		patch_Lizard.BPUUpdatePass2(self);
 	}
 	
 	
 	
-	public static void BPUUpdatePass3(Cicada self, int critNum)
+	public static void BPUUpdatePass3(Cicada self)
 	{
 		//LIZARDS ACTUALLY WORKS FOR US TOO! DON'T MIND IF I DO...
-		patch_Lizard.BPUUpdatePass3(self, critNum);
+		patch_Lizard.BPUUpdatePass3(self);
 	}
 	
 	
-	public static void BPUUpdatePass4(Cicada self, int critNum)
+	public static void BPUUpdatePass4(Cicada self)
 	{
-		patch_Lizard.BPUUpdatePass4(self, critNum);
+		patch_Lizard.BPUUpdatePass4(self);
 	}
 	
 	
-	public static void BPUUpdatePass5(Cicada self, int critNum)
+	public static void BPUUpdatePass5(Cicada self)
 	{
 		//----- CICADAS WON'T PUSH! BUT MAYBE THEY'LL PULL WHOEVER IS HOLDING THEM?------
 	}
 		
 		
-	public static void BPUUpdatePass5_2(Cicada self, int critNum)
+	public static void BPUUpdatePass5_2(Cicada self)
 	{
 		bool isTowingOther = self.flying && self.grabbedBy.Count > 0 && (self.grabbedBy[0].grabber is Player) && patch_Player.IsStuck(self.grabbedBy[0].grabber as Player);
 		
@@ -278,9 +251,9 @@ public class patch_Cicada
 	}
 	
 	
-	public static void BPUUpdatePass6(Cicada self, int critNum)
+	public static void BPUUpdatePass6(Cicada self)
 	{
-		patch_Lizard.BPUUpdatePass6(self, critNum);
+		patch_Lizard.BPUUpdatePass6(self);
 	}
 
 
@@ -292,10 +265,8 @@ public class patch_Cicada
 			orig.Invoke(self, eu);
 			return;
 		}
-		
-		int critNum = self.abstractCreature.ID.RandomSeed;
 
-		BPUUpdatePass1(self, critNum);
+		BPUUpdatePass1(self);
 		
 		orig.Invoke(self, eu);
 
@@ -305,19 +276,54 @@ public class patch_Cicada
 		
 		if (self.room != null)
 		{ 
-			BPUUpdatePass2(self, critNum);
-			BPUUpdatePass3(self, critNum);
-			BPUUpdatePass4(self, critNum);
-			BPUUpdatePass5(self, critNum);
-			BPUUpdatePass5_2(self, critNum);
+			BPUUpdatePass2(self);
+			BPUUpdatePass3(self);
+			BPUUpdatePass4(self);
+			BPUUpdatePass5(self);
+			BPUUpdatePass5_2(self);
 		}
-		BPUUpdatePass6(self, critNum);
+		BPUUpdatePass6(self);
 	}
 
 
-	public static void PopFree(Cicada self, float power, bool inPipe)
-	{
-		patch_Lizard.PopFree(self, power, inPipe);
-	}
+    private static void CicadaGraphics_InitiateSprites(On.CicadaGraphics.orig_InitiateSprites orig, CicadaGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
+    {
+        orig.Invoke(self, sLeaser, rCam);
+        BP_UpdateFatness(self, sLeaser);
+
+    }
+
+    public static void BP_UpdateFatness(CicadaGraphics self, RoomCamera.SpriteLeaser sLeaser)
+    {
+        //orig.Invoke(self, sLeaser, rCam);
+
+        //float bodySize = Custom.ClampedRandomVariation((!self.cicada.gender) ? 0.4f : 0.6f, 0.1f, 0.5f) * 2f;
+
+        float bodySize = self.cicada.iVars.fatness;
+        switch (patch_Lizard.GetChubValue(self.cicada))
+        {
+            case 4:
+                bodySize *= 1.4f;
+                break;
+            case 3:
+                bodySize *= 1.3f;
+                break;
+            case 2:
+                bodySize *= 1.1f;
+                break;
+            case 1:
+                bodySize *= 1.0f;
+                break;
+            case 0:
+            default:
+                bodySize *= 1.0f;
+                break;
+        }
+
+        sLeaser.sprites[self.BodySprite].scale = bodySize; // self.iVars.fatness;
+                                                           //sLeaser.sprites[self.BodySprite].scaleY = bodySize;
+        sLeaser.sprites[self.HighlightSprite].scaleX = Mathf.Lerp(5f, 3f, Mathf.Abs(bodySize - 1f) * 10f) / 20f;
+        sLeaser.sprites[self.HighlightSprite].scaleY = Mathf.Lerp(12f, 8f, Mathf.Abs(bodySize - 1f) * 10f) / 20f;
+    }
 
 }

@@ -381,7 +381,7 @@ public class patch_PlayerGraphics
 
 
         //THE POACHER IS A FUNNY SHAPE!
-        if (self.player.slugcatStats.name.value == "FriendDragonslayer" && hipScale > 10)
+        if (self.player?.slugcatStats?.name?.value == "FriendDragonslayer" && hipScale > 10)
         {
             float redirect = Mathf.Min(hipScale - 10, 6);
             sLeaser.sprites[hp].scaleX -= 0.05f * (redirect);

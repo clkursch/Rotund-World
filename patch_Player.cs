@@ -828,7 +828,7 @@ public class patch_Player
 			if (fatness > 0.06f) //(0.15f * 0.7f)
 				result *= 2;
 		}
-        if (eatenobject is Centipede && patch_DLL.GetChub(eatenobject as Creature) >= 4) //&& (eatenobject as Centipede).Small 
+        if (eatenobject is Centipede && patch_MiscCreatures.GetChub(eatenobject as Creature) >= 4) //&& (eatenobject as Centipede).Small 
         {
             result *= 2;
         }
@@ -4911,8 +4911,8 @@ public class patch_Player
 		if (self.GetBelly().autoPilot != new IntVector2(0, 0))
 		{
 			//Debug.Log("-----AUTO PILOT!: ");
-			//CANCEL THE AUTO PILOT BY PRESSING ANY (OTHER) DIRECTION, OR BY PRESSING GRAB AGAIN
-			if ((self.input[0].IntVec != new IntVector2(0, 0) && self.input[0].IntVec != self.input[2].IntVec) || self.input[0].pckp && !self.input[1].pckp)
+			//CANCEL THE AUTO PILOT BY PRESSING ANY (OTHER) DIRECTION, OR BY PRESSING GRAB AGAIN. OR IF OUR TIMER WAS TICKING AND JUST REACHED 1
+			if (self.GetBelly().pilotTimer == 1 || ((self.input[0].IntVec != new IntVector2(0, 0) && self.input[0].IntVec != self.input[2].IntVec) || self.input[0].pckp && !self.input[1].pckp))
 				self.GetBelly().autoPilot = new IntVector2(0, 0);
 			else
 			{
@@ -4921,8 +4921,11 @@ public class patch_Player
 				self.input[0].y = self.GetBelly().autoPilot.y;
 			}
 		}
+		if (self.GetBelly().pilotTimer > 0 && !IsStuckOrWedged(self))
+			self.GetBelly().pilotTimer--;
 
-		if (self.input[0].pckp && !self.input[1].pckp && (self.GetBelly().pushingOther > 0 || self.GetBelly().pullingOther || self.GetBelly().isStuck) && self.input[0].IntVec != new IntVector2(0, 0))
+
+        if (self.input[0].pckp && !self.input[1].pckp && (self.GetBelly().pushingOther > 0 || self.GetBelly().pullingOther || self.GetBelly().isStuck) && self.input[0].IntVec != new IntVector2(0, 0))
 			self.GetBelly().autoPilot = self.input[0].IntVec;
 
 		//if (self.animation == Player.AnimationIndex.HangFromBeam)
@@ -5553,7 +5556,11 @@ public class patch_Player
 
 			//INTERACTION WITH STICK TOGETHER! IF WE GET STUCK VIA TELEPORT, MAKE IT AN AUTOPILOT! FINALLY A USE FOR THIS THING...
 			if (self.enteringShortCut != null)
-				self.GetBelly().autoPilot = new IntVector2((int)self.GetBelly().stuckVector.x, (int)self.GetBelly().stuckVector.y);
+			{
+                self.GetBelly().autoPilot = new IntVector2((int)self.GetBelly().stuckVector.x, (int)self.GetBelly().stuckVector.y);
+                self.GetBelly().pilotTimer = 15;
+            }
+				
 
             //CHECK IF THIS IS THE SAME GAP WE'VE ALREADY TRIED (SO WE DON'T CHEEZE PROGRESS) //WAIT THIS DOESN'T MATTER WE SHOULD DO THIS EVERY TIME
             //bool sameGap = false;
@@ -5644,6 +5651,7 @@ public class patch_Player
                 self.GetBelly().stuckStrain += 10; //JUST TO KEEP US WEDGED
 				self.GetBelly().autoPilot = new IntVector2((int)self.GetBelly().stuckVector.x, (int)self.GetBelly().stuckVector.y);
 				self.GetBelly().stuckLock = 15; //HOLD THEM IN PLACE FOR THIS LONG
+				self.GetBelly().pilotTimer = 15;
             }
         }
 
@@ -6111,6 +6119,7 @@ public class patch_Player
 			self.GetBelly().stuckStrain += 10; //JUST TO KEEP US WEDGED
 			RedirectStuckage(self, true, eu);
 			self.GetBelly().autoPilot = new IntVector2((int)self.GetBelly().stuckVector.x, (int)self.GetBelly().stuckVector.y);
+			self.GetBelly().pilotTimer = 15;
         }
 		
 		
@@ -6762,7 +6771,7 @@ public class patch_Player
         Player myPartner = FindPlayerInRange(self);
 		LanternMouse mousePartner = patch_LanternMouse.FindMouseInRange(self);
 		Cicada cicadaPartner = patch_Cicada.FindCicadaInRange(self);
-		Yeek yeekPartner = patch_Yeek.FindYeekInRange(self);
+		//Yeek yeekPartner = patch_Yeek.FindYeekInRange(self);
 		Lizard lizardPartner = FindLizardInRange(self, 0, 2);
 		Scavenger scavPartner = patch_Scavenger.FindScavInRange(self);
 		
@@ -6780,8 +6789,8 @@ public class patch_Player
 			myObject = (mousePartner as Creature);
 		else if (cicadaPartner != null)
 			myObject = (cicadaPartner as Creature);
-		else if (yeekPartner != null)
-			myObject = (yeekPartner as Creature);
+		//else if (yeekPartner != null)
+		//	myObject = (yeekPartner as Creature);
 		else if (scavPartner != null)
 			myObject = (scavPartner as Creature);
 		else if (lizardPartner != null)
