@@ -123,7 +123,7 @@ This item can only be swallowed if there are no items stored in your belly.
 namespace RotundWorld;
 
 
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.9.02")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.9.03")]
 //[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin

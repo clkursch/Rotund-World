@@ -29,8 +29,8 @@ public class patch_PlayerGraphics
     {
         orig.Invoke(self, ow);
 
-        if (self.player.playerState.isGhost)
-            return; //OH GOD DON'T LET THE GHOST SPAWNS RUN OUR TAIL INCREASE MULTIPLE TIMES
+        //if (self.player.playerState.isGhost)
+        //    return; //HOPEFULLY THIS IS FIXED NOW SO WE WON'T NEED IT...
 		
 		//SET THIS EVERY TIME
         self.GetGraph().tailBase = new float[self.tail.Length];
