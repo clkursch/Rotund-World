@@ -271,7 +271,8 @@ public class patch_PlayerGraphics
         }
     }
 
-
+    public static float heatFloor = 400;
+    public static float heatCeil = 1000;
     public static void BP_DrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
     {
 
@@ -459,8 +460,6 @@ public class patch_PlayerGraphics
             sLeaser.sprites[bl].y = sLeaser.sprites[9].y -= 0.5f; // + Custom.DirVec(self.drawPositions[0, 0], self.objectLooker.mostInterestingLookPoint).y;
             //Debug.Log("-----RENDER LAYERS!: " + sLeaser.sprites[10]._renderLayer + "-" + sLeaser.sprites[3]._renderLayer);
             float breathNum = 0.5f + 0.5f * Mathf.Sin(Mathf.Lerp(self.lastBreath, self.breath, timeStacker) * 3.1415927f * 2f);
-            float heatFloor = 400; //250
-            float heatCeil = 1000; //750
             heatVal = Mathf.Min(Mathf.Max(patch_Player.GetHeat(self.player) - heatFloor, 0), heatCeil) / heatCeil;
             //Debug.Log("----BREATH!: " + breathNum + "  -  " + self.player.aerobicLevel + "  -  " + timeStacker + "-" + heatVal);
 
@@ -471,12 +470,9 @@ public class patch_PlayerGraphics
             if (self.player.shortcutDelay > 1) // || patch_Player.IsGrabbedByPlayer(self.player))
                 sLeaser.sprites[bl].alpha = 0f;
 
-            //CHECK THIS FIRST BECAUSE WE MIGHT BE EXHAUSTTED
-            if (self.player.isGourmand)
-                self.player.ClassMechanicsGourmand();
-
-            if (!self.player.lungsExhausted && !self.player.gourmandExhausted)
-                self.player.aerobicLevel = Mathf.Min(0.85f, Mathf.Max(self.player.aerobicLevel, heatVal));
+            //CHECK THIS FIRST BECAUSE WE MIGHT BE EXHAUSTTED - PROBABLY NOT NEEDED ANYMORE
+            //if (self.player.isGourmand)
+            //    self.player.ClassMechanicsGourmand();
 
             //RELAXED EYES
             if (heatVal >= 0.7f && self.GetGraph().randCycle < 3)
@@ -668,12 +664,23 @@ public class patch_PlayerGraphics
 
     public static void PlayerGraphics_Update(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)
     {
+        float origBreath = self.breath;
+        
         orig(self);
         //TUMMY RUBS
         self.drawPositions[1, 0] += self.player.GetBelly().tuchShift;
 
         if (self.player?.slugcatStats?.name?.value == "Pearlcat")
             CloakCheck(self);
+
+        //OKAY WE NEED TO STOP ALTERING AEROBICS THAT'S TOO MESSY. RECALCULATE OUR BREATH LEVEL IF NEEDED
+        bool exhaustionFxToggle = BPOptions.blushEnabled.Value && !(self.player.isNPC && self.player.isSlugpup) && !BellyPlus.VisualsOnly();
+        float heatVal = Mathf.Min(Mathf.Max(patch_Player.GetHeat(self.player) - heatFloor, 0), heatCeil) / heatCeil;
+        if (exhaustionFxToggle && !self.player.lungsExhausted && !self.player.dead && heatVal > 0.35f)
+        {
+            float aerobic = Mathf.Min(0.85f, self.player.aerobicLevel);
+            self.breath = origBreath + (1f / Mathf.Lerp(60f, 15f, Mathf.Pow(aerobic, 1.5f)));
+        }
     }
 	
 	

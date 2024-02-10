@@ -21,7 +21,7 @@ using System.Linq;
 
 //check grabbing stuck player while holding centipede
 //attempted fix for expedition enhanced exception
-
+//Scav hand update should run on update instead of drawsprite
 */
 
 
@@ -150,40 +150,33 @@ public class patch_Player
 		orig(player, abstractCreature, world);
 		
 		//THIS IS AN ATTEMPT TO CATCH ANY PLAYERS THAT TRY AND SPAWN OUTSIDE OF THE NORMAL CONDITIONS (LIKE BEING RESPAWNED BY THE ENDGAME REVIVE PROCESS)
-		bool illegalSpawn = false; //CHECK FOR 400 BECAUSE FAST SHELTER DOORS BUMPS US UP TO 340
-		if (player.abstractCreature.world.rainCycle.timer > 400 && !player.isNPC && player.abstractCreature.world.game.IsStorySession)
-		{
-			illegalSpawn = true;
-		}
-		
-
-        if (player.isNPC || player.playerState.isGhost)
-		{
-			//SetNPCID(player);
-		}
-
-
+		bool illegalSpawn = false; // CHECK FOR 400 BECAUSE FAST SHELTER DOORS BUMPS US UP TO 340 - we probably don't need this anymore... player.abstractCreature.world.rainCycle.timer > 400 && 
 		int playerNumber = player.playerState.playerNumber; // GetPlayerNum(player);
-		
-		//IF WE'RE AN ILLEGAL SPAWN, ONLY CONTINUE IF OUR BELLYSTATE DOESN'T EXIST YET (BECAUSE WE MAY WANT TO KEEP THIS ILLEGAL)
-		if (illegalSpawn || player.abstractCreature.GetAbsBelly().myFoodInStomach != -1) // && bellyStats.Length <= playerNumber) //THERE DOESN'T SEEM TO BE A GOOD WAY TO CHECK IF THIS EXISTS?
+
+        IntVector2 personalBelly = SlugcatStats.SlugcatFoodMeter(player.slugcatStats.name); //BECAUSE PLAYERSTATS.MAXFOOD ONLY GIVES PLAYER 1'S BELLY SIZE
+        player.GetBelly().bigBelly = player.isGourmand || (personalBelly.x > 10 && personalBelly.x - personalBelly.y >= 4);
+
+        //OKAY INDIVIDUAL FOOD BARS BEATS US TO THE PUNCH SO WE HAVE TO SET THIS HERE TOO
+        if (player.abstractCreature.GetAbsBelly().origPoleSpeed == 0)
+            player.abstractCreature.GetAbsBelly().origPoleSpeed = player.slugcatStats.poleClimbSpeedFac;
+
+        //IF WE'RE AN ILLEGAL SPAWN, ONLY CONTINUE IF OUR BELLYSTATE DOESN'T EXIST YET (BECAUSE WE MAY WANT TO KEEP THIS ILLEGAL)
+        if (player.abstractCreature.GetAbsBelly().myFoodInStomach != -1) // && bellyStats.Length <= playerNumber) //THERE DOESN'T SEEM TO BE A GOOD WAY TO CHECK IF THIS EXISTS?
 		{
-			Debug.Log("ILLEGAL SPAWN! CANCEL THE STARTUP " + playerNumber);
+            illegalSpawn = true;
+            Debug.Log("ILLEGAL SPAWN! CANCEL THE STARTUP " + playerNumber);
 			UpdateBellySize(player); //STILL DO THIS THOUGH. THIS WEIRD CLONE MAY WANT IT
 			if (player.GetBelly().foodOnBack != null)
 				player.GetBelly().foodOnBack.ReplaceOwner(player);
             return;
 		}
 
-		IntVector2 personalBelly = SlugcatStats.SlugcatFoodMeter(player.slugcatStats.name); //BECAUSE PLAYERSTATS.MAXFOOD ONLY GIVES PLAYER 1'S BELLY SIZE
-
-		player.GetBelly().bigBelly = player.isGourmand || (personalBelly.x > 10 && personalBelly.x - personalBelly.y >= 4);
+		
 		player.GetBelly().foodOnBack = new FoodOnBack(player);
 		//INITIALIZE FOOD LEVEL IF IT HASN'T BEEN ALREADY
 		if (player.abstractCreature.GetAbsBelly().myFoodInStomach == -1)
 		{
 			player.abstractCreature.GetAbsBelly().myFoodInStomach = player.FoodInStomach;
-			player.abstractCreature.GetAbsBelly().origPoleSpeed = player.slugcatStats.poleClimbSpeedFac;
 		}
 		
 
@@ -5924,8 +5917,10 @@ public class patch_Player
 
 	public static void BPUUpdatePass1(Player self, bool eu)
     {
-		//IF WE'RE PUSHING SOMEONE, PAUSE OUR RUN ANIMATION SO OUR LEGS DON'T MOVE
-		if (self.bodyMode == Player.BodyModeIndex.Stand && self.input[0].x != 0 && (self.GetBelly().pushingOther > 0 || self.GetBelly().pullingOther) && self.animationFrame > 0 && self.slowMovementStun < 8)
+        //Debug.Log("-POLE CLIMBIN " + self.abstractCreature.GetAbsBelly().origPoleSpeed + " " + self.slugcatStats.poleClimbSpeedFac);
+
+        //IF WE'RE PUSHING SOMEONE, PAUSE OUR RUN ANIMATION SO OUR LEGS DON'T MOVE
+        if (self.bodyMode == Player.BodyModeIndex.Stand && self.input[0].x != 0 && (self.GetBelly().pushingOther > 0 || self.GetBelly().pullingOther) && self.animationFrame > 0 && self.slowMovementStun < 8)
 			self.animationFrame--; //REDUCE THE RUN ANIMATION TICK BY 1 SO IT LOOKS LIKE WE'RE STANDING STILL
 		
 
@@ -7766,10 +7761,10 @@ public class patch_Player
         //IF WE'RE BEING TUGGED (BY A SLUGCAT) RELEASE US 
         if (IsGrabbedByPlayer(self))
 		{
-			Creature myHelper = self.grabbedBy[0].grabber;
+            Creature myHelper = self.grabbedBy[0].grabber;
 			if (myHelper != null)
             {
-				// Debug.Log("-----LAUNCH OUR PULLER!!!: " + self.grabbedBy[0].graspUsed);
+				//Debug.Log("-----LAUNCH OUR PULLER!!!: " + self.grabbedBy[0].graspUsed);
 				if (!(self.isNPC && self.isSlugpup))
 					myHelper.ReleaseGrasp(self.grabbedBy[0].graspUsed);
 				//FORGET THAT, JUST MIRROR THE LAUNCH VALUE
@@ -8686,50 +8681,11 @@ public class patch_Player
 	public static void BPUpdateAnimation(On.Player.orig_UpdateAnimation orig, Player self)
 	{
         //CHECK TO MAKE SURE WE HAVEN'T FAILED A PULLUP DUE TO OUR SHEER MASS
-        //bool beamCheck = (self.animation == Player.AnimationIndex.HangFromBeam && self.input[0].y > 0 && self.input[1].y == 0);
-
         if (self.animation == Player.AnimationIndex.GetUpOnBeam && GetOverstuffed(self) > 80)
             self.straightUpOnHorizontalBeam = true;
 
-
         orig.Invoke(self);
-		/*
-        Debug.Log("---ME2! " + self.bodyMode + " - " + self.animation);
-
-        if (beamCheck && self.animation == Player.AnimationIndex.GetUpOnBeam && GetOverstuffed(self) > 100)
-		{
-            //OKAY CHECK IF WE'RE ABOUT TO FAIL
-            if (self.bodyChunks[1].ContactPoint.y > 0 && self.room.GetTile(self.mainBodyChunk.pos + new Vector2(0f, 20f)).Solid)
-            {
-                self.straightUpOnHorizontalBeam = true;
-				self.bodyMode = Player.BodyModeIndex.ClimbingOnBeam;
-				self.noGrabCounter = 0;
-                Debug.Log("-PULLUP FAILED! BACKUP! ");
-            }
-
-            //PULLUP FAILED! BACKUP 
-            Debug.Log("-PULLUP FAILED! BACKUP! ");
-			//self.animation = Player.AnimationIndex.GetUpOnBeam;
-			//self.pullupSoftlockSafety = 0;
-			//self.straightUpOnHorizontalBeam = true;
-		}
-		*/
 	}
-
-	
-	
-	//UPDATE SHORTCUT HELPER TO PRETEND OUR RAD IS REDUCED :(
-	// public static void ShortcutHelperUpdate(On.Player.orig_Update orig, ShortcutHelper self, bool eu)
-	// {
-		// for (int i = 0; i < this.room.game.Players.Count; i++)
-		// {
-			// if (this.room.game.Players[i].realizedCreature != null && this.room.game.Players[i].realizedCreature.room == this.room && this.room.game.Players[i].realizedCreature.Consious && this.room.game.Players[i].realizedCreature.grabbedBy.Count == 0)
-			// {
-				
-			// }
-		// }
-	// }
-	
 	
 	
 	public static void Player_GraphicsModuleUpdated(On.Player.orig_GraphicsModuleUpdated orig, Player self, bool actuallyViewed, bool eu)
@@ -8788,8 +8744,11 @@ public class patch_Player
                 grpShare = self.grasps[i].shareability;
                 dom = self.grasps[i].dominance;
 
-                //THE IMPORTANT PART! TEMPORARILY SET THE GRASP TO NULL SO IT DOESN'T UPDATE AGAIN
-                self.grasps[i] = null;
+				//THE IMPORTANT PART! TEMPORARILY SET THE GRASP TO NULL SO IT DOESN'T UPDATE AGAIN
+				//self.grasps[i] = null;
+				//self.ReleaseGrasp(i);
+				(self as Creature).ReleaseGrasp(i); //RUN AS CREATURE BECAUSE PLAYER VERSION PLAYS A SOUND
+                break;
             }
 		}
 		
@@ -8798,7 +8757,8 @@ public class patch_Player
 		
 		if (stuckCrit != null)
 		{
-			self.grasps[grpIndex] = new Creature.Grasp(self, stuckCrit, grpIndex, chunk, grpShare, dom, false);
+			//self.grasps[grpIndex] = new Creature.Grasp(self, stuckCrit, grpIndex, chunk, grpShare, dom, false);
+			self.SlugcatGrab(stuckCrit, grpIndex);
         }
 	}
 	

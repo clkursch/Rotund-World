@@ -20,7 +20,8 @@ public class patch_Scavenger
 
         On.ScavengerGraphics.ctor += ScavengerGraphics_ctor;
         On.ScavengerGraphics.InitiateSprites += ScavengerGraphics_InitiateSprites;
-        On.ScavengerGraphics.DrawSprites += PG_DrawSprites;
+        // On.ScavengerGraphics.DrawSprites += PG_DrawSprites;
+        On.ScavengerGraphics.Update += ScavengerGraphics_Update;
 
         //TO EDIT THEIR MOVEMENT SPEED FLOAT
         BindingFlags propFlags = BindingFlags.Instance | BindingFlags.Public;
@@ -290,9 +291,9 @@ public class patch_Scavenger
         sLeaser.sprites[self.HipSprite].scale *= myFat;
     }
 
-    public static void PG_DrawSprites(On.ScavengerGraphics.orig_DrawSprites orig, ScavengerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    private static void ScavengerGraphics_Update(On.ScavengerGraphics.orig_Update orig, ScavengerGraphics self)
     {
-        orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
+		orig(self);
 
         if (self.scavenger.room == null || BellyPlus.VisualsOnly())
             return;
@@ -320,10 +321,9 @@ public class patch_Scavenger
             myHelper = patch_LanternMouse.FindMouseInRange(self.scavenger);
 
         if (myHelper != null)
+        {
             if (patch_Player.IsStuckOrWedged(myHelper) || patch_Player.ObjIsPushingOther(myHelper))
             {
-
-                // for (int l = 0; l < 2; l++)
                 if (UnityEngine.Random.value < 0.125f)
                 {
                     self.hands[0].pos = myHelper.bodyChunks[1].pos;
@@ -339,6 +339,7 @@ public class patch_Scavenger
                 patch_Player.ObjPushedOn(myHelper);
                 self.scavenger.GetBelly().pushingOther = 3;
             }
+        }
     }
 
 }
