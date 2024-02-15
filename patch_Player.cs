@@ -2,19 +2,10 @@
 using System.Collections.Generic;
 using RWCustom;
 using UnityEngine;
-//using System.Reflection;
-//using MonoMod.RuntimeDetour; //AN EXTRA LITTLE REFERENCE JUST FOR THIS HOOK MOD
 using MoreSlugcats;
-
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
-using static MonoMod.Cil.RuntimeILReferenceBag.FastDelegateInvokers;
-using BepInEx;
-using DressMySlugcat;
-using NoirCatto;
 using System.Linq;
-
-
 
 
 /*
@@ -160,27 +151,22 @@ public class patch_Player
         if (player.abstractCreature.GetAbsBelly().origPoleSpeed == 0)
             player.abstractCreature.GetAbsBelly().origPoleSpeed = player.slugcatStats.poleClimbSpeedFac;
 
-        //IF WE'RE AN ILLEGAL SPAWN, ONLY CONTINUE IF OUR BELLYSTATE DOESN'T EXIST YET (BECAUSE WE MAY WANT TO KEEP THIS ILLEGAL)
-        if (player.abstractCreature.GetAbsBelly().myFoodInStomach != -1) // && bellyStats.Length <= playerNumber) //THERE DOESN'T SEEM TO BE A GOOD WAY TO CHECK IF THIS EXISTS?
+        if (player.GetBelly().foodOnBack == null) //INITIALIZE THIS TOO, IF WE'RE MISSING IT
+            player.GetBelly().foodOnBack = new FoodOnBack(player); //player.GetBelly().foodOnBack.ReplaceOwner(player);
+
+        //IF OUR FOOD LEVEL WAS ALREADY INITIALIZED, SKIP THE REST
+        if (player.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
 		{
             illegalSpawn = true;
             Debug.Log("ILLEGAL SPAWN! CANCEL THE STARTUP " + playerNumber);
 			UpdateBellySize(player); //STILL DO THIS THOUGH. THIS WEIRD CLONE MAY WANT IT
-			if (player.GetBelly().foodOnBack != null)
-				player.GetBelly().foodOnBack.ReplaceOwner(player);
             return;
 		}
-
-		
-		player.GetBelly().foodOnBack = new FoodOnBack(player);
-		//INITIALIZE FOOD LEVEL IF IT HASN'T BEEN ALREADY
-		if (player.abstractCreature.GetAbsBelly().myFoodInStomach == -1)
-		{
+		else if (player.abstractCreature.GetAbsBelly().myFoodInStomach == -1) //INITIALIZE FOOD LEVEL IF IT HASN'T BEEN ALREADY
+        {
 			player.abstractCreature.GetAbsBelly().myFoodInStomach = player.FoodInStomach;
 		}
 		
-
-
 		expRotund = ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("bur-rotund");
 
         if (BPOptions.debugLogs.Value)
@@ -228,7 +214,7 @@ public class patch_Player
 			{ //OKAY WE NEED TO SKIP THIS FOR NON-SHARED PIPS OTHERWISE A FAT PLAYER LEAVING THE SESSION WILL HAVE ALL SORTS OF WEIRD EFFECTS
                 Debug.Log("-WE'VE GOT THE BIGGEST FOOD! DO NOTHING. P" + playerNumber + " -TO: " + myLongTrmFood);
             }
-            //SPECIAL CASE FOR INDIVIDUAL FOOD BARS MOD!
+            //SPECIAL CASE FOR INDIVIDUAL FOOD BARS MOD! - THIS PROBABLY DOESN'T EVEN GET HERE, SINCE IFB UPDATES OUR FOOD VALUES BEFORE THE CONSTRUCTOR SO WE COUNT AS ILLEGAL SPAWNS
             else if (BellyPlus.individualFoodEnabled)
 			{
                 player.playerState.foodInStomach = Mathf.Min(Mathf.Max(player.playerState.foodInStomach, myLongTrmFood), SlugcatStats.SlugcatFoodMeter(player.slugcatStats.name).x);
@@ -8773,10 +8759,11 @@ public class patch_Player
 		}
 
 		//WE NEED THIS WHEN RUNNING CTOR AGAIN SINCE PLAYERS CAN BE RECREATED
-		public void ReplaceOwner(Player owner)
-		{
-            this.owner = owner;
-        }
+		//WE MIGHT NOT NEED THIS AS OF 1.9
+		// public void ReplaceOwner(Player owner)
+		// {
+            // this.owner = owner;
+        // }
 
 		public bool HasAFood
 		{

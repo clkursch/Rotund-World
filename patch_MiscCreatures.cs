@@ -524,7 +524,7 @@ public class patch_MiscCreatures
 		{
 			for (int k = 0; k < self.tails.GetLength(1); k++)
 			{
-				self.tails[i, k].rad *= 1 + Mathf.Max(0f, (self.fish.abstractCreature.GetAbsBelly().myFoodInStomach - 6) / 2f);
+				self.tails[i, k].rad *= 1 + Mathf.Max(0f, (self.fish.abstractCreature.GetAbsBelly().myFoodInStomach - 6) / 3f);
                 //self.tails[i, k].rad *= 5f;
 
             }
