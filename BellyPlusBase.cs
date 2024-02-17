@@ -123,7 +123,7 @@ This item can only be swallowed if there are no items stored in your belly.
 namespace RotundWorld;
 
 
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.9.2")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.9.3")]
 //[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin
@@ -178,7 +178,6 @@ public class BellyPlus : BaseUnityPlugin
 			
             patch_SeedCob.Patch();
 			patch_Misc.Patch();
-			patch_ProcessManager.Patch();
 			patch_OracleBehavior.Patch(); //THESE COUNT AS VISUALS. THE CHANGES CAN STAY
 			patch_OverseerTutorial.Patch();
 			
@@ -382,15 +381,6 @@ public class BellyPlus : BaseUnityPlugin
             }
         }
     }
-
-
-    public static void RefreshDictionaries(Room room)
-	{
-		Debug.Log("BP-INITIATING DICTIONARY REFRESH!");
-		//BEGONE
-	}
-
-	
 	
 	public static bool SafariJumpButton(Creature self)
 	{
@@ -440,7 +430,6 @@ public static class AbsBellyClass
 {
     public class AbsBelly
     {
-        // Define your variables to store here!
         //FOR ABSTRACT
 		public int myFoodInStomach = -1; //MEANS UNINITIALIZED
 		public float origPoleSpeed;
@@ -458,12 +447,12 @@ public static class BellyClass
 {
     public class Belly
     {
-        // Define your variables to store here!
         //UNIVERSAL
 		public int fwumpDelay;
 		public float myChubValue;
-		
-		public bool assistedSqueezing;
+        public bool fatDisabled;
+
+        public bool assistedSqueezing;
 		public int pushingOther;
 		public Creature pushingCreature;
 		public bool pullingOther;
@@ -542,7 +531,6 @@ public static class BellyClass
 		public patch_Player.FoodOnBack foodOnBack;
     }
 
-    // This part lets you access the stored stuff by simply doing "self.GetBelly()" in BellyPlus.cs or everywhere else!
     private static readonly ConditionalWeakTable<Creature, Belly> CWT = new();
     public static Belly GetBelly(this Creature crit) => CWT.GetValue(crit, _ => new());
 }
@@ -552,7 +540,6 @@ public static class YourGraphicsClass
 {
 	public class YourGraphics
 	{
-		// Define your variables to store here!
 		public int randCycle = 1;
 		public bool staring;
 		public int blSprt = 12;
@@ -563,14 +550,8 @@ public static class YourGraphicsClass
 		public float checkRad = 1f; //USED TO DETECT CHANGES IN RAD
 		public bool verified;
 		public bool cloakRipped;
-
-		public YourGraphics()
-		{
-			// Initialize your variables here! (Anything not added here will be null or false or 0 (default values))
-		}
 	}
 
-	// This part lets you access the stored stuff by simply doing "self.GetCat()" in BellyPlus.cs or everywhere else!
 	private static readonly ConditionalWeakTable<PlayerGraphics, YourGraphics> CWT = new();
 	public static YourGraphics GetGraph(this PlayerGraphics player) => CWT.GetValue(player, _ => new());
 }

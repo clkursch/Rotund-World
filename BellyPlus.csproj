@@ -138,7 +138,6 @@
     <Compile Include="patch_OverseerTutorial.cs" />
     <Compile Include="patch_Player.cs" />
     <Compile Include="patch_PlayerGraphics.cs" />
-    <Compile Include="patch_ProcessManager.cs" />
     <Compile Include="patch_RainCycle.cs" />
     <Compile Include="patch_Scavenger.cs" />
     <Compile Include="patch_SeedCob.cs" />

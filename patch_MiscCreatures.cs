@@ -63,6 +63,14 @@ public class patch_MiscCreatures
         On.LeechGraphics.Radius += LeechGraphics_Radius;
 
         On.StaticWorld.InitStaticWorld += StaticWorld_InitStaticWorld;
+        On.Creature.ctor += Creature_ctor;
+    }
+
+    private static void Creature_ctor(On.Creature.orig_ctor orig, Creature self, AbstractCreature abstractCreature, World world)
+    {
+        orig(self, abstractCreature, world);
+        //CHECK IF OUR FATNESS WAS DISABLED IN THE REMIX MENU
+        self.GetBelly().fatDisabled = !patch_MiscCreatures.CheckFattable(self);
     }
 
     /*
@@ -91,7 +99,7 @@ public class patch_MiscCreatures
 
 	public static int GetChub(Creature self)
 	{
-		if (CheckFattable(self) == false)
+		if (self.GetBelly().fatDisabled)
 			return 0; //NO FATTING ALLOWED
 		
 		int critNum = self.abstractCreature.ID.RandomSeed;
@@ -105,7 +113,24 @@ public class patch_MiscCreatures
 	
 	public static bool CheckFattable(Creature crit)
 	{
-		if (crit is Lizard && !BPOptions.fatLiz.Value)
+		if (crit is Player player)
+        {
+            int playerNum = player.playerState.playerNumber;
+            if (player.isNPC)
+                return BPOptions.fatPups.Value;
+            else
+            {
+                if (playerNum == 0)
+                    return BPOptions.fatP1.Value;
+                if (playerNum == 1)
+                    return BPOptions.fatP2.Value;
+                if (playerNum == 2)
+                    return BPOptions.fatP3.Value;
+                if (playerNum == 3)
+                    return BPOptions.fatP4.Value;
+            } 
+        }
+        if (crit is Lizard && !BPOptions.fatLiz.Value)
 			return false;
 		if (crit is LanternMouse && !BPOptions.fatMice.Value)
 			return false;
@@ -216,7 +241,7 @@ public class patch_MiscCreatures
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("--SPAWNING BIGEEL " + self.bodyChunks[0].rad);
 
-        if (GetChub(self) >= 4 && CheckFattable(self))
+        if (GetChub(self) >= 4)
 		{
 			self.abstractCreature.GetAbsBelly().myFoodInStomach += 2;
             FeedBigEel(self, 2);
@@ -228,7 +253,7 @@ public class patch_MiscCreatures
 		//LEVIATHAN FEEEED!
 		for (int i = 0; i < self.clampedObjects.Count; i++)
 		{
-			if (self.clampedObjects[i].chunk.owner is Creature && !(self.clampedObjects[i].chunk.owner as Creature).Template.smallCreature && CheckFattable(self))
+			if (self.clampedObjects[i].chunk.owner is Creature && !(self.clampedObjects[i].chunk.owner as Creature).Template.smallCreature && !self.GetBelly().fatDisabled)
 			{
 				self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
                 FeedBigEel(self, 1);
@@ -507,7 +532,7 @@ public class patch_MiscCreatures
         MovementConnection movementConnection = (self.AI.pathFinder as FishPather).FollowPath(self.room.GetWorldCoordinate(self.mainBodyChunk.pos), true);
         if (movementConnection != null && (movementConnection.type == MovementConnection.MovementType.ShortCut || movementConnection.type == MovementConnection.MovementType.NPCTransportation))
         {
-            if (CheckFattable(self) && ModManager.MMF && self.AI.denFinder.GetDenPosition() != null && movementConnection.destinationCoord == self.AI.denFinder.GetDenPosition() && self.AI.behavior == JetFishAI.Behavior.ReturnPrey && self.grasps[0] != null && !(self.grasps[0].grabbed is Creature))
+            if (!self.GetBelly().fatDisabled && ModManager.MMF && self.AI.denFinder.GetDenPosition() != null && movementConnection.destinationCoord == self.AI.denFinder.GetDenPosition() && self.AI.behavior == JetFishAI.Behavior.ReturnPrey && self.grasps[0] != null && !(self.grasps[0].grabbed is Creature))
             {
                 self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
                 UpdateBellySize(self, 0);
@@ -542,7 +567,7 @@ public class patch_MiscCreatures
 
     private static void Deer_Act(On.Deer.orig_Act orig, Deer self, bool eu, float support, float forwardPower)
     {
-        if (self.eatCounter == 50 && CheckFattable(self))
+        if (self.eatCounter == 50 && !self.GetBelly().fatDisabled)
         {
             self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
             UpdateBellySize(self, 0);
@@ -641,7 +666,7 @@ public class patch_MiscCreatures
         if (self.abstractCreature.GetAbsBelly().myFoodInStomach >= 16)
             drainRate *= 0.1f;
 
-        if (UnityEngine.Random.value < drainRate && CheckFattable(self))
+        if (UnityEngine.Random.value < drainRate && !self.GetBelly().fatDisabled)
         {
             self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
             //Debug.Log("BLOAT " + self.abstractCreature.GetAbsBelly().myFoodInStomach);
@@ -651,7 +676,6 @@ public class patch_MiscCreatures
 
     public static void Centipede_ctor(On.Centipede.orig_ctor orig, Centipede self, AbstractCreature abstractCreature, World world)
     {
-		bool preMeatCheck = true; // self.CentiState.meatInitated;
 		orig.Invoke(self, abstractCreature, world);
 		
 		if (GetChub(self) == 4)
@@ -661,14 +685,6 @@ public class patch_MiscCreatures
 				//PHAT
 				self.bodyChunks[i].rad += Mathf.Lerp(1.5f, 2.5f, self.size) / 1.5f; //-2, 3.5
             }
-			
-			//if (!preMeatCheck && !BellyPlus.VisualsOnly())
-			//{
-			//	if (self.Centiwing) // || self.Small)
-			//		abstractCreature.state.meatLeft += 2;
-			//	else
-			//		abstractCreature.state.meatLeft += 3;
-			//}
 		}
     }
 	
@@ -697,7 +713,7 @@ public class patch_MiscCreatures
     {
 		//Debug.Log("DO I EVEN RUN..." + self.daddy.digestingCounter);
 		orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
-		if (BellyPlus.VisualsOnly() || !CheckFattable(self.daddy))
+		if (BellyPlus.VisualsOnly() || self.daddy.GetBelly().fatDisabled)
 			return;
 		
 		//if (self.daddy.digestingCounter > 0)
@@ -724,7 +740,7 @@ public class patch_MiscCreatures
 	public static void DDL_Update(On.DaddyLongLegs.orig_Update orig, DaddyLongLegs self, bool eu)
 	{
 		//if (self.digestingCounter > 15)
-		if (self.eatObjects.Count > 0 && !BellyPlus.VisualsOnly() && CheckFattable(self))
+		if (self.eatObjects.Count > 0 && !BellyPlus.VisualsOnly() && !self.GetBelly().fatDisabled)
 		{
 			for (int i = 0; i < self.bodyChunks.Length; i++)
 			{

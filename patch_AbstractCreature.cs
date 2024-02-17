@@ -107,87 +107,70 @@ public class patch_AbstractCreature
 
     public static void BPShortcutHandler_CreatureTakeFlight(On.ShortcutHandler.orig_CreatureTakeFlight orig, ShortcutHandler self, Creature creature, AbstractRoomNode.Type type, WorldCoordinate start, WorldCoordinate dest)
     {
-        try
+        bool isParasitic = false;
+        if (BellyPlus.parasiticEnabled)
+            isParasitic = CheckForParasite(creature.abstractCreature);
+
+        if (creature is Vulture && !creature.GetBelly().fatDisabled && !isParasitic)
         {
-            bool isParasitic = false;
-            if (BellyPlus.parasiticEnabled)
-                isParasitic = CheckForParasite(creature.abstractCreature);
-
-            if (creature is Vulture && patch_MiscCreatures.CheckFattable(creature) && !isParasitic)
+            if (creature.grasps[0] != null && creature.grasps[0].grabbed is Creature)  // && creature.Template.CreatureRelationship(creature.grasps[0].grabbed as Creature).type == CreatureTemplate.Relationship.Type.Eats)
             {
-                if (creature.grasps[0] != null && creature.grasps[0].grabbed is Creature)  // && creature.Template.CreatureRelationship(creature.grasps[0].grabbed as Creature).type == CreatureTemplate.Relationship.Type.Eats)
-                {
-                    creature.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
-                    patch_Lizard.ObjUpdateBellySize(creature);
-                    Debug.Log("CREATURE DRAGGED PREY OFFSCREEN - EATING A TASTY SNACK! " + creature.abstractCreature.GetAbsBelly().myFoodInStomach);
-                }
-
+                creature.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
+                patch_Lizard.ObjUpdateBellySize(creature);
+                Debug.Log("CREATURE DRAGGED PREY OFFSCREEN - EATING A TASTY SNACK! " + creature.abstractCreature.GetAbsBelly().myFoodInStomach);
             }
         }
-        catch
-        {
-            Debug.Log("CATCH! BP CRASH ON TRYING TO LEAVE TO OFFSCREEN DEN! ");
-        }
-        
-		orig.Invoke(self, creature, type, start, dest);
+
+        orig.Invoke(self, creature, type, start, dest);
     }
 	
 	
 
     public static void BP_IsEnteringDen(On.AbstractCreature.orig_IsEnteringDen orig, AbstractCreature self, WorldCoordinate den)
 	{
-		try
-		{
-			bool isParasitic = false;
-			if (BellyPlus.parasiticEnabled)
-			{
-                isParasitic = CheckForParasite(self);
-				//PSFoodValues(self);
-            }
-				
-
-			
-			if (self.realizedCreature != null && patch_MiscCreatures.CheckFattable(self.realizedCreature) && !isParasitic)
-			{
-				//OH, I GUESS CICADAS DO THIS TOO!
-				//YEEKS DO NOT, THEY CATCH FRUIT SO THIS WON'T RUN. HANDLED IN YEEKSTATE INSTEAD
-				if ((self.realizedCreature is Lizard || self.realizedCreature is Cicada || self.realizedCreature is Vulture) && self.abstractAI != null && self.abstractAI.HavePrey())
-				{
-					Creature mySelf = self.realizedCreature as Creature;
-					//BONUS MEAT IF EATING A HEFTY PLAYER
-					float fatGained = 2;
-					if (mySelf.grasps[0].grabbed is Player player)
-						fatGained += Mathf.Min((patch_Player.GetOverstuffed(player) / 2f), 4f);
-						
-					self.GetAbsBelly().myFoodInStomach += Mathf.CeilToInt(fatGained);
-					patch_Lizard.ObjUpdateBellySize(mySelf as Creature); //CICADAS CAN'T DO THIS... WAIT YES THEY CAN!!
-					Debug.Log("CREATURE IN DEN - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
-				}
-
-				//MINI CREATURE UPDATES
-				if (self.realizedCreature is DropBug)
-				{
-					Creature mySelf = self.realizedCreature as Creature;
-					int amnt = (self.GetAbsBelly().myFoodInStomach >= 4) ? 1 : 2; //PAST TWO MEALS, SLOW DOWN THE CHONK
-					//GAIN 2 IF HUNGRY. ONLY 1 IF FAT
-					self.GetAbsBelly().myFoodInStomach += amnt;
-					patch_MiscCreatures.UpdateBellySize(mySelf as DropBug, amnt);
-					Debug.Log("MINI CREATURE IN DEN - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
-				}
-				
-				if (self.realizedCreature is JetFish fish && fish.AI != null && fish.AI.behavior == JetFishAI.Behavior.ReturnPrey)
-				{
-					self.GetAbsBelly().myFoodInStomach += 2;
-					patch_Lizard.ObjUpdateBellySize(fish);
-					Debug.Log("JETFISH - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
-				}
-			}
+        bool isParasitic = false;
+        if (BellyPlus.parasiticEnabled)
+        {
+            isParasitic = CheckForParasite(self);
+            //PSFoodValues(self);
         }
-		catch
-		{
-			Debug.Log("CATCH! BP CRASH ON TRYING TO ENTER DEN! ");
-		}
 
-		orig.Invoke(self, den);
+        if (self.realizedCreature != null && !self.realizedCreature.GetBelly().fatDisabled && !isParasitic)
+        {
+            //OH, I GUESS CICADAS DO THIS TOO!
+            //YEEKS DO NOT, THEY CATCH FRUIT SO THIS WON'T RUN. HANDLED IN YEEKSTATE INSTEAD
+            if ((self.realizedCreature is Lizard || self.realizedCreature is Cicada || self.realizedCreature is Vulture) && self.abstractAI != null && self.abstractAI.HavePrey())
+            {
+                Creature mySelf = self.realizedCreature as Creature;
+                //BONUS MEAT IF EATING A HEFTY PLAYER
+                float fatGained = 2;
+                if (mySelf.grasps[0].grabbed is Player player)
+                    fatGained += Mathf.Min((patch_Player.GetOverstuffed(player) / 2f), 4f);
+
+                self.GetAbsBelly().myFoodInStomach += Mathf.CeilToInt(fatGained);
+                patch_Lizard.ObjUpdateBellySize(mySelf as Creature); //CICADAS CAN'T DO THIS... WAIT YES THEY CAN!!
+                Debug.Log("CREATURE IN DEN - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
+            }
+
+            //MINI CREATURE UPDATES
+            if (self.realizedCreature is DropBug)
+            {
+                Creature mySelf = self.realizedCreature as Creature;
+                int amnt = (self.GetAbsBelly().myFoodInStomach >= 4) ? 1 : 2; //PAST TWO MEALS, SLOW DOWN THE CHONK
+                                                                              //GAIN 2 IF HUNGRY. ONLY 1 IF FAT
+                self.GetAbsBelly().myFoodInStomach += amnt;
+                patch_MiscCreatures.UpdateBellySize(mySelf as DropBug, amnt);
+                Debug.Log("MINI CREATURE IN DEN - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
+            }
+
+            if (self.realizedCreature is JetFish fish && fish.AI != null && fish.AI.behavior == JetFishAI.Behavior.ReturnPrey)
+            {
+                self.GetAbsBelly().myFoodInStomach += 2;
+                patch_Lizard.ObjUpdateBellySize(fish);
+                Debug.Log("JETFISH - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
+            }
+        }
+
+        orig.Invoke(self, den);
 	}
 }

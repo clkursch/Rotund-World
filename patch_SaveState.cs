@@ -35,21 +35,14 @@ public class patch_SaveState
 			
 		
 		orig.Invoke(self, game, survived, newMalnourished);
-		
-		try
-		{
-			if (survived && BellyPlus.bonusFood > 0)
-			{
-				self.food += BellyPlus.bonusFood + tailPips;
-				self.deathPersistentSaveData.foodReplenishBonus++; //GIVE US EXTRA FOOD EVEN IF WE DIE
-				game.rainWorld.progression.SaveWorldStateAndProgression(self.malnourished);
-			}
-		}
-		catch
-		{
-			Debug.Log("CATCH! SAVE STATE BONUS FOOD FAILURE");
-		}
-	}
+
+        if (survived && BellyPlus.bonusFood > 0)
+        {
+            self.food += BellyPlus.bonusFood + tailPips;
+            self.deathPersistentSaveData.foodReplenishBonus++; //GIVE US EXTRA FOOD EVEN IF WE DIE
+            game.rainWorld.progression.SaveWorldStateAndProgression(self.malnourished);
+        }
+    }
 
 
 	private static void BP_ApplyCustomEndGame(On.SaveState.orig_ApplyCustomEndGame orig, SaveState self, RainWorldGame game, bool addFiveCycles)

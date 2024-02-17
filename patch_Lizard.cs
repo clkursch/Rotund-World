@@ -228,15 +228,6 @@ public class patch_Lizard
 		return Mathf.Max(0f, exh - startAt) / (maxStamina - startAt);
 	}
 
-	public static bool IsCramped(Creature self)
-	{
-		//NAH, JUST RETURNS TRUE IF IN A PASSAGE AT ALL
-		return (
-			(self.room != null && self.room.aimap != null && self.room.aimap.getAItile(self.bodyChunks[1].pos).narrowSpace)
-			|| self.GetBelly().isStuck);
-
-	}
-
 
 	public static bool IsStuck(Creature self)
 	{

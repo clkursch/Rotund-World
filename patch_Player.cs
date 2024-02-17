@@ -249,12 +249,8 @@ public class patch_Player
         }
 
         //CHECK IF OUR FATNESS IS DISABLED
-        if ((playerNumber == 0 && BPOptions.fatP1.Value == false && !player.isNPC) ||
-			(playerNumber == 1 && BPOptions.fatP2.Value == false) ||
-			(playerNumber == 2 && BPOptions.fatP3.Value == false) ||
-			(playerNumber == 3 && BPOptions.fatP4.Value == false) ||
-            (player.isNPC && BPOptions.fatPups.Value == false))
-		{
+        if (player.GetBelly().fatDisabled) //!patch_MiscCreatures.CheckFattable(player)
+        {
 			player.abstractCreature.GetAbsBelly().myFoodInStomach = 0;
 		}
 
@@ -361,7 +357,6 @@ public class patch_Player
         //IL_0105: ldelem.ref
         //IL_0106: ldfld float32 BodyChunk::rad
 
-        var player = 0;
         var k = 0;
         while (cursor.TryGotoNext(MoveType.After, 
 			// i => i.MatchLdloc(out player), //HERE
@@ -1955,17 +1950,6 @@ public class patch_Player
 		obj.GetBelly().wideEyes = wideEyes;
 	}
 
-
-	public static void ObjSetNoStuck(Creature obj, int add)
-	{
-		obj.GetBelly().noStuck = add;
-	}
-
-	public static int ObjGetNoStuck(Creature obj)
-	{
-		return obj.GetBelly().noStuck;
-	}
-
 	public static void ObjApplySlickness(Creature obj)
 	{
 		int amnt = 3600;
@@ -2049,12 +2033,7 @@ public class patch_Player
     public static void Player_SwallowObject(On.Player.orig_SwallowObject orig, Player self, int grasp)
     {
         bool skipCheck = false;
-		int playerNumber = self.playerState.playerNumber;
-		if ((playerNumber == 0 && BPOptions.fatP1.Value == false && !self.isNPC) ||
-			(playerNumber == 1 && BPOptions.fatP2.Value == false) ||
-			(playerNumber == 2 && BPOptions.fatP3.Value == false) ||
-			(playerNumber == 3 && BPOptions.fatP4.Value == false)
-			|| BellyPlus.VisualsOnly())
+		if (self.GetBelly().fatDisabled || BellyPlus.VisualsOnly())
 		{
 			skipCheck = true;
 		}
@@ -2130,35 +2109,11 @@ public class patch_Player
 	}
 
 
-    //WEIGHTINESS (SLUGCAT VERSION ONLY!)
+    //WEIGHTINESS 
     public static int GetChubValue(Creature self)
 	{
 		return Mathf.FloorToInt(self.GetBelly().myChubValue);
-		/*
-		int currentFood = self.abstractCreature.GetAbsBelly().myFoodInStomach;
-		if (self.slugcatStats.maxFood - currentFood <= -1)
-			return 4;
-		else if (self.slugcatStats.maxFood - currentFood == 0)
-			return 3;
-		else if (self.slugcatStats.maxFood - currentFood == 1)
-			return 2;
-		else if (self.slugcatStats.maxFood - currentFood == 2)
-			return 1;
-		else if (self.slugcatStats.maxFood - currentFood == 3)
-			return 0;
-		else if (self.slugcatStats.maxFood - currentFood == 4)
-			return -1;
-		else if (self.slugcatStats.maxFood - currentFood == 5)
-			return -2;
-		else if (self.slugcatStats.maxFood - currentFood == 6)
-			return -3;
-		else
-		{
-			return -4;
-		}
-		*/
 	}
-	
 	
 	public static float GetChubFloatValue(Player self)
 	{
@@ -2406,35 +2361,6 @@ public class patch_Player
 
         //CHECK IF OUR BONUS PIP NEES TO BE SAVED FOR END OF CYCLE
         CheckBonusFood(self, false);
-	}
-	
-	
-	public static bool CheckFattable(Creature crit)
-	{
-		if (crit is Lizard && !BPOptions.fatLiz.Value)
-			return false;
-		if (crit is LanternMouse && !BPOptions.fatMice.Value)
-			return false;
-		if (crit is Scavenger && !BPOptions.fatScavs.Value)
-			return false;
-		if (crit is Cicada && !BPOptions.fatSquids.Value)
-			return false;
-		if (crit is NeedleWorm && !BPOptions.fatNoots.Value)
-			return false;
-		if (crit is Centipede && !BPOptions.fatCentis.Value)
-			return false;
-		if (crit is DaddyLongLegs && !BPOptions.fatDll.Value)
-			return false;
-		if (crit is Vulture && !BPOptions.fatVults.Value)
-			return false;
-		if (crit is MirosBird && !BPOptions.fatMiros.Value)
-			return false;
-		if (crit is DropBug && !BPOptions.fatWigs.Value)
-			return false;
-		if (crit is BigEel && !BPOptions.fatEels.Value)
-			return false;
-		
-		return true;
 	}
 	
 	
@@ -3102,12 +3028,7 @@ public class patch_Player
 		}
 
 		//CHECK IF WE'RE DISABLED
-		int playerNum = self.playerState.playerNumber;
-        if ((playerNum == 0 && BPOptions.fatP1.Value == false && self.isNPC) ||
-			(playerNum == 1 && BPOptions.fatP2.Value == false) ||
-			(playerNum == 2 && BPOptions.fatP3.Value == false) ||
-			(playerNum == 3 && BPOptions.fatP4.Value == false) ||
-			(self.isNPC && BPOptions.fatPups.Value == false))
+		if (self.GetBelly().fatDisabled)
 			return;
 		
 		//if (BPOptions.debugLogs.Value)
@@ -3121,11 +3042,12 @@ public class patch_Player
 		if (GetOverstuffed(self) > 0 && self.eatMeat <= 0 && self.graphicsModule != null && self.room != null && self.SlugCatClass != MoreSlugcatsEnums.SlugcatStatsName.Spear)
 		{
 			self.AerobicIncrease(0.9f);
-			self.slowMovementStun = 30 + 5 * Math.Min(GetOverstuffed(self), 4);
 			self.Blink(30 + 5 * Math.Min(GetOverstuffed(self), 4));
-			
-			//SWALLOW!
-			self.mainBodyChunk.vel.y = self.mainBodyChunk.vel.y + 0.5f * Math.Min(GetOverstuffed(self), 4); //2f;
+			if (!BellyPlus.VisualsOnly())
+                self.slowMovementStun = 30 + 5 * Math.Min(GetOverstuffed(self), 4);
+
+            //SWALLOW!
+            self.mainBodyChunk.vel.y = self.mainBodyChunk.vel.y + 0.5f * Math.Min(GetOverstuffed(self), 4); //2f;
 			self.room.PlaySound(SoundID.Slugcat_Swallow_Item, self.mainBodyChunk.pos, 0.2f + 0.1f * Math.Min(GetOverstuffed(self), 6), 1f);
 			(self.graphicsModule as PlayerGraphics).swallowing = 5 * Math.Min(GetOverstuffed(self), 4); //20;
 		}
@@ -8686,14 +8608,10 @@ public class patch_Player
 		if (self.GetBelly().foodOnBack != null)
 			self.GetBelly().foodOnBack.GraphicsModuleUpdated(actuallyViewed, eu);
 		
-		bool skipOrig = false;
 		//OKAY BUT WE NEED TO STOP SKIPPING ORIG SO LETS INSTEAD TEMPORARILY NULL ANY GRABS CONTAINING A STUCK CREATURE WE ARE PULLING
 		//Creature.Grasp[] origGrasps = self.grasps; //NO THIS KEEPS LIVE REFERENCES
 		int grpIndex = 0;
 		Creature stuckCrit = null;
-		int chunk = 0;
-		Creature.Grasp.Shareability grpShare = Creature.Grasp.Shareability.CanOnlyShareWithNonExclusive;
-		float dom = 0f;
 
         //THIS PART OF THE CODE ALSO DETERMINES HOW CLOSELY WE HOLD OUR GRABBED OBJECTS TO US. SO UNDER THOSE SPECIFIC CONDTIONS, SKIP THE NORMAL VERSION.
         for (int i = 0; i < 2; i++)
@@ -8726,9 +8644,6 @@ public class patch_Player
 				//IT'S TOO LATE I'M ALREADY IN TOO DEEP
                 stuckCrit = myTarget;
                 grpIndex = i;
-				chunk = self.grasps[i].chunkGrabbed;
-                grpShare = self.grasps[i].shareability;
-                dom = self.grasps[i].dominance;
 
 				//THE IMPORTANT PART! TEMPORARILY SET THE GRASP TO NULL SO IT DOESN'T UPDATE AGAIN
 				//self.grasps[i] = null;

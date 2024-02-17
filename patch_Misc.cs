@@ -120,21 +120,16 @@ public class patch_Misc
     private static void BPSlugcatPageContinue_ctor(On.Menu.SlugcatSelectMenu.SlugcatPageContinue.orig_ctor orig, SlugcatSelectMenu.SlugcatPageContinue self, Menu.Menu menu, MenuObject owner, int pageIndex, SlugcatStats.Name slugcatNumber)
     {
         //WHY DOES THE GAME TRY SO HARD TO CORRECT THE SAVED FOOD VALUE THAT GETS DISPLAYED ONSCREEN?? IT'S NOT THAT DEEP
-        
+
         //DANG THIS IS IMPOSSIBLE! IT DOESN'T UPDATE ITSELF, AND THAT VALUE IS IMPORTANT FOR THE CTOR, AND ITS SET LITERALLY THE LINE BEFORE...
         //OKAY WE'RE GONNA HAVE TO GET WEIRD WITH IT. 
         //RIG THE FOOD VALUES FOR JUST A SECOND, THEN SWITCH THEM BACK.
-        try
-        {
-            BellyPlus.fakeFoodVal = true;
-            orig(self, menu, owner, pageIndex, slugcatNumber);
-            //fakeFoodVal = false; //THIS ISN'T FAST ENOUGH! BY NOW HUD HAS ALREADY INITIATED WITH THE BROKEN VALIUES. WE NEED TO GO DEEPER...
-        }
-        catch (Exception e)
-        {
-            Debug.Log("CATCH! ERROR 2 " + e);
-        }
-        BellyPlus.fakeFoodVal = false; //JUST TO BE SURE
+
+        BellyPlus.fakeFoodVal = true;
+        orig(self, menu, owner, pageIndex, slugcatNumber);
+        //fakeFoodVal = false; //THIS ISN'T FAST ENOUGH! BY NOW HUD HAS ALREADY INITIATED WITH THE BROKEN VALIUES. WE NEED TO GO DEEPER...
+        
+		BellyPlus.fakeFoodVal = false; //JUST TO BE SURE
     }
 	
 	
@@ -542,16 +537,18 @@ public class patch_Misc
 	
 	public static void SetTrackerVal(WinState.IntegerTracker intTrck, int plrNum)
 	{
-		//LUCKILY, myFoodInStomach VALUES REMAIN IN MEMORY LONG AFTER THE PLAYER HAS BEEN REMOVED FROM THE WORLD
-		// int myFood = patch_Player.bellyStats[plrNum].myFoodInStomach;
-		int myFood = BellyPlus.foodMemoryBank[plrNum];
-        intTrck.SetProgress(myFood);
-        //WE JUST NEED TO PRETEND WE NEVER MAKE PROGRESS OKAY?
-        intTrck.showFrom = myFood;
-        intTrck.lastShownProgress = myFood;
-		if (BPOptions.debugLogs.Value)
-			Debug.Log("SAVING INDIVIDUAL PLAYER WEIGHT P:" + plrNum + " FOOD: " + myFood);
-		BellyPlus.foodMemoryBank[plrNum] = 0; //THEN PUT IT BACK
+        //LUCKILY, myFoodInStomach VALUES REMAIN IN MEMORY LONG AFTER THE PLAYER HAS BEEN REMOVED FROM THE WORLD - NOT ANYMORE. THE DOWNSIDE OF CWTS...
+        //THIS ONE WON'T FAIL IF IT'S NULL
+        if (BellyPlus.foodMemoryBank.TryGetValue(plrNum, out int myFood))
+		{
+            intTrck.SetProgress(myFood);
+            //WE JUST NEED TO PRETEND WE NEVER MAKE PROGRESS OKAY?
+            intTrck.showFrom = myFood;
+            intTrck.lastShownProgress = myFood;
+            if (BPOptions.debugLogs.Value)
+                Debug.Log("SAVING INDIVIDUAL PLAYER WEIGHT P:" + plrNum + " FOOD: " + myFood);
+            BellyPlus.foodMemoryBank[plrNum] = 0; //THEN PUT IT BACK
+        }
     }
 	
 	

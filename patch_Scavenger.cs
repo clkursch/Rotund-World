@@ -77,7 +77,6 @@ public class patch_Scavenger
 	{
 		
 		float baseWeight = 0.5f; //I THINK...
-		float baseRad = 9.5f;
 		int currentFood = self.abstractCreature.GetAbsBelly().myFoodInStomach;
 
 		//new BodyChunk(this, 0, new Vector2(0f, 0f), 9.5f, 0.5f);
