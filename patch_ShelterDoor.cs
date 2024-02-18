@@ -24,7 +24,9 @@ public class patch_ShelterDoor
         {
             Room thisRoom = self.world.GetAbstractRoom(self.FirstAlivePlayer.pos).realizedRoom;
 
-            Debug.Log("-DOOR CLOSED: " + thisRoom.game.Players.Count);
+            //Debug.Log("-DOOR CLOSED: " + thisRoom.game.Players.Count);
+            if (thisRoom == null)
+                return; //UHH APPARENTLY THIS CAN BE NULL? RETURNING FOR SAFETY
 
             //NOTE THIS ONLY APPLIES TO PLAYERS AND NOT SLUGPUPS
             for (int i = 0; i < thisRoom.game.Players.Count; i++)

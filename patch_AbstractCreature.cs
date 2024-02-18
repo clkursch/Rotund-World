@@ -144,7 +144,7 @@ public class patch_AbstractCreature
                 Creature mySelf = self.realizedCreature as Creature;
                 //BONUS MEAT IF EATING A HEFTY PLAYER
                 float fatGained = 2;
-                if (mySelf.grasps[0].grabbed is Player player)
+                if (mySelf.grasps[0] != null && mySelf.grasps[0].grabbed is Player player)
                     fatGained += Mathf.Min((patch_Player.GetOverstuffed(player) / 2f), 4f);
 
                 self.GetAbsBelly().myFoodInStomach += Mathf.CeilToInt(fatGained);

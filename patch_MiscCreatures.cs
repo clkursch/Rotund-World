@@ -208,7 +208,7 @@ public class patch_MiscCreatures
 
     public static void UpdateBellySize(Creature self, int amnt)
     {
-        if (self is DropBug)
+        if (self is DropBug && self.graphicsModule != null)
 			(self.graphicsModule as DropBugGraphics).bodyThickness += 0.3f * amnt;
 	
 		else if (self is Deer && !BellyPlus.VisualsOnly())
