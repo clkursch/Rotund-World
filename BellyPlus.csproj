@@ -141,7 +141,6 @@
     <Compile Include="patch_RainCycle.cs" />
     <Compile Include="patch_Scavenger.cs" />
     <Compile Include="patch_SeedCob.cs" />
-    <Compile Include="patch_ShelterDoor.cs" />
     <Compile Include="patch_SlugcatHand.cs" />
     <Compile Include="BPEnums.cs" />
     <Compile Include="patch_SlugNPCAI.cs" />

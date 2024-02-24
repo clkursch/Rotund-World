@@ -171,8 +171,6 @@ public class BellyPlus : BaseUnityPlugin
 			patch_SlugcatHand.Patch();
 			patch_FoodMeter.Patch();
 			patch_SaveState.Patch();
-
-			patch_ShelterDoor.Patch();//HOW DID I MISS THIS???
 			patch_RainCycle.Patch();
 			//------
 			
