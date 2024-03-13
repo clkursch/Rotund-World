@@ -123,7 +123,7 @@ This item can only be swallowed if there are no items stored in your belly.
 namespace RotundWorld;
 
 
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.9.3.1")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.9.5")]
 //[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin
@@ -524,6 +524,7 @@ public static class BellyClass
 		public int stuckLock;
 		public bool canSlugSlam;
 		public int slamThreshold; //for modders to adjust what level their modcat can activate slugslams
+		public bool maxFoodOverrideFlag; //for eatMeat shenanigans because I hate IL hooks
         public PhysicalObject forceEatTarget;
 		public ChunkSoundEmitter squeezeLoop;
 		public patch_Player.FoodOnBack foodOnBack;

@@ -2131,7 +2131,7 @@ public class patch_Player
 		
 		int currentFood = self.abstractCreature.GetAbsBelly().myFoodInStomach + self.abstractCreature.GetAbsBelly().externalMass;
 		int bellyMod = (self.GetBelly().bigBelly ? 2 : 0) + BellyOffset(self);
-		if (self.isNPC && self.isSlugpup)
+		if ((self.isNPC && self.isSlugpup) || self.Malnourished)
 			bellyMod -= 1;
 
 		if (self.slugcatStats.maxFood - currentFood <= -2 + bellyMod)
@@ -2674,15 +2674,6 @@ public class patch_Player
 				PhysicalObject obj = self.grasps[j].grabbed;
 				if (IsFoodSmearable(obj))
 				{
-					for (int m = 0; m < self.abstractCreature.stuckObjects.Count; m++)
-					{
-						if (self.abstractCreature.stuckObjects[m].A == self.abstractCreature && self.abstractCreature.stuckObjects[m].B == obj.abstractPhysicalObject)
-						{
-							self.abstractCreature.stuckObjects[m].Deactivate();
-							break;
-						}
-					}
-					
 					correctMaterial = true;
 					
 					//DON'T SMEAR ON THE FIRST ATTEMPT
@@ -2692,13 +2683,12 @@ public class patch_Player
 					}
 					else if (UnityEngine.Random.value < 0.33f) //1 IN 4
 					{
-						crushFood = true;
+                        //MOVED THIS HERE FOR THE INVISIBLE FOOD BUG. BUT I DONT THINK WE EVEN NEED THIS
+                        crushFood = true;
 						foodPos = obj.firstChunk.pos;
-						obj.Destroy();
-						self.room.RemoveObject(obj);
-						self.room.abstractRoom.RemoveEntity(obj.abstractPhysicalObject);
-						self.ReleaseGrasp(j);
-						BellyPlus.smearHintGiven = true; //THEY ALREADY KNOW HOW TO USE THAT!
+                        self.ReleaseGrasp(j);
+                        obj.Destroy();
+                        BellyPlus.smearHintGiven = true; //THEY ALREADY KNOW HOW TO USE THAT!
 					}
 					
 					if (otherCrit is Player)
@@ -2834,9 +2824,16 @@ public class patch_Player
 			return;
 		}
 		add *= BPOptions.foodMult.Value;
-		
-		//SPECIAL EXCEPTIONS FOR SOME CHALLENGE MODE LEVELS 
-		if (ModManager.MSC && self.room != null && self.room.game.IsArenaSession 
+
+		//CORRECT EATMEAT() SHENANIGANS
+        if (self.GetBelly().maxFoodOverrideFlag)
+        {
+            self.slugcatStats.maxFood--;
+            self.GetBelly().maxFoodOverrideFlag = false;
+        }
+
+        //SPECIAL EXCEPTIONS FOR SOME CHALLENGE MODE LEVELS 
+        if (ModManager.MSC && self.room != null && self.room.game.IsArenaSession 
 			&& self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.gameType == MoreSlugcatsEnums.GameTypeID.Challenge)
 		{
 			if (add == 5 && (self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.challengeID == 63 || self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.challengeID == 45))
@@ -3067,6 +3064,12 @@ public class patch_Player
         if (BellyPlus.fullBellyOverride) //FOR DRONEMASTER SO WE COULD BRIEFLY FAKE A NON-FULL BELLY
             self.playerState.foodInStomach++;
 
+		if (self.GetBelly().maxFoodOverrideFlag)
+		{
+			self.slugcatStats.maxFood--;
+            self.GetBelly().maxFoodOverrideFlag = false;
+        }
+
         //JUST A DIRECT COPY OF THE PART THAT SKIPS IF OUR BELLY IS FULL
         //ACTUALLY, INSTEAD OF RISKING HUD SHENANIGANS WITH THE CIRCLES.... LETS DO IT THE STUPID WAY
         if (self.FoodInStomach >= self.MaxFoodInStomach)
@@ -3143,12 +3146,13 @@ public class patch_Player
 	}
 
 
-	//A STRIPPED DOWN VERSION OF THE EATMEAT FN THAT ONLY ADDS FOOD, PERSONALLY
+    //A STRIPPED DOWN VERSION OF THE EATMEAT FN THAT ONLY ADDS FOOD, PERSONALLY
 	public static void Player_EatMeatUpdate(On.Player.orig_EatMeatUpdate orig, Player self, int graspIndex)
 	{
 		if (self.grasps[graspIndex] == null || !(self.grasps[graspIndex].grabbed is Creature))
 		{
-			return;
+            orig(self, graspIndex);
+            return;
 		}
 		
 		SlugcatStats.Name origClass = self.SlugCatClass;
@@ -3165,8 +3169,10 @@ public class patch_Player
 		//THIS JUST RUNS THE SAME COPY OF EATMEATUPDATE EXCEPT IT RUNS WHEN OUR BELLY IS FULL
 		if (self.eatMeat > 20 && self.FoodInStomach >= self.MaxFoodInStomach && self.slugcatStats?.name?.value != "SprobParasite") //SKIP THIS FOR THE PARASITE!
 		{
-			//CORPSE JIGGLE STUFF PROBABLY
-			if (self.eatMeat % 5 == 0)
+            self.standing = false;
+            self.Blink(5);
+            //CORPSE JIGGLE STUFF PROBABLY
+            if (self.eatMeat % 5 == 0)
 			{
 				Vector2 vector = Custom.RNV() * 3f;
 				self.mainBodyChunk.pos += vector;
@@ -3188,11 +3194,9 @@ public class patch_Player
 				}
 			}
 			vector2 /= num;
-
-
-
-
-			if (self.graphicsModule != null && (self.grasps[graspIndex].grabbed as Creature).State.meatLeft > 0)// && self.FoodInStomach < self.MaxFoodInStomach)
+            self.mainBodyChunk.vel += Custom.DirVec(self.mainBodyChunk.pos, vector2) * 0.5f;
+            self.bodyChunks[1].vel -= Custom.DirVec(self.mainBodyChunk.pos, vector2) * 0.6f;
+            if (self.graphicsModule != null && (self.grasps[graspIndex].grabbed as Creature).State.meatLeft > 0)// && self.FoodInStomach < self.MaxFoodInStomach)
 			{
 				if (!Custom.DistLess(self.grasps[graspIndex].grabbedChunk.pos, (self.graphicsModule as PlayerGraphics).head.pos, self.grasps[graspIndex].grabbedChunk.rad))
 					(self.graphicsModule as PlayerGraphics).head.vel += Custom.DirVec(self.grasps[graspIndex].grabbedChunk.pos, (self.graphicsModule as PlayerGraphics).head.pos) * (self.grasps[graspIndex].grabbedChunk.rad - Vector2.Distance(self.grasps[graspIndex].grabbedChunk.pos, (self.graphicsModule as PlayerGraphics).head.pos));
@@ -3231,32 +3235,13 @@ public class patch_Player
 					self.room.PlaySound(SoundID.Slugcat_Eat_Meat_A, self.mainBodyChunk);
 			}
 			
-			//THEN, SINCE WE PLAN TO SKIP THE REST OF GRABUPDATE(), TAKE CARE OF A FEW LAST THINGS
-			//ACTUALLY I MIGHT BE WRONG ABOUT THIS NOW THAT WE'VE FIXED IT. JUST RESETING THE EATMEAT NUMBER MIGHT BE ALL WE NEED, AND MOST OF THE BELOW STUFF MIGHT BE UNNEEDED
-			int num11 = 0;
-			if (ModManager.MMF && (self.grasps[0] == null || !(self.grasps[0].grabbed is Creature)) && self.grasps[1] != null && self.grasps[1].grabbed is Creature)
-			{
-				num11 = 1;
-			}
-
-			
-			if (self.spearOnBack != null)
-			{
-				self.spearOnBack.increment = false;
-				self.spearOnBack.interactionLocked = true;
-			}
-			if ((ModManager.MSC || ModManager.CoopAvailable) && self.slugOnBack != null)
-			{
-				self.slugOnBack.increment = false;
-				self.slugOnBack.interactionLocked = true;
-			}
 			//RUN THE USUAL, BUT DON'T CHECK IF OUR BELLY IS FULL
-			if (self.grasps[num11] != null && self.eatMeat % 80 == 0 && ((self.grasps[num11].grabbed as Creature).State.meatLeft <= 0)) // || this.FoodInStomach >= this.MaxFoodInStomach))
+			if (self.grasps[graspIndex] != null && self.eatMeat % 80 == 0 && ((self.grasps[graspIndex].grabbed as Creature).State.meatLeft <= 0)) // || this.FoodInStomach >= this.MaxFoodInStomach))
 			{
 				self.eatMeat = 0;
 				self.wantToPickUp = 0;
-				self.TossObject(num11, false); // ??? eu?
-				self.ReleaseGrasp(num11);
+				self.TossObject(graspIndex, false); // ??? eu?
+				self.ReleaseGrasp(graspIndex);
 				self.standing = true;
                 //Debug.Log("-EATA DA MEAT");
                 self.GetBelly().frFed = false;
@@ -3284,9 +3269,49 @@ public class patch_Player
 			self.SlugCatClass = origClass;
 	}
 	
-	
-	//IT'S LITERALLY JUST A 3RD COPY OF EATMEATUPDATE BUT FOR CORN... MAN THIS THING SUCKS
-	public static void EatCornUpdate(Player self, int graspIndex)
+
+    //OKAY I MIGHT HAVE A BETTER ONE
+	/* -OKAY IT PROBABLY IS BETTER BUT... LETS PLAY IT SAFE FOR THE UPDATE
+    public static void Player_EatMeatUpdate(On.Player.orig_EatMeatUpdate orig, Player self, int graspIndex)
+    {
+        SlugcatStats.Name origClass = self.SlugCatClass;
+        //int origMaxFood = self.slugcatStats.maxFood;
+        bool foodLover = IsFoodLover();
+        //TRICK ORIG INTO THINKING WE AREN'T FULL. DURING ADDFOOD() CALCULATION WE'LL CHANGE IT BACK
+		if (self.slugcatStats.maxFood >= self.FoodInStomach)
+		{
+            self.slugcatStats.maxFood = self.FoodInStomach + 1;
+			self.GetBelly().maxFoodOverrideFlag = true;
+        }
+
+        if (foodLover)
+        {
+            if (SlugcatStats.SlugcatCanMaul(self.SlugCatClass))
+                self.SlugCatClass = MoreSlugcatsEnums.SlugcatStatsName.Artificer; //MAULING IS ALSO HANDLED HERE, SO PRETEND WE'RE ARTI IF WE CAN MAUL
+            else
+                self.SlugCatClass = SlugcatStats.Name.Red;
+        }
+
+        orig(self, graspIndex);
+
+        //self.slugcatStats.maxFood = origMaxFood;
+
+        if (foodLover) //THROW THIS IN HERE
+            self.SlugCatClass = origClass;
+
+
+        //THIS IS THE CHECK THE GAME USES TO SEE WHEN WE SHOULD TOSS MEAT IF WE'RE FULL. JUST DON'T LET IT GET TO THIS POINT
+        if (self.eatMeat % 80 == 0 && self.grasps[graspIndex] != null && (self.grasps[graspIndex].grabbed as Creature).State.meatLeft > 0)
+        {
+            self.eatMeat = 20;
+            //Debug.Log("-RESET DA MEAT");
+            self.GetBelly().frFed = false;
+        }
+    }
+	*/
+
+    //IT'S LITERALLY JUST A 3RD COPY OF EATMEATUPDATE BUT FOR CORN... MAN THIS THING SUCKS
+    public static void EatCornUpdate(Player self, int graspIndex)
 	{
         
         if (self.grasps[graspIndex] == null || !(self.grasps[graspIndex].grabbed is SeedCob))
@@ -3759,27 +3784,29 @@ public class patch_Player
         //SPEARMASTER CAN'T DO THIS
 		if (BPOptions.detachablePopcorn.Value == false || (ModManager.MSC && self.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Spear && !IsFoodLover()))
 			return;
-		
-		
-		int myGrasp = 0;
-		if (self.input[0].pckp && self.grasps[myGrasp] != null && self.grasps[myGrasp].grabbed is SeedCob seedCob && (seedCob.open > 0.8f) && !seedCob.AbstractCob.dead)
+
+
+		for (int myGrasp = 0; myGrasp < self.grasps.Length; myGrasp++)
 		{
-			self.GetBelly().eatCorn++;
-			EatCornUpdate(self, myGrasp); //GOOFY CUSTOM METHOD
-			if (self.spearOnBack != null)
+			if (self.input[0].pckp && self.grasps[myGrasp] != null && self.grasps[myGrasp].grabbed is SeedCob seedCob && (seedCob.open > 0.8f) && !seedCob.AbstractCob.dead)
 			{
-				self.spearOnBack.increment = false;
-				self.spearOnBack.interactionLocked = true;
+				self.GetBelly().eatCorn++;
+				EatCornUpdate(self, myGrasp); //GOOFY CUSTOM METHOD
+				if (self.spearOnBack != null)
+				{
+					self.spearOnBack.increment = false;
+					self.spearOnBack.interactionLocked = true;
+				}
+				if ((ModManager.MSC || ModManager.CoopAvailable) && self.slugOnBack != null)
+				{
+					self.slugOnBack.increment = false;
+					self.slugOnBack.interactionLocked = true;
+				}
+				//DON'T CRAFT OR SPIT UP THINGS
+				if (self.swallowAndRegurgitateCounter > 0)
+					self.swallowAndRegurgitateCounter--;
+				return;
 			}
-			if ((ModManager.MSC || ModManager.CoopAvailable) && self.slugOnBack != null)
-			{
-				self.slugOnBack.increment = false;
-				self.slugOnBack.interactionLocked = true;
-			}
-			//DON'T CRAFT OR SPIT UP THINGS
-			if (self.swallowAndRegurgitateCounter > 0)
-				self.swallowAndRegurgitateCounter--;
-            return;
 		}
 		//WE DON'T REALLY NEED TO TOSS IT
 		self.GetBelly().eatCorn = Custom.IntClamp(self.GetBelly().eatCorn - 1, 0, 50);
@@ -7198,7 +7225,7 @@ public class patch_Player
 					}
 				}
 			}
-			else if (self.GetBelly().pullingOther && self.grasps[0] != null)
+			else if (self.GetBelly().pullingOther)
 			{
                 Creature myGrasped = GetGraspedCreature(self);
 				if (myGrasped != null)
