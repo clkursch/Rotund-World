@@ -56,7 +56,8 @@ public class patch_MiscCreatures
         On.MoreSlugcats.Yeek.ctor += Yeek_ctor;
         On.MoreSlugcats.YeekState.Feed += YeekState_Feed;
         On.MoreSlugcats.Yeek.SetPlayerHoldingBodyMass += Yeek_SetPlayerHoldingBodyMass;
-        On.MoreSlugcats.Yeek.GetSegmentRadForCollision += Yeek_GetSegmentRadForCollision;
+        //On.MoreSlugcats.Yeek.GetSegmentRadForCollision += Yeek_GetSegmentRadForCollision; //OLD VERSION
+        On.MoreSlugcats.YeekGraphics.GraphSegmentRad += YeekGraphics_GraphSegmentRad;
 
         On.Leech.ctor += Leech_ctor;
         On.Leech.Attached += Leech_Attached;
@@ -72,15 +73,6 @@ public class patch_MiscCreatures
         //CHECK IF OUR FATNESS WAS DISABLED IN THE REMIX MENU
         self.GetBelly().fatDisabled = !patch_MiscCreatures.CheckFattable(self);
     }
-
-    /*
-    public static void YeekFixPatch()
-    {
-        //On.Y
-        _ = new Hook(typeof(YeekFix.FixedYeekGraphics).GetMethod(nameof(YeekFix.FixedYeekGraphics.GraphSegmentRad)), FixedYeekGraphics_GraphSegmentRad);
-        _ = new Hook(typeof(YeekFix.FixedYeekState).GetMethod(nameof(YeekFix.FixedYeekState.Feed)), FixedYeekState_Feed);
-    }
-    */
 
     private static void StaticWorld_InitStaticWorld(On.StaticWorld.orig_InitStaticWorld orig)
     {
@@ -603,18 +595,23 @@ public class patch_MiscCreatures
 
     private static void YeekState_Feed(On.MoreSlugcats.YeekState.orig_Feed orig, YeekState self, int CycleTimer)
     {
-        //if (CheckFattable())
+        orig(self, CycleTimer);
         if (BPOptions.fatYeeks.Value)
             self.creature.GetAbsBelly().myFoodInStomach += 2;
         //Debug.Log(" YEEKERTON " + self.creature.GetAbsBelly().myFoodInStomach);
     }
 
+    private static float YeekGraphics_GraphSegmentRad(On.MoreSlugcats.YeekGraphics.orig_GraphSegmentRad orig, YeekGraphics self, int i)
+    {
+        float fatMod = 1f + Mathf.Max(0f, (self.myYeek.abstractCreature.GetAbsBelly().myFoodInStomach - 5) / 5f);
+        return orig(self, i) * fatMod;
+    }
 
-    private static float Yeek_GetSegmentRadForCollision(On.MoreSlugcats.Yeek.orig_GetSegmentRadForCollision orig, Yeek self, int seg)
+    /*private static float Yeek_GetSegmentRadForCollision(On.MoreSlugcats.Yeek.orig_GetSegmentRadForCollision orig, Yeek self, int seg)
     {
         float fatMod = 1f + Mathf.Max(0f, (self.abstractCreature.GetAbsBelly().myFoodInStomach - 5) / 5f);
         return orig(self, seg) * fatMod;
-    }
+    }*/
 
     private static void Yeek_SetPlayerHoldingBodyMass(On.MoreSlugcats.Yeek.orig_SetPlayerHoldingBodyMass orig, Yeek self)
     {
@@ -628,20 +625,6 @@ public class patch_MiscCreatures
                 self.bodyChunks[i].mass *= fatMod;
             }
         }
-    }
-
-    //FOR THE YEEKFIX VERSION (soon to be the real version)
-    public static float FixedYeekGraphics_GraphSegmentRad(Func<YeekFix.FixedYeekGraphics, int, float> orig, YeekFix.FixedYeekGraphics self, int i)
-    {
-        float fatMod = 1f + Mathf.Max(0f, (self.myYeek.abstractCreature.GetAbsBelly().myFoodInStomach - 5) / 5f);
-        return orig(self, i) * fatMod;
-    }
-
-    public static void FixedYeekState_Feed(Action<YeekFix.FixedYeekState, int> orig, YeekFix.FixedYeekState self, int CycleTimer)
-    {
-
-        orig(self, CycleTimer);
-        self.creature.GetAbsBelly().myFoodInStomach += 2;
     }
 
 

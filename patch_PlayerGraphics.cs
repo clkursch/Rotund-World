@@ -299,18 +299,21 @@ public class patch_PlayerGraphics
 		//float limbScale = 0;
 		switch (patch_Player.GetChubFloatValue(self.player))
         {
-            case 0f:
             default:
                 torsoScale = 0f;
 				hipScale = 0f;
                 break;
+            case 0f:
+                torsoScale = 0.5f;
+                hipScale = 2.5f;
+                break;
             case 1f:
-                torsoScale = 0f;
-				hipScale = 2f;
+                torsoScale = 1f;
+				hipScale = 4f;
                 break;
             case 2f:
-                torsoScale = 1f;
-				hipScale = 5f;
+                torsoScale = 1.5f;
+				hipScale = 5.5f;
 				break;
             // case 2.5f:
                 // torsoScale = 1.5f;

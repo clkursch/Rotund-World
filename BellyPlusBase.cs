@@ -123,7 +123,7 @@ This item can only be swallowed if there are no items stored in your belly.
 namespace RotundWorld;
 
 
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.9.5")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.10.0")]
 //[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin
@@ -214,13 +214,13 @@ public class BellyPlus : BaseUnityPlugin
 			}
             if (ModManager.ActiveMods[i].id == "NoirCatto.NoirCatto")
             {
-                noircatEnabled = true;
+                //noircatEnabled = true;
             }
-			if (ModManager.ActiveMods[i].id == "expeditionenhanced")
+			/*if (ModManager.ActiveMods[i].id == "expeditionenhanced")
             {
                 expdEnhancedEnabled = true;
 				ExpdEnhancedContent();
-            }
+            }*/
             if (ModManager.ActiveMods[i].id == "sprobgik.parasitescug")
             {
                 parasiticEnabled = true;
@@ -233,11 +233,11 @@ public class BellyPlus : BaseUnityPlugin
             }
 			if (ModManager.ActiveMods[i].id == "improved-input-config")
             {
-                improvedInputEnabled = true;
+                //improvedInputEnabled = true;
             }
             if (ModManager.ActiveMods[i].id == "vigaro.yeekfix")
             {
-				YeekFixContent();
+				//YeekFixContent();
             }
         }
 
@@ -248,6 +248,10 @@ public class BellyPlus : BaseUnityPlugin
 
             On.SlugcatStats.NourishmentOfObjectEaten += SlugcatStats_NourishmentOfObjectEaten;
 			On.PlayerGraphics.DrawSprites += patch_PlayerGraphics.LatePriorityDrawSprites;
+
+			//REGISTER CUSTOM THINGS
+			Modding.Expedition.CustomBurdens.Register(new Obese());
+            Modding.Expedition.CustomPerks.Register(new FoodLover());
 
             IsInit = true;
         }
@@ -275,7 +279,7 @@ public class BellyPlus : BaseUnityPlugin
         if (improvedInputEnabled)
             Initialize_Custom_Input();
 		
-		patch_Misc.PostPatch();
+		//patch_Misc.PostPatch(); //NO LONGER NEEDED FOR EXPD ENHANCED
     }
     public static void Initialize_Custom_Input()
     {
@@ -288,7 +292,7 @@ public class BellyPlus : BaseUnityPlugin
 
     public void ExpdEnhancedContent()
     {
-        ExpeditionsEnhanced.RegisterExpeditionContent(new Obese(), new FoodLover());
+        //ExpeditionsEnhanced.RegisterExpeditionContent(new Obese(), new FoodLover());
     }
 
     public void YeekFixContent()

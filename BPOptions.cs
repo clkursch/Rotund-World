@@ -19,7 +19,7 @@ public class BPOptions : OptionInterface
         BPOptions.extraTime = this.config.Bind<bool>("extraTime", true);
         BPOptions.hudHints = this.config.Bind<bool>("hudHints", true);
         BPOptions.fatArmor = this.config.Bind<bool>("fatArmor", true);
-        BPOptions.slugSlams = this.config.Bind<bool>("slugSlams", false);
+        BPOptions.slugSlams = this.config.Bind<bool>("slugSlams", true);
         //BPOptions.dietNeedles = this.config.Bind<bool>("dietNeedles", false);
         BPOptions.detachNeedles = this.config.Bind<bool>("detachNeedles", false);
 		BPOptions.detachablePopcorn = this.config.Bind<bool>("detachablePopcorn", true);
@@ -31,7 +31,7 @@ public class BPOptions : OptionInterface
         BPOptions.blushEnabled = this.config.Bind<bool>("blushEnabled", false);
         BPOptions.bpDifficulty = this.config.Bind<float>("bpDifficulty", 0f, new ConfigAcceptableRange<float>(-5f, 5f));
         BPOptions.sfxVol = this.config.Bind<float>("sfxVol", 0.1f, new ConfigAcceptableRange<float>(-0.1f, 0.4f));
-        BPOptions.startThresh = this.config.Bind<int>("startThresh", 2, new ConfigAcceptableRange<int>(-4, 8));//(0, 4)
+        BPOptions.startThresh = this.config.Bind<int>("startThresh", 4, new ConfigAcceptableRange<int>(-4, 8));//(0, 4)
 		BPOptions.gapVariance = this.config.Bind<float>("gapVariance", 1.0f, new ConfigAcceptableRange<float>(0.5f, 1.75f));
         BPOptions.jokeContent1 = this.config.Bind<bool>("jokeContent1", true);
         BPOptions.foodMult = this.config.Bind<int>("foodMult", 1, new ConfigAcceptableRange<int>(1, 4));

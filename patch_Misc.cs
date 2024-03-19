@@ -16,6 +16,7 @@ using static Expedition.ExpeditionProgression;
 //using Rewired;
 using MoreSlugcats;
 using ExpeditionEnhanced; //FOR MOD COMPAT!
+using Unity.Jobs;
 
 namespace RotundWorld;
 public class patch_Misc
@@ -38,7 +39,7 @@ public class patch_Misc
         //On.Expedition.ChallengeTools.GenerateAchievementScores += BP_GenerateAchievementScores;
 
         
-        On.Expedition.ExpeditionProgression.BurdenName += ExpeditionProgression_BurdenName;
+        /*On.Expedition.ExpeditionProgression.BurdenName += ExpeditionProgression_BurdenName;
         On.Expedition.ExpeditionProgression.BurdenManualDescription += ExpeditionProgression_BurdenManualDescription;
         On.Expedition.ExpeditionProgression.BurdenScoreMultiplier += ExpeditionProgression_BurdenScoreMultiplier;
         On.Expedition.ExpeditionProgression.BurdenMenuColor += ExpeditionProgression_BurdenMenuColor;
@@ -52,6 +53,7 @@ public class patch_Misc
         On.Menu.UnlockDialog.ctor += UnlockDialog_ctor; 
 		On.Menu.UnlockDialog.UpdateBurdens += UnlockDialog_UpdateBurdens;
         On.Menu.UnlockDialog.Update += UnlockDialog_Update;
+		*/
 
         On.Menu.SlugcatSelectMenu.SlugcatPageContinue.ctor += BPSlugcatPageContinue_ctor;
         On.Menu.ControlMap.ctor += BPControlMap_ctor;
@@ -83,11 +85,11 @@ public class patch_Misc
     }
 	
 	
-	public static void PostPatch()
+	/*public static void PostPatch()
     {
 		//RUN THIS AFTER ALL OF THE MODLOADER STUFF US DONE SO WE DON'T DOUBLE-ADD BUR-ROTUND
 		On.Expedition.ExpeditionProgression.SetupBurdenGroups += ExpeditionProgression_SetupBurdenGroups;
-	}
+	}*/
 	
 
     
@@ -152,11 +154,11 @@ public class patch_Misc
 		if (self.Player != null) //APPARENTLY THIS CAN BE NULL HERE
 			self.Player.abstractCreature.GetAbsBelly().myFoodInStomach = self.Player.playerState.foodInStomach; //UPDATE OUR FOOD VALUE AFTER HUNTER JUMPS ONSCREEN
     }
-	
-	
-	
-	
-	
+
+
+
+
+    /* OBSOLETE WITH THE 1.9.14 UPDATE
     private static void UnlockDialog_Update(On.Menu.UnlockDialog.orig_Update orig, UnlockDialog self)
     {
 		orig.Invoke(self);
@@ -235,7 +237,7 @@ public class patch_Misc
 		orig.Invoke(self);
 	}
 
-
+	
     private static void BurdenManualPage_ctor(On.Menu.BurdenManualPage.orig_ctor orig, Menu.BurdenManualPage self, Menu.Menu menu, Menu.MenuObject owner)
     {
 		orig.Invoke(self, menu, owner);
@@ -262,6 +264,38 @@ public class patch_Misc
 		}
 	}
 
+	    private static void ExpeditionProgression_SetupBurdenGroups(On.Expedition.ExpeditionProgression.orig_SetupBurdenGroups orig)
+    {
+		//orig();
+		orig.Invoke();
+		
+		if (BellyPlus.expdEnhancedEnabled)
+			return;
+		
+		//List<string> oldGroups = ExpeditionProgression.burdenGroups["expedition"];
+		//List<string> value2 = new List<string>
+		//{
+		//	"bur-rotund"
+		//};
+		//ExpeditionProgression.burdenGroups.Add("expedition", value2);
+		ExpeditionProgression.burdenGroups["expedition"].Add("bur-rotund");
+	}
+
+    
+    
+	private static void ExpeditionProgression_SetupPerkGroups(On.Expedition.ExpeditionProgression.orig_SetupPerkGroups orig)
+	{
+		orig.Invoke();
+		
+		if (BellyPlus.expdEnhancedEnabled)
+			return;
+		
+		ExpeditionProgression.perkGroups["expedition"].Add("unl-foodlover");
+	}
+
+
+
+	
     private static Color ExpeditionProgression_BurdenMenuColor(On.Expedition.ExpeditionProgression.orig_BurdenMenuColor orig, string key)
     {
 		if (key == "bur-rotund")
@@ -296,35 +330,6 @@ public class patch_Misc
 			return ExpeditionProgression.IGT.Translate("OBESE");
 		}
 		return orig.Invoke(key);
-	}
-
-    private static void ExpeditionProgression_SetupBurdenGroups(On.Expedition.ExpeditionProgression.orig_SetupBurdenGroups orig)
-    {
-		//orig();
-		orig.Invoke();
-		
-		if (BellyPlus.expdEnhancedEnabled)
-			return;
-		
-		//List<string> oldGroups = ExpeditionProgression.burdenGroups["expedition"];
-		//List<string> value2 = new List<string>
-		//{
-		//	"bur-rotund"
-		//};
-		//ExpeditionProgression.burdenGroups.Add("expedition", value2);
-		ExpeditionProgression.burdenGroups["expedition"].Add("bur-rotund");
-	}
-
-    
-    
-	private static void ExpeditionProgression_SetupPerkGroups(On.Expedition.ExpeditionProgression.orig_SetupPerkGroups orig)
-	{
-		orig.Invoke();
-		
-		if (BellyPlus.expdEnhancedEnabled)
-			return;
-		
-		ExpeditionProgression.perkGroups["expedition"].Add("unl-foodlover");
 	}
 
 
@@ -365,9 +370,12 @@ public class patch_Misc
 			return orig.Invoke(key);
 	}
 	
-	
-	
-	public static bool ShouldBeEdible(PhysicalObject self)
+	*/
+
+
+
+
+    public static bool ShouldBeEdible(PhysicalObject self)
 	{
 		return (self.grabbedBy.Count > 0 && self.grabbedBy[0].grabber is Player player && (player.objectInStomach != null || player.FoodInStomach < player.MaxFoodInStomach));
 	}
@@ -850,33 +858,35 @@ public class patch_Misc
 
 
 //AN ATTEMPT TO MAKE THESE CUSTOM EXPEDITION THINGS COMPATIBLE WITH EXPEDITIONS EXPANDED
-public class Obese : CustomBurden
+//OH THESE ARE BASICALLY BASEGAME AFTER 1.9.14
+public class Obese : Modding.Expedition.CustomBurden //CustomBurden
 {
 	public override float ScoreMultiplier => 35f;
-	public override string ID => "bur-rotund";
+    public override string Group => "Other Burdens";
+    public override string ID => "bur-rotund";
 	
-	public override string Name => "OBESE";
-	public override string ManualDescription => "Makes the player exceptionally prone to getting fat, making you struggle with your size even at the minimum food requirment.";
+	public override string DisplayName => "OBESE";
+    public override string Description => "Makes the player exceptionally prone to getting fat, making you struggle with your size even at the minimum food requirment.";
+    public override string ManualDescription => "Makes the player exceptionally prone to getting fat, making you struggle with your size even at the minimum food requirment.";
 	public override Color Color => new Color(0.55f, 0.35f, 0f);
-	public override bool AlwaysUnlocked => true;
+	public override bool UnlockedByDefault => true;
 }
 
 
-public class FoodLover : CustomPerk
+public class FoodLover : Modding.Expedition.CustomPerk //CustomPerk
 {
-    public override string ID => "unl-foodlover"; 
-    public override string Name => "Food Lover"; 
-    
+    public override string ID => "unl-foodlover";
+    public override string Group => "Other Perks";
+    public override string DisplayName => "Food Lover";  //Name
+
     public override string Description => "Allows the player to eat all food types for their full value";
     public override string ManualDescription => "Allows the player to eat all food types for their full value";
     
     public override string SpriteName => "Symbol_EggBugEgg";
     public override Color Color => new Color(0f, 1f, 0.47058824f); 
-    public override bool AlwaysUnlocked => true;
-    public override CustomPerkType PerkType => CustomPerkType.Custom;
+    public override bool UnlockedByDefault => true; //AlwaysUnlocked
+    //public override CustomPerkType PerkType => CustomPerkType.Custom;
 }
-
-
 
 
 

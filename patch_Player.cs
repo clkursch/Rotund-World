@@ -5396,10 +5396,13 @@ public class patch_Player
 				myChub = 5f + naturalChub; //LOWER LEVELS GET MORE NATURAL CHUB
 				break;
 			case 1f:
-				myChub = 2f + naturalChub * 2;
+				myChub = 3f + naturalChub * 2;
 				break;
-			default:
-				myChub = 0f + (naturalChub * 2) + (self.GetBelly().bigBelly ? 2 : 0);
+            case 0f:
+                myChub = 1.5f + (naturalChub * 2f) + (self.GetBelly().bigBelly ? 1 : 0);
+                break;
+            default:
+				myChub = 0f + (naturalChub * 2f) + (self.GetBelly().bigBelly ? 2 : 0);
 				break;
 		}
 
@@ -5958,7 +5961,7 @@ public class patch_Player
 			// if (stuffing > 4)
 				// stuffing = Mathf.Min(4 + ((stuffing - 4) / 4), 7);
 			if (stuffing > 3)
-				stuffing = Mathf.Min(3 + ((stuffing - 3) / 4), 7);
+				stuffing = Mathf.Min(3f + ((stuffing - 3) / 4), BPOptions.easilyWinded.Value ? 7f : 6.5f);
 			
 			//WE WTILL WANT TO BE ABLE TO PULL UP AS GOURMAND IF WE'RE GOURMAND EXHAUSTED. BUT MAKE IT HARDER
 			if ((self.lungsExhausted && !self.gourmandExhausted) || (self.gourmandExhausted && self.GetBelly().corridorExhaustion >= 80) && !(self.input[0].jmp && !self.input[1].jmp))
