@@ -5199,17 +5199,7 @@ public class patch_Player
 		if (player.GetBelly().miscTimer > 0)
 			return; //TOO MUCH MEOWING! WAIT A BIT
 
-		if (BellyPlus.noircatEnabled)
-			PlayNoircattoFiles(player, alt);
-		else
-			PlaySolaceFiles(player, alt);
-    }
-
-    public static void PlayNoircattoFiles(Player player, bool alt)
-    {
-		float mass = NoirCatto.NoirCatto.DefaultFirstChunkMass;
-		SoundID sound = alt ? NoirCatto.NoirCatto.Meow2SND : NoirCatto.NoirCatto.MeowFrustratedSND;
-        PlayNoirMeow(player, alt, mass, sound);
+		PlaySolaceFiles(player, alt);
     }
 
     public static void PlaySolaceFiles(Player player, bool alt)

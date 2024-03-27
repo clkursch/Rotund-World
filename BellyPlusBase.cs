@@ -124,12 +124,10 @@ namespace RotundWorld;
 
 
 [BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.10.0")]
-//[BepInProcess("RainWorld.exe")]
 
 public class BellyPlus : BaseUnityPlugin
 {
 
-    //public static BellyPlus instance;
 	public static BPOptions myOptions;
 	public static new ManualLogSource Logger;
 	public static bool is_post_mod_init_initialized = false;
@@ -139,9 +137,6 @@ public class BellyPlus : BaseUnityPlugin
     {
 		try
 		{
-			//patch_SoundImporter.Patch();
-			//base.OnEnable();
-			//RainWorld.Start += new RainWorld.hook_Start(this.RainWorld_Start);
 			Logger = base.Logger;
 
 			On.RainWorld.OnModsInit += RainWorld_OnModsInit;
@@ -212,20 +207,9 @@ public class BellyPlus : BaseUnityPlugin
             {
 				dressMySlugcatEnabled = true;
 			}
-            if (ModManager.ActiveMods[i].id == "NoirCatto.NoirCatto")
-            {
-                //noircatEnabled = true;
-            }
-			/*if (ModManager.ActiveMods[i].id == "expeditionenhanced")
-            {
-                expdEnhancedEnabled = true;
-				ExpdEnhancedContent();
-            }*/
             if (ModManager.ActiveMods[i].id == "sprobgik.parasitescug")
             {
                 parasiticEnabled = true;
-                //"id": "SprobParasite",
-				//"name": "The Parasite",
             }
             if (ModManager.ActiveMods[i].id == "sprobgik.individualfoodbars")
             {
@@ -233,12 +217,8 @@ public class BellyPlus : BaseUnityPlugin
             }
 			if (ModManager.ActiveMods[i].id == "improved-input-config")
             {
-                //improvedInputEnabled = true;
-            }
-            if (ModManager.ActiveMods[i].id == "vigaro.yeekfix")
-            {
-				//YeekFixContent();
-            }
+                improvedInputEnabled = true;
+			}
         }
 
         //OKAY WE'VE GOT A FEW HOOKS THAT NEED TO GO IN HERE FOR LOAD ORDER REASONS
@@ -323,7 +303,7 @@ public class BellyPlus : BaseUnityPlugin
     //1.9 MOD CHEKCS
     public static bool ridableLizEnabled = false;
 	public static bool dressMySlugcatEnabled = false;
-    public static bool noircatEnabled = false;
+    // public static bool noircatEnabled = false;
 	public static bool expdEnhancedEnabled = false;
     public static bool parasiticEnabled = false;
 	public static bool individualFoodEnabled = false;
