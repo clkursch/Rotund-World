@@ -15,6 +15,7 @@ using SprobParasiticScug;
 using MonoMod.RuntimeDetour;
 using RWCustom;
 using System.Runtime.CompilerServices;
+using System.Net;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -123,7 +124,7 @@ This item can only be swallowed if there are no items stored in your belly.
 namespace RotundWorld;
 
 
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.10.0")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.10.2")]
 
 public class BellyPlus : BaseUnityPlugin
 {
@@ -140,6 +141,7 @@ public class BellyPlus : BaseUnityPlugin
 			Logger = base.Logger;
 
 			On.RainWorld.OnModsInit += RainWorld_OnModsInit;
+            On.RainWorld.OnModsInit += Extras.WrapInit(LoadResources);
             On.RainWorld.OnModsDisabled += RainWorld_OnModsDisabled;
 			On.RainWorld.PostModsInit += RainWorld_PostModsInit;
 			
@@ -182,8 +184,6 @@ public class BellyPlus : BaseUnityPlugin
             base.Logger.LogError(string.Format("Failed to initialize Rotund World", arg));
 			throw;
 		}
-
-		
 	}
 
 
@@ -193,7 +193,7 @@ public class BellyPlus : BaseUnityPlugin
     private void RainWorld_OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
 	{
 		orig(self);
-		BPEnums.BPSoundID.RegisterValues();
+		//BellyPlus.RegisterValues(); //NO LONGER USING THIS FOR SOUND
 		MachineConnector.SetRegisteredOI("willowwisp.bellyplus", new BPOptions());
 
 		//CHECK MODS TO SEE IF RIDABLE LIZARS IS THERE...
@@ -219,6 +219,10 @@ public class BellyPlus : BaseUnityPlugin
             {
                 improvedInputEnabled = true;
 			}
+            if (ModManager.ActiveMods[i].id == "SplatCat")
+            {
+                splatCatEnabled = true;
+            }
         }
 
         //OKAY WE'VE GOT A FEW HOOKS THAT NEED TO GO IN HERE FOR LOAD ORDER REASONS
@@ -240,6 +244,23 @@ public class BellyPlus : BaseUnityPlugin
             Debug.LogException(ex);
         }
     }
+
+    //OKAY IT'S TIME TO LET THE BIG BOYS (SLIMECUBED) FIGURE OUT HOW TO DO SOUNDS CORRECTLY
+    private void LoadResources(RainWorld rainWorld)
+    {
+        SqueezeLoop = new SoundID("SqueezeLoop", true);
+        Pop1 = new SoundID("Pop1", true);
+        Fwump1 = new SoundID("Fwump1", true);
+        Squinch1 = new SoundID("Squinch1", true);
+        Fwump2 = new SoundID("Fwump2", true);
+    }
+
+    public static SoundID SqueezeLoop;
+    public static SoundID Pop1;
+    public static SoundID Fwump1;
+    public static SoundID Squinch1;
+    public static SoundID Fwump2;
+
 
     private int SlugcatStats_NourishmentOfObjectEaten(On.SlugcatStats.orig_NourishmentOfObjectEaten orig, SlugcatStats.Name slugcatIndex, IPlayerEdible eatenobject)
     {
@@ -284,7 +305,7 @@ public class BellyPlus : BaseUnityPlugin
     private void RainWorld_OnModsDisabled(On.RainWorld.orig_OnModsDisabled orig, RainWorld self, ModManager.Mod[] newlyDisabledMods)
     {
 		orig(self, newlyDisabledMods);
-		BPEnums.BPSoundID.UnregisterValues();
+		//BellyPlus.UnregisterValues();
 	}
 
     //MAYBE WE CAN USE THIS TO DETERMINE IF THE BONUS FOOD PIP IS SAVED 
@@ -308,6 +329,7 @@ public class BellyPlus : BaseUnityPlugin
     public static bool parasiticEnabled = false;
 	public static bool individualFoodEnabled = false;
 	public static bool improvedInputEnabled = false;
+	public static bool splatCatEnabled = false;
 
     public static bool fullBellyOverride = false;
 	public static bool versionCheck = false;
@@ -509,6 +531,7 @@ public static class BellyClass
 		public bool canSlugSlam;
 		public int slamThreshold; //for modders to adjust what level their modcat can activate slugslams
 		public bool maxFoodOverrideFlag; //for eatMeat shenanigans because I hate IL hooks
+		public int tailPushedAngle; //If our tail gets squished up or down by pushers
         public PhysicalObject forceEatTarget;
 		public ChunkSoundEmitter squeezeLoop;
 		public patch_Player.FoodOnBack foodOnBack;

@@ -52,7 +52,7 @@
     </Reference>
     <Reference Include="HOOKS-Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\BepInEx\plugins\HOOKS-Assembly-CSharp.dll</HintPath>
-	  <Private>false</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="ImprovedInput">
       <HintPath>Resources\ImprovedInput.dll</HintPath>
@@ -92,11 +92,15 @@
     </Reference>
     <Reference Include="PUBLIC-Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\BepInEx\utils\PUBLIC-Assembly-CSharp.dll</HintPath>
-	  <Private>false</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\Managed\Rewired_Core.dll</HintPath>
       <Private>false</Private>
+    </Reference>
+    <Reference Include="SplatCat">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\312520\3179993934\plugins\SplatCat.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="SprobParasiticScug">
       <HintPath>Resources\SprobParasiticScug.dll</HintPath>
@@ -109,7 +113,7 @@
     </Reference>
     <Reference Include="Unity.Mathematics">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\Managed\Unity.Mathematics.dll</HintPath>
-	  <Private>false</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\Managed\UnityEngine.dll</HintPath>
@@ -128,6 +132,7 @@
     <Compile Include="BellyPlusBase.cs" />
     <Compile Include="BPOptions.cs" />
     <Compile Include="CycleFoodChallenge.cs" />
+    <Compile Include="Extras.cs" />
     <Compile Include="FoodScoreChallenge.cs" />
     <Compile Include="patch_AbstractCreature.cs" />
     <Compile Include="patch_Cicada.cs" />
@@ -146,7 +151,6 @@
     <Compile Include="patch_Scavenger.cs" />
     <Compile Include="patch_SeedCob.cs" />
     <Compile Include="patch_SlugcatHand.cs" />
-    <Compile Include="BPEnums.cs" />
     <Compile Include="patch_SlugNPCAI.cs" />
     <Compile Include="patch_Vulture.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

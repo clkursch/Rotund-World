@@ -552,7 +552,7 @@ public class patch_Lizard
 						self.bodyChunks[i].vel = new Vector2(0, 0);
 					}
 					// Debug.Log("LZ!FWOMP!! EJECTED " + inPipe + "-" + self.GetBelly().boostStrain);
-					PlayExternalSound(self, BPEnums.BPSoundID.Fwump1, 0.03f, 1f);
+					PlayExternalSound(self, BellyPlus.Fwump1, 0.03f, 1f);
 					// self.Stun(20); //I THINK THIS MAKES THEM DROP THINGS
 					self.GetBelly().boostStrain /= 2; //MAYBE THIS WILL HELP THE REPEATING POPS
 				}
@@ -675,7 +675,7 @@ public class patch_Lizard
 			self.GetBelly().noStuck = 30;
 			if (squeezeThresh == 0 || squeezeThresh == -0.5f) //IF IT WAS EXACTLY OUR SIZE, PLAY A FUNNY SOUND
 			{
-				self.room.PlaySound(BPEnums.BPSoundID.Squinch1, self.mainBodyChunk, false, 0.1f, 1f - GetChubValue(self) / 10f);
+				self.room.PlaySound(BellyPlus.Squinch1, self.mainBodyChunk, false, 0.1f, 1f - GetChubValue(self) / 10f);
 				//BellyPlus.shortStuck[critNum] = 5; //TO ACCOMPANY THE SQUINCH~
 				// Debug.Log("LZ!SQUINCH " + inPipe);
 			}
@@ -725,11 +725,11 @@ public class patch_Lizard
 			}
 
 			if (crashVel > 15f) //AT THIS SPEED WE'LL BREACH THE ENTRANCE EVEN WITH THE REDUCED VEL. 
-				PlayExternalSound(self, BPEnums.BPSoundID.Squinch1, 0.2f, 1.3f);
+				PlayExternalSound(self, BellyPlus.Squinch1, 0.2f, 1.3f);
 
 			if (crashVel > 8f) //WE'RE GOING PRETTY FAST! CUT OUR VEL IN HALF
 			{
-				PlayExternalSound(self, BPEnums.BPSoundID.Fwump1, 0.12f, 1f);
+				PlayExternalSound(self, BellyPlus.Fwump1, 0.12f, 1f);
 				for (int i = 0; i < self.bodyChunks.Length; i++)
 				{
 					self.bodyChunks[i].vel *= 0.2f;
@@ -752,7 +752,7 @@ public class patch_Lizard
         {
 			float velMag = 0.0f + Mathf.Sqrt(crashVel * 2f);
 			float vol = Mathf.Min((velMag / 5f), 0.25f);
-			self.room.PlaySound(BPEnums.BPSoundID.Fwump2, self.mainBodyChunk, false, vol, 1.1f);
+			self.room.PlaySound(BellyPlus.Fwump2, self.mainBodyChunk, false, vol, 1.1f);
 			// Debug.Log("LZ!-----BWOMP! JUST GOT STUCK " + velMag);
 
 			for (int n = 0; n < 3; n++) //STRAIN DRIPS
@@ -1085,7 +1085,7 @@ public class patch_Lizard
 		}
 		else if (patch_Player.IsStuckOrWedged(self) && offscreen == false && (self.GetBelly().isSqueezing || self.GetBelly().assistedSqueezing)) //(num > 0f)
 		{
-			self.GetBelly().stuckLoop = self.room.PlaySound(BPEnums.BPSoundID.SqueezeLoop, self.mainBodyChunk, true, 0f, 0f, true); //Vulture_Jet_LOOP
+			self.GetBelly().stuckLoop = self.room.PlaySound(BellyPlus.SqueezeLoop, self.mainBodyChunk, true, 0f, 0f, true); //Vulture_Jet_LOOP
 			self.GetBelly().stuckLoop.requireActiveUpkeep = true;
 		}
 	}
@@ -1124,8 +1124,8 @@ public class patch_Lizard
 			//if (!self.GetBelly().inPipeStatus && self.inShortcut)
 			if (self.enteringShortCut != null && self.GetBelly().noStuck <= 0 && (self.bodyChunks[bdy].vel.magnitude > 7f))
 			{
-				self.room.PlaySound(BPEnums.BPSoundID.Squinch1, self.mainBodyChunk, false, 0.15f, 1.3f);
-				PlayExternalSound(self, BPEnums.BPSoundID.Fwump1, 0.12f, 1f);
+				self.room.PlaySound(BellyPlus.Squinch1, self.mainBodyChunk, false, 0.15f, 1.3f);
+				PlayExternalSound(self, BellyPlus.Fwump1, 0.12f, 1f);
 				if (BPOptions.debugLogs.Value)
 					Debug.Log("LZ!---WE HIT THAT PIPE AWFULLY SPEEDY!: " + self.bodyChunks[bdy].vel.magnitude);
 			}
@@ -1579,7 +1579,7 @@ public class patch_Lizard
 
 		//-------------POP SOUND-----------
 		popVol += (-0.1f + Mathf.Max(0, BPOptions.sfxVol.Value));
-		PlayExternalSound(self, BPEnums.BPSoundID.Pop1, (popVol / (!inPipe ? 2.5f : 2f)) * softenValue, 1f);
+		PlayExternalSound(self, BellyPlus.Pop1, (popVol / (!inPipe ? 2.5f : 2f)) * softenValue, 1f);
 
 		//CREATE SOME FUN SPARK FX
 		int sparkCount = Mathf.FloorToInt(Mathf.Lerp(0f, 12f, popMag)); //DEFAULT WAS 8
