@@ -1156,7 +1156,7 @@ public class patch_Player
 		//EXTRA CHONKY FELLAS GET EVEN SLOWER
 		if (self is Player)
         {
-			tileSeed -= ((Math.Min(GetOverstuffed(self as Player), 12) - self.shortcutDelay) * 0.2f) * (1 + (GapDifficulty() / 10f)); //LET EASY MODE PLAYERS GET UP MUCH EASIER ;
+			tileSeed -= ((Math.Min(GetOverstuffed(self as Player), 12) - self.shortcutDelay) * 0.2f) * (1 + (GapDifficulty() / 7.5f)); //LET EASY MODE PLAYERS GET UP MUCH EASIER ;
 			//DON'T TRAP PLAYERS BEHIND US FROM LEAVING PIPES WE'RE BLOCKING
 			tileSeed += ((self.GetBelly().fwumpFlag) * 0.5f) + (self.shortcutDelay * 0.2f);
 		}
@@ -1931,7 +1931,7 @@ public class patch_Player
 	public static void ObjGainLoosenProg(Creature obj, float amnt)
 	{
 		if (obj is Player)
-			obj.GetBelly().loosenProg += amnt * (GetLivingPlayers(obj as Player) == 1 ? 2f : 1.75f) * HardmodeScaling(6f, 1f);
+			obj.GetBelly().loosenProg += amnt * (GetLivingPlayers(obj as Player) == 1 ? 2f : 1.75f) * HardmodeScaling(6f, 1f) * Mathf.Lerp(1f, 2f, -BPOptions.bpDifficulty.Value / 5f); //OKAY, EASY MODE GETS EVEN FASTER
 		else
 			obj.GetBelly().loosenProg += amnt * HardmodeScaling(6f, 2f);
 	}
@@ -3139,6 +3139,9 @@ public class patch_Player
 		bool foodLover = IsFoodLover();
 		if (foodLover)
 		{
+			//SPECIAL FIX FOR FOOD QUEST WITH FOODLOVER ENABLED
+			if (self.room.game.IsStorySession && self.room.game.StoryCharacter == MoreSlugcatsEnums.SlugcatStatsName.Gourmand)
+				CheckGourmFoodQuest(self, self.grasps[graspIndex].grabbed);
 			if (SlugcatStats.SlugcatCanMaul(self.SlugCatClass))
 				self.SlugCatClass = MoreSlugcatsEnums.SlugcatStatsName.Artificer; //MAULING IS ALSO HANDLED HERE, SO PRETEND WE'RE ARTI IF WE CAN MAUL
 			else
@@ -3247,6 +3250,32 @@ public class patch_Player
 		
 		if (foodLover)
 			self.SlugCatClass = origClass;
+	}
+	
+	
+	//SINCE THE GAME THINKS WE ARE HUNTER AS WE EAT MEAT, CHECK THIS MANUALLY
+	public static void CheckGourmFoodQuest(Player player, PhysicalObject eatenObject)
+	{
+		if (ModManager.MSC && eatenObject.room != null && eatenObject.room.game.IsStorySession && eatenObject.room.game.StoryCharacter == MoreSlugcatsEnums.SlugcatStatsName.Gourmand && player.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Gourmand)
+		{
+			WinState.GourFeastTracker gourTracker = eatenObject.room.game.GetStorySession.saveState.deathPersistentSaveData.winState.GetTracker(MoreSlugcatsEnums.EndgameID.Gourmand, addIfMissing: true) as WinState.GourFeastTracker;
+			for (int j = 0; j < gourTracker.currentCycleProgress.Length; j++)
+			{
+				if (eatenObject.abstractPhysicalObject.type == AbstractPhysicalObject.AbstractObjectType.Creature)
+				{
+					int creatureIndex = WinState.GourmandPassageCreaturesAtIndexContains((eatenObject as Creature).Template.type, j);
+					if (creatureIndex > 0)
+					{
+						if (gourTracker.currentCycleProgress[j] <= 0)
+						{
+							player.showKarmaFoodRainTime = 300;
+							eatenObject.room.PlaySound(MoreSlugcatsEnums.MSCSoundID.Karma_Pitch_Discovery, 0f, 1f, 0.9f + UnityEngine.Random.value * 0.3f);
+						}
+						gourTracker.currentCycleProgress[j] = creatureIndex;
+					}
+				}
+			}
+		}
 	}
 	
 
@@ -4618,7 +4647,7 @@ public class patch_Player
 				ObjGainBoostStrain(otherObject as Player, 5, 15, 22);
 				ObjGainSquishForce(otherObject as Player, 17, 22);
 				//1/5 OF FALL SPEED PROGRESS GAIN
-				float progBoost = ((ramSpeed * 0.01f) * (1f + GetScaledOverstuffed(self) * 0.05f)) * (ObjIsSlick(self) ? 3f : 1f);
+				float progBoost = ((ramSpeed * 0.01f) * (1f + GetScaledOverstuffed(self) * 0.05f)) * (ObjIsSlick(self) ? 3f : 1f) * (self.lungsExhausted ? 0.1f : 1f);
 				Debug.Log("PHYSICS BOOST PROGRESS! " + progBoost + " CRASH VEL:" + ramSpeed);
 				ObjGainLoosenProg(self, progBoost);
 
@@ -4634,6 +4663,14 @@ public class patch_Player
 							
 				self.room.PlaySound(SoundID.Slugcat_Normal_Jump, self.mainBodyChunk.pos, 1.6f, 0.6f);
 				self.room.PlaySound(SoundID.Slugcat_Terrain_Impact_Medium, self.mainBodyChunk.pos, 1.4f, 1f);
+
+				//STICK TOGETHER INTERACTION - OK WE CAN'T LET THEM KEEP THE DRILL OF DEATH
+				if (self.enteringShortCut != null)
+				{
+                    self.enteringShortCut = null;
+                    self.GetBelly().corridorExhaustion = 125;
+                }
+					
             }
 			
 
@@ -4785,7 +4822,7 @@ public class patch_Player
 
 		if (PipeStatus(self)) // self.GetBelly().inPipeStatus)
 		{
-			patch_Player.ObjGainStuckStrain(self, critMass * 50);
+			patch_Player.ObjGainStuckStrain(self, critMass * 25);
 			ObjSetFwumpFlag(self, 5);
 			// PopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
 		}
@@ -4911,19 +4948,6 @@ public class patch_Player
 	public static void BP_Violence(On.Creature.orig_Violence orig, Creature self, BodyChunk source, Vector2? directionAndMomentum, BodyChunk hitChunk, PhysicalObject.Appendage.Pos hitAppendage, Creature.DamageType type, float damage, float stunBonus)
 	{
 		bool wasStunned = self.Stunned;
-		
-		//THIS DOESN'T WORK, PERMINANT DNG TRACKING STILL KILLS US
-		// if (!BellyPlus.VisualsOnly() && self is Player && BPOptions.fatArmor.Value && type == Creature.DamageType.Stab)
-		// {
-			// float myFat = (GetOverstuffed(self as Player) + Mathf.Max(GetChubValue(self as Player) - 1f, 0)) * (1 + ((BPOptions.bpDifficulty.Value * 1.2f) / 10f));
-			// float saveChance = Mathf.InverseLerp(0, 15, myFat) / 2f;
-			// if (UnityEngine.Random.value < saveChance)
-			// {
-				// damage /= 10f;
-				// Debug.Log("LECHONK SAVE! " + saveChance);
-			// }
-		// }
-		
 		
 		orig.Invoke(self, source, directionAndMomentum, hitChunk, hitAppendage, type, damage, stunBonus);
 		
@@ -5446,7 +5470,7 @@ public class patch_Player
 		float tileSize = (myChub + GetTileSizeMod(self, tilePosMod, myInputVec, 0, inPipe, self.submerged, false));
 		float preTileSize = tileSize;
 		
-		float diff = GapDifficulty() - (Mathf.Max(0, BPOptions.gapVariance.Value - 1) * 5f); //SCALE GAP TIGHTNESS BY VARIANCE SLIGHTLY
+		float diff = (GapDifficulty() * 1.5f) - (Mathf.Max(0, BPOptions.gapVariance.Value - 1) * 5f); //SCALE GAP TIGHTNESS BY VARIANCE SLIGHTLY
         //AND THEN THIS ONES FOR THE DIFFICULTY MODIFIER. BUT LETS LEAVE THE FIRST 5 STACKS OF THIS ALONE...
         if (tileSize > 3)
 			tileSize = 3 + ((tileSize - 3) * (1 + (diff / 10f)));
