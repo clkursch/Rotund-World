@@ -587,7 +587,7 @@ public class patch_Lizard
 
 			//SOME SPECIFICS FOR SOME VANILLAS
 			if (self.Template.type == CreatureTemplate.Type.GreenLizard)
-                sizeMod = 2;
+                sizeMod = 1.5f;
 			else if (mySize >= 2) //HYUUUGE BOIS I GUESS
 			{
                 naturalChub = 2;
@@ -610,22 +610,6 @@ public class patch_Lizard
                 sizeMod = -2;
             else if (mySize < 0.5) //MODDED BABBS
                 sizeMod = -2.5f;
-            
-
-
-			//if ((self.Template.type == CreatureTemplate.Type.GreenLizard || self.Template.type == MoreSlugcatsEnums.CreatureTemplateType.TrainLizard))
-			//	sizeMod = 2;
-			//else if (self.Template.type == CreatureTemplate.Type.YellowLizard || self.Template.type == CreatureTemplate.Type.RedLizard)
-			//	sizeMod = 1;
-			//else if (self.Template.type == MoreSlugcatsEnums.CreatureTemplateType.EelLizard || self.Template.type == MoreSlugcatsEnums.CreatureTemplateType.ZoopLizard)
-			//	sizeMod = -2;
-			//else if (self.Template.type == MoreSlugcatsEnums.CreatureTemplateType.SpitLizard)
-			//{
-			//	naturalChub = 2;
-			//	sizeMod = 2;
-			//}
-			
-
 		}
 		
 

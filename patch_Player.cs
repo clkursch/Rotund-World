@@ -4741,8 +4741,11 @@ public class patch_Player
                 //self.bodyChunks[0].vel.y = Mathf.Max(-1, self.bodyChunks[0].vel.y);
                 //self.bodyChunks[0].pos.y += 1;
             }
-				
-		}
+
+            //self.emoteSleepCounter > 1.4f
+            if (self.slugcatStats?.name?.value == "NoirCatto" && bedge.slugcatStats?.name?.value == "Friend" && self.emoteSleepCounter > 1.4f)
+                patch_PlayerGraphics.SolaceUpdate(self);
+        }
 
         //ROLLY POLY!!
         if (otherObject is Player && !self.isSlugpup && !IsCramped(otherObject as Player) && (otherObject as Player).Consious
@@ -5245,8 +5248,8 @@ public class patch_Player
 
     public static void PlaySolaceFiles(Player player, bool alt)
     {
-		float mass = TheFriend.NoirThings.NoirCatto.DefaultFirstChunkMass;
-        SoundID sound = alt ? TheFriend.NoirThings.NoirCatto.Meow2SND : TheFriend.NoirThings.NoirCatto.MeowFrustratedSND;
+        float mass = TheFriend.CharacterThings.NoirThings.NoirCatto.DefaultFirstChunkMass;
+        SoundID sound = alt ? TheFriend.CharacterThings.NoirThings.NoirCatto.Meow2SND : TheFriend.CharacterThings.NoirThings.NoirCatto.MeowFrustratedSND;
         PlayNoirMeow(player, alt, mass, sound);
     }
 
@@ -7290,12 +7293,14 @@ public class patch_Player
 				//Creature myObject = null;
 
 
-				if (myObject is Player)
+				if (myObject is Player target)
                 {
-					boostAmnt *= 1 + (1 - GetSweetSpotPerc(myObject as Player));
-					loosenAmnt *= 1 + 2f * (1 - GetSweetSpotPerc(myObject as Player));
+					boostAmnt *= 1 + (1 - GetSweetSpotPerc(target));
+					loosenAmnt *= 1 + 2f * (1 - GetSweetSpotPerc(target));
                     if (BellyPlus.splatCatEnabled)
-                        TrySplat(myObject as Player, 0, myObject.GetBelly().stuckVector, 0.25f, 1f);
+                        TrySplat(target, 0, myObject.GetBelly().stuckVector, 0.25f, 1f);
+					if (self.slugcatStats?.name?.value == "NoirCatto" && target.slugcatStats?.name?.value == "Friend" && UnityEngine.Random.value < 0.1f)
+						patch_PlayerGraphics.SolaceUpdate(self);
                 }
                 else if (myObject is Lizard)
 				{

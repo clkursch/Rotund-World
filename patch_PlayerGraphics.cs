@@ -483,8 +483,9 @@ public class patch_PlayerGraphics
                 //sLeaser.sprites[9].element = Futile.atlasManager.GetElementWithName("Face" + ((!self.player.dead) ? "B" : "Dead"));
                 self.player.Blink(5);
             }
-            
 
+            if (self.player.slugcatStats?.name?.value == "NoirCatto" && heatVal > 0.7 && Mathf.Max(self.player.GetBelly().beingPushed, self.player.GetBelly().pushingOther) > 0f)
+                SolaceUpdate(self.player);
 
             if (patch_Player.GetPant(self.player) && breathNum > 0.9f)
             {
@@ -662,6 +663,17 @@ public class patch_PlayerGraphics
 
         if (self.player?.slugcatStats?.name?.value == "Pearlcat")
             CloakDraw(self, sLeaser);
+    }
+
+
+    public static void SolaceUpdate(Player player)
+    {
+        if (player.GetBelly().miscTimer == 0)
+        {
+            SoundID sound = TheFriend.CharacterThings.NoirThings.NoirCatto.PurrLoopSND;
+            player.room?.PlaySound(sound, player.firstChunk, false, 0.8f, 1.0f);
+            player.GetBelly().miscTimer = 40 * 14;
+        }
     }
 
 
