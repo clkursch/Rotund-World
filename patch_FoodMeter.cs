@@ -108,7 +108,7 @@ public class patch_FoodMeter
 		if (self.showCount > self.circles.Count)
 			return; //THAT WOULD HAVE CRASHED US!
 
-		orig.Invoke(self);
+        orig.Invoke(self);
 	}
 
 

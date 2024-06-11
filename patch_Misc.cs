@@ -59,7 +59,7 @@ public class patch_Misc
         On.Menu.ControlMap.ctor += BPControlMap_ctor;
         On.SlugcatStats.SlugcatFoodMeter += BPSlugcatStats_SlugcatFoodMeter;
         On.HUD.KarmaMeter.ctor += BPKarmaMeter_ctor; //ACTUAL NONSENSE
-
+        On.PlayerSessionRecord.AddEat += PlayerSessionRecord_AddEat;
 
 
         On.FliesRoomAI.CreateFlyInHive += BP_CreateFlyInHive;
@@ -83,16 +83,61 @@ public class patch_Misc
 		);
 
     }
-	
-	
-	/*public static void PostPatch()
+
+    private static void PlayerSessionRecord_AddEat(On.PlayerSessionRecord.orig_AddEat orig, PlayerSessionRecord self, PhysicalObject eatenObject)
+    {
+        for (int i = self.eats.Count - 1; i >= 0; i--)
+        {
+            if (self.eats[i].ID == eatenObject.abstractPhysicalObject.ID)
+            {
+                return;
+            }
+        }
+
+        //RUN THE SAME CHECK WE NORMALLY WOULD, BUT ONLY IF WE AREN'T GOURM
+        if (ModManager.MSC && eatenObject.room != null && eatenObject.room.game.IsStorySession && eatenObject.room.game.StoryCharacter == MoreSlugcatsEnums.SlugcatStatsName.Gourmand && (eatenObject.room.game.Players[self.playerNumber].realizedCreature as Player).SlugCatClass != MoreSlugcatsEnums.SlugcatStatsName.Gourmand)
+        {
+            WinState.GourFeastTracker gourTracker = eatenObject.room.game.GetStorySession.saveState.deathPersistentSaveData.winState.GetTracker(MoreSlugcatsEnums.EndgameID.Gourmand, addIfMissing: true) as WinState.GourFeastTracker;
+            for (int j = 0; j < gourTracker.currentCycleProgress.Length; j++)
+            {
+                if (eatenObject.abstractPhysicalObject.type == AbstractPhysicalObject.AbstractObjectType.Creature)
+                {
+                    int creatureIndex = WinState.GourmandPassageCreaturesAtIndexContains((eatenObject as Creature).Template.type, j);
+                    if (creatureIndex > 0)
+                    {
+                        if (gourTracker.currentCycleProgress[j] <= 0)
+                        {
+                            (eatenObject.room.game.Players[self.playerNumber].realizedCreature as Player).showKarmaFoodRainTime = 300;
+                            eatenObject.room.PlaySound(MoreSlugcatsEnums.MSCSoundID.Karma_Pitch_Discovery, 0f, 1f, 0.9f + UnityEngine.Random.value * 0.3f);
+                        }
+                        gourTracker.currentCycleProgress[j] = creatureIndex;
+                    }
+                }
+                else if (WinState.GourmandPassageRequirementAtIndex(j) == eatenObject.abstractPhysicalObject.type || (WinState.GourmandPassageRequirementAtIndex(j) == AbstractPhysicalObject.AbstractObjectType.SSOracleSwarmer && eatenObject.abstractPhysicalObject.type == AbstractPhysicalObject.AbstractObjectType.SLOracleSwarmer))
+                {
+                    //Custom.Log("Item flagged for gourmand collection", eatenObject.abstractPhysicalObject.type.ToString());
+                    if (gourTracker.currentCycleProgress[j] <= 0)
+                    {
+                        (eatenObject.room.game.Players[self.playerNumber].realizedCreature as Player).showKarmaFoodRainTime = 300;
+                        eatenObject.room.PlaySound(MoreSlugcatsEnums.MSCSoundID.Karma_Pitch_Discovery, 0f, 1f, 0.9f + UnityEngine.Random.value * 0.3f);
+                    }
+                    gourTracker.currentCycleProgress[j] = 1;
+                }
+            }
+        }
+
+        orig(self, eatenObject);
+    }
+
+
+    /*public static void PostPatch()
     {
 		//RUN THIS AFTER ALL OF THE MODLOADER STUFF US DONE SO WE DON'T DOUBLE-ADD BUR-ROTUND
 		On.Expedition.ExpeditionProgression.SetupBurdenGroups += ExpeditionProgression_SetupBurdenGroups;
 	}*/
-	
 
-    
+
+
     private static IntVector2 BPSlugcatStats_SlugcatFoodMeter(On.SlugcatStats.orig_SlugcatFoodMeter orig, SlugcatStats.Name slugcat)
     {
 		IntVector2 result = orig.Invoke(slugcat);

@@ -90,7 +90,7 @@ public class patch_Player
 		On.Player.JollyUpdate += BP_JollyUpdate;
         On.Player.JollyEmoteUpdate += Player_JollyEmoteUpdate;
         //On.Player.ChangeCameraToPlayer +=  //IT'S A STATIC SO WE CAN'T DO IT? D:
-        On.Player.TriggerCameraSwitch += BP_TriggerCameraSwitch; //JUST TO CATCH A CRASH I GUESS
+        //On.Player.TriggerCameraSwitch += BP_TriggerCameraSwitch; //JUST TO CATCH A CRASH I GUESS
 
         On.Player.GraphicsModuleUpdated += Player_GraphicsModuleUpdated;
 		On.SlugcatStats.NourishmentOfObjectEaten += SlugcatStats_NourishmentOfObjectEaten;
@@ -2906,7 +2906,8 @@ public class patch_Player
 			orig.Invoke(self, add - overflowFood);
 			if (overflowFood > 0)
 			{
-				self.AddFood(overflowFood); //GOTTA DO IT AGAIN CUZ OUR BELLY WILL CUT OFF THE EXTRA.
+                self.abstractCreature.GetAbsBelly().myFoodInStomach -= overflowFood;//HEY WE'RE ABOUT TO ADD TOO MUCH PERSONAL FOOD BECAUSE WE DIDN'T ACCOUNT FOR OVERFLOW BEFORE RUNNING ADDFOOD AGAIN! JUST SHAVE THE EXTRA OFF THE TOP
+                self.AddFood(overflowFood); //GOTTA DO IT AGAIN CUZ OUR BELLY WILL CUT OFF THE EXTRA.
 			}
 		}
 		else
@@ -2959,14 +2960,15 @@ public class patch_Player
 			
 			//WE NEED TO CAREFULLY SUBTRACT 1 AT A TIME IF USING THIS METHOD
 			self.abstractCreature.GetAbsBelly().myFoodInStomach -= 1;
+            CheckBonusFood(self, false); //WE FORGOT TO UPDATE THESE INBETWEEN LOOPS! THIS CAN CAUSE ISSUES IF SUBTRACTING MORE THAN 1
 
-			//SUBTRACT FROM THE POINT COUNTER TOO
-			if (self.abstractCreature.world.game.IsStorySession && self.AI == null)
+            //SUBTRACT FROM THE POINT COUNTER TOO
+            if (self.abstractCreature.world.game.IsStorySession && self.AI == null)
 				self.abstractCreature.world.game.GetStorySession.saveState.totFood -= 1;
 			else if (self.abstractCreature.world.game.IsArenaSession)
 				self.room.game.GetArenaGameSession.arenaSitting.players[self.playerState.playerNumber].AddSandboxScore(-1);
 
-            //self.room.game.GetArenaGameSession.arenaSitting.players[self.playerState.playerNumber].AddSandboxScore(1);
+			//self.room.game.GetArenaGameSession.arenaSitting.players[self.playerState.playerNumber].AddSandboxScore(1);
 
             //WE DON'T CURRENTLY DO THIS, BUT IF ANYONE EVER SUBTRACTS MORE THAN ONE, JUST RUN THE SINGLE MULTIPLE TIMES.
             if (sub > 1)
@@ -2974,7 +2976,7 @@ public class patch_Player
 		}
 		else
 		{
-			self.abstractCreature.GetAbsBelly().myFoodInStomach -= sub;
+            self.abstractCreature.GetAbsBelly().myFoodInStomach -= sub;
 			orig.Invoke(self, sub);
 		}
 
