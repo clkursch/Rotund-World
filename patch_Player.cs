@@ -1412,8 +1412,9 @@ public class patch_Player
 		IntVector2 myTilePos = self.room.GetTilePosition(self.bodyChunks[1].pos + new Vector2(posMod.x * 20, posMod.y * 20));
 		float tileSeed = (myTilePos.x + myTilePos.y) + seedKey;
 		float tileSizeMod = sizeMod;
-		//Debug.Log("-----TILE SEED!: " + myTilePos.x + "+" + myTilePos.y + " = "+ tileSeed);
-		bool coinFlip = (tileSeed%4 == 0); //25% CHANCE TO BE TRUE ON ANY GIVEN TILE
+		float gapVariance = BPOptions.gapVariance.Value;
+        //Debug.Log("-----TILE SEED!: " + myTilePos.x + "+" + myTilePos.y + " = "+ tileSeed);
+        bool coinFlip = (tileSeed%4 == 0); //25% CHANCE TO BE TRUE ON ANY GIVEN TILE
 
 		while (tileSeed > 8)
 		{
@@ -1548,9 +1549,10 @@ public class patch_Player
 			string myRoom = self.room.roomSettings.name.ToString();
 			if (myRoom == "SS_AI" || myRoom == "DM_AI")
 			{
-				tileSizeMod += 14;
-				rainWarning = false;
-			}
+				tileSizeMod += 14 * Mathf.Max(1, BPOptions.gapVariance.Value);
+                rainWarning = false;
+				gapVariance = 1f;
+            }
 			else if (myRoom == "SU_A44" || myRoom == "SL_C16") //TUTORIAL BERRY ROOM AND THAT PEBBLES CRACKED ROOM
             {
 				tileSizeMod += 8 + myChub;
@@ -1636,7 +1638,7 @@ public class patch_Player
 				Debug.Log("-----LIZARD TO CATCH UP!): " + tileSeed);
 		}
 
-        return -4f + (tileSeed /= 2f) * BPOptions.gapVariance.Value;
+        return -4f + (tileSeed /= 2f) * gapVariance;
 	}
 	
 	
