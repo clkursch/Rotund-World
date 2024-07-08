@@ -78,14 +78,14 @@ public class patch_Player
 		On.Player.Die += BP_Die;
 		On.Player.Tongue.decreaseRopeLength += BPdecreaseRopeLength;
 		On.Player.DeathByBiteMultiplier += BP_DeathByBiteMultiplier;
-		On.Player.Stun += BP_Stun;
+		//On.Player.Stun += BP_Stun;
         On.Spear.HitSomething += BPSpear_HitSomething;
 		// On.Player.SpearStick += ;
 
 		On.Player.ClassMechanicsGourmand += Player_ClassMechanicsGourmand;
 		On.Player.SlugSlamConditions += BP_SlugSlamConditions;
 		On.Player.CanBeSwallowed += BP_CanBeSwallowed;
-        On.Player.CanEatMeat += BPPlayer_CanEatMeat;
+        
 		//I'M TIRED OF THIS NOT WORKING!
 		On.Player.JollyUpdate += BP_JollyUpdate;
         On.Player.JollyEmoteUpdate += Player_JollyEmoteUpdate;
@@ -842,7 +842,7 @@ public class patch_Player
     
 
 	//THERE ARE A NUMBER OF OTHER FACTORS INVOLVED TAT MAKE THIS TRICKY. SO RATHER THAN RETURN TRUE WHEN NEEDED, WE'LL PRETEND WE'RE HUNTER WHEN NEEDED
-	private static bool BPPlayer_CanEatMeat(On.Player.orig_CanEatMeat orig, Player self, Creature crit)
+	public static bool BPPlayer_CanEatMeat(On.Player.orig_CanEatMeat orig, Player self, Creature crit)
 	{
 		if (IsFoodLover())
 		{
@@ -4992,7 +4992,17 @@ public class patch_Player
 					//IDK IF THE STUN WILL CANCEL OUT ANY OF THIS
 				}
 			}
-		}
+
+            //OKAY NOW APPLY PLAYER STUN RESISTANCE HERE
+            if (self is Player player && !BellyPlus.VisualsOnly() && BPOptions.fatArmor.Value)
+            {
+                float fbase = Mathf.Max(GetChubValue(self) - 1f, 0) / 15f; // (0.1 - 0.2)
+                float fptwo = (fbase + (GetOverstuffed(player) / 50f)) * (1 + ((BPOptions.bpDifficulty.Value * 1.2f) / 10f));  //(hits 0.50 at 7 overstuffed)
+                float stunResist = Mathf.Max(1f - fptwo, 0.5f); //0.5 //ISN'T THIS BACKWARDS?? SHOULDN'T THE MIN BE 1?
+                //Debug.Log("STUN AMNT " + stunResist + " - " + fptwo + " - " + stunResist);
+				player.stun = Mathf.CeilToInt(player.stun * stunResist);
+            }
+        }
 	}
 	
 	
@@ -5013,19 +5023,24 @@ public class patch_Player
 	}
 	
 	
+	//OKAY WE CAN'T APPLY STUN RESISTANCE TO ALL STUNS. HYPOTHERMIA DEATHS REQUIRE 60 STUN TO DIE WHICH CAN'T BE REACHED WITH STUN RESISTANCE. MOVING TO VIOLENCE INSTEAD
+	/*
 	public static void BP_Stun(On.Player.orig_Stun orig, Player self, int st)
 	{
-		if (!BellyPlus.VisualsOnly() && BPOptions.fatArmor.Value && st > 5)
+		//Debug.Log("BASE STUN AMNT " + st);
+
+        if (!BellyPlus.VisualsOnly() && BPOptions.fatArmor.Value && st > 20)
 		{
 			float fbase = Mathf.Max(GetChubValue(self) - 1f, 0) / 15f; // (0.1 - 0.2)
 			float fptwo = (fbase + (GetOverstuffed(self) / 50f)) * (1 + ((BPOptions.bpDifficulty.Value * 1.2f) / 10f));  //(hits 0.50 at 7 overstuffed)
-			float stunResist = Mathf.Min(1f - fptwo, 0.5f); //0.35
+			float stunResist = Mathf.Max(1f - fptwo, 0.5f); //0.5 //ISN'T THIS BACKWARDS?? SHOULDN'T THE MIN BE 1?
+			Debug.Log("STUN AMNT " + Mathf.CeilToInt(st * stunResist) + " - " + fptwo + " - " + stunResist);
 			orig.Invoke(self, Mathf.CeilToInt(st * stunResist));
 		}
 		else
 			orig.Invoke(self, st);
 	}
-	
+	*/
 	
 	// public override bool SpearStick(Weapon source, float dmg, BodyChunk chunk, PhysicalObject.Appendage.Pos appPos, Vector2 direction)
 	// {
@@ -6117,11 +6132,12 @@ public class patch_Player
 		//LETS GET A BIT MORE TOASTY WARM
 		if (self.room != null && self.room.blizzard)
 		{
-			float stuffing = (GetChubFloatValue(self) / 8f) + (GetOverstuffed(self) / 8f);
+			float stuffing = (GetChubFloatValue(self) / 4f) + (GetOverstuffed(self) / 5f);
 			float warmth = RainWorldGame.DefaultHeatSourceWarmth * Mathf.Clamp(stuffing, 0f, 5f);
-			//self.Hypothermia -= Mathf.Lerp(warmth, 0f, self.HypothermiaExposure); //WITH THIS MATH, A FULL STRENGTH BLIZARD IS UNEFFECTED BY OUR FATNESS AT ALL. BUT LANTERNS WORK THIS WAY TOO SO WHATEVER
-            self.Hypothermia -= Mathf.Lerp(warmth, 0f, (self.HypothermiaExposure / 2f)); //FORGET IT. HALF EFFECTIVENESS IN FULL BLIZARD INSTEAD OF NO EFFECTIVENESS
-        }
+			self.Hypothermia -= Mathf.Lerp(warmth, 0f, self.HypothermiaExposure); //WITH THIS MATH, A FULL STRENGTH BLIZARD IS UNEFFECTED BY OUR FATNESS AT ALL. BUT LANTERNS WORK THIS WAY TOO SO WHATEVER
+			//self.Hypothermia -= Mathf.Lerp(warmth, 0f, (self.HypothermiaExposure / 2f)); //FORGET IT. HALF EFFECTIVENESS IN FULL BLIZARD INSTEAD OF NO EFFECTIVENESS
+			//Debug.Log("REDUCING HYPO: " + Mathf.Lerp(warmth, 0f, self.HypothermiaExposure) + " LANTERNS: " + stuffing);
+		}
 
 		//IF WE'RE SUBMERGED MAKE US SLICK (AND WASH OFF PREVIOUS SLICKNESS)
 		if (self.bodyChunks[1].submersion > 0.5)

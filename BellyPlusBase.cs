@@ -124,7 +124,7 @@ This item can only be swallowed if there are no items stored in your belly.
 namespace RotundWorld;
 
 
-[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.10.6")]
+[BepInPlugin("willowwisp.bellyplus", "Rotund World", "1.10.7")]
 
 public class BellyPlus : BaseUnityPlugin
 {
@@ -231,7 +231,8 @@ public class BellyPlus : BaseUnityPlugin
             if (IsInit) return;
 
             On.SlugcatStats.NourishmentOfObjectEaten += SlugcatStats_NourishmentOfObjectEaten;
-			On.PlayerGraphics.DrawSprites += patch_PlayerGraphics.LatePriorityDrawSprites;
+            On.Player.CanEatMeat += patch_Player.BPPlayer_CanEatMeat;
+            On.PlayerGraphics.DrawSprites += patch_PlayerGraphics.LatePriorityDrawSprites;
 
 			//REGISTER CUSTOM THINGS
 			Modding.Expedition.CustomBurdens.Register(new Obese());
