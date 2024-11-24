@@ -1,4 +1,6 @@
 ﻿
+using UnityEngine;
+
 namespace RotundWorld;
 
 public class patch_RainCycle
@@ -12,19 +14,8 @@ public class patch_RainCycle
 	{
         float newMinutes = minutes;
 		if (BPOptions.extraTime.Value && !BellyPlus.VisualsOnly())
-			newMinutes *= 1.3f;
+			newMinutes *= 1.3f + Mathf.Max(0f, (BPOptions.bpDifficulty.Value / 5f));
 		orig.Invoke(self, world, newMinutes);
-	}
-	
-	public static void BP_Update(On.RainCycle.orig_Update orig, RainCycle self)
-	{
-        if (BellyPlus.noRain && self.timer == 5000)
-		{
-			self.pause = 1073741823;
-			self.timer++;
-		}
-		else
-			orig.Invoke(self);
 	}
 
 }

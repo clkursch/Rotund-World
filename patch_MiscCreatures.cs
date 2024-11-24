@@ -196,26 +196,69 @@ public class patch_MiscCreatures
     }
 
 
-
-
-    public static void UpdateBellySize(Creature self, int amnt)
+    public static void AddFood(Creature self, int amnt)
     {
-        if (self is DropBug && self.graphicsModule != null)
-			(self.graphicsModule as DropBugGraphics).bodyThickness += 0.3f * amnt;
-	
-		else if (self is Deer && !BellyPlus.VisualsOnly())
-		{
-			float massMod = 1f + Mathf.Max(0f, (self.abstractCreature.GetAbsBelly().myFoodInStomach - 2) / 20f);
-			for (int i = 1; i < 5; i++)
-			{
+        if (patch_MiscCreatures.CheckFattable(self) == false)
+            return;
+
+        self.abstractCreature.GetAbsBelly().myFoodInStomach += amnt;
+        ObjUpdateBellySize(self);
+    }
+
+
+    
+
+
+    public static void ObjUpdateBellySize(Creature self)
+    {
+        if (self is Lizard)
+            patch_Lizard.UpdateBellySize(self as Lizard);
+        else if (self is Cicada)
+            patch_Cicada.UpdateBellySize(self as Cicada);
+        else if (self is Vulture)
+            patch_Vulture.UpdateBellySize(self as Vulture);
+		else if (self is LanternMouse)
+			patch_LanternMouse.UpdateBellySize(self as LanternMouse);
+        else if (self is Scavenger)
+        {
+            if (self.abstractCreature.GetAbsBelly().myFoodInStomach == 5)
+                self.abstractCreature.GetAbsBelly().myFoodInStomach++; //A LITTLE BUMP TO GET FROM SKINNY TO WELL FED
+            patch_Scavenger.UpdateBellySize(self as Scavenger);
+            ReloadGraphicsModule(self, self.room);
+        }
+        else if (self is DropBug && self.graphicsModule != null)
+            (self.graphicsModule as DropBugGraphics).bodyThickness += 0.3f * self.abstractCreature.GetAbsBelly().myFoodInStomach; //amnt;
+        else if (self is Deer && !BellyPlus.VisualsOnly())
+        {
+            float massMod = 1f + Mathf.Max(0f, (self.abstractCreature.GetAbsBelly().myFoodInStomach - 2) / 20f);
+            for (int i = 1; i < 5; i++)
+            {
                 float num = (float)i / 4f;
                 num = (1f - num) * 0.5f + Mathf.Sin(Mathf.Pow(num, 0.5f) * 3.1415927f) * 0.5f;
                 num = Mathf.Pow(Mathf.Max(0f, Mathf.Lerp(num, 1f, 0.2f)), 0.7f);
                 self.bodyChunks[i].rad = Mathf.Lerp(10f, 35f, num) * massMod;
-			}
-		}
+            }
+        }
     }
 
+
+
+    public static void ReloadGraphicsModule(Creature self, Room room)
+    {
+        if (self.graphicsModule != null && self.room != null)
+        {
+            self.graphicsModule.dispose = true; //GET RID OF THE OLD GRAPHICS MODULE
+            self.graphicsModule = null;
+            self.InitiateGraphicsModule(); //MAKES A NEW GRAPHICS MODULE
+            //REGISTERS THE NEW GRAPHICS MODULE IN THE ROOM
+            self.room.drawableObjects.Add(self.graphicsModule);
+            for (int i = 0; i < self.room.game.cameras.Length; i++)
+            {
+                if (self.room.game.cameras[i].room == self.room)
+                    self.room.game.cameras[i].NewObjectInRoom(self.graphicsModule);
+            }
+        }
+    }
 
 
     private static void BPBigEel_ctor(On.BigEel.orig_ctor orig, BigEel self, AbstractCreature abstractCreature, World world)
@@ -526,8 +569,7 @@ public class patch_MiscCreatures
         {
             if (!self.GetBelly().fatDisabled && ModManager.MMF && self.AI.denFinder.GetDenPosition() != null && movementConnection.destinationCoord == self.AI.denFinder.GetDenPosition() && self.AI.behavior == JetFishAI.Behavior.ReturnPrey && self.grasps[0] != null && !(self.grasps[0].grabbed is Creature))
             {
-                self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
-                UpdateBellySize(self, 0);
+                AddFood(self, 1);
             }
         }
         orig(self);
@@ -553,7 +595,7 @@ public class patch_MiscCreatures
     {
         orig.Invoke(self, abstractCreature, world);
         CheckIn(self);
-        UpdateBellySize(self, 0);
+        ObjUpdateBellySize(self);
         self.Template.meatPoints = 30;
     }
 
@@ -561,10 +603,7 @@ public class patch_MiscCreatures
     {
         if (self.eatCounter == 50 && !self.GetBelly().fatDisabled)
         {
-            self.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
-            UpdateBellySize(self, 0);
-            //self.graphicsModule.Reset();
-            //self.graphicsModule.
+            AddFood(self, 1);
         }
         orig(self, eu, support, forwardPower);
     }

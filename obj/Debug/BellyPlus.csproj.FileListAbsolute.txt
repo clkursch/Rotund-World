@@ -18,3 +18,7 @@ C:\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\Streamin
 C:\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\StreamingAssets\mods\fatworld\plugins\BellyPlus.pdb
 C:\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\StreamingAssets\mods\fatworld\newest\plugins\BellyPlus.dll
 C:\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\StreamingAssets\mods\fatworld\newest\plugins\BellyPlus.pdb
+C:\Users\ckurs\source\repos\Rotund-World\Rotund-World\obj\Debug\BellyPlus.csproj.AssemblyReference.cache
+C:\Users\ckurs\source\repos\Rotund-World\Rotund-World\obj\Debug\BellyPlus.csproj.CoreCompileInputs.cache
+C:\Users\ckurs\source\repos\Rotund-World\Rotund-World\obj\Debug\BellyPlus.dll
+C:\Users\ckurs\source\repos\Rotund-World\Rotund-World\obj\Debug\BellyPlus.pdb

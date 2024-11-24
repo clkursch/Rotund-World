@@ -13,6 +13,9 @@ using System.Linq;
 //check grabbing stuck player while holding centipede
 //attempted fix for expedition enhanced exception
 //Scav hand update should run on update instead of drawsprite
+
+//Lantern mice sprites to scale past 8
+//Extra cycle time now scales based on difficulty. Higher difficulty will allow a bit of extra time.
 */
 
 
@@ -863,20 +866,20 @@ public class patch_Player
 	public static void BP_JollyUpdate(On.Player.orig_JollyUpdate orig, Player self, bool eu)
 	{
         orig.Invoke(self, eu);
-		if (BellyPlus.VisualsOnly())
+		if (BellyPlus.VisualsOnly() || self.DreamState || self.isNPC)
 			return;
 
         //IF WE'D NORMALLY SKIP THIS, RUN IT INSTEAD
         if (!ModManager.CoopAvailable && !self.isNPC && self.room != null)
 		{
-			self.JollyInputUpdate();	
+			self.JollyInputUpdate();
 			self.JollyPointUpdate();
 			if (self.jollyButtonDown && self.room.game.cameras[0].hud != null && self.room.game.cameras[0].hud.map != null)
 			{
                 // self.input[0].mp = false; //self.standStillOnMapButton = true;
                 // self.input[1].mp = false; //self.standStillOnMapButton = true;
                 self.room.game.cameras[0].hud.map.fadeCounter = 0; //.fade
-           }
+            }
 		}
         //else
         //orig.Invoke(self, eu);
@@ -1755,20 +1758,6 @@ public class patch_Player
 	//AND LIZAR!
 	public static Lizard FindLizardInRange(Creature self, int myChunk, int lizChunk)
 	{
-        /*foreach (KeyValuePair<int, Lizard> kvp in patch_Lizard.lizardBook)
-		{
-			if (
-				kvp.Value != null
-				&& kvp.Value != self
-				&& kvp.Value.room == self.room
-				&& kvp.Value.dead == false
-				&& Custom.DistLess(self.bodyChunks[myChunk].pos, kvp.Value.bodyChunks[lizChunk].pos, 35f)
-			)
-			{
-				return kvp.Value as Lizard;
-			}
-		}*/
-
         if (self.room == null)
             return null;
 
@@ -1787,12 +1776,33 @@ public class patch_Player
 			}
 		}
 		
-		
 		return null;
 	}
 
-	
-	public static BodyPart GetHead(Player self) //lol
+    //CheckFattable
+    public static Creature FindFatCreatureInRange(Creature self)
+    {
+        if (self.room == null)
+            return null;
+
+        for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++)
+        {
+            if (self.room.abstractRoom.creatures[i].realizedCreature != null
+                && self.room.abstractRoom.creatures[i].realizedCreature is Creature crit
+				&& patch_MiscCreatures.CheckFattable(crit)
+                && crit != self && !(crit is Player) && !crit.dead
+                && crit.room != null && crit.room == self.room
+                && Custom.DistLess(self.bodyChunks[1].pos, crit.mainBodyChunk.pos, 50f)
+            )
+            {
+                return crit;
+            }
+        }
+        return null;
+    }
+
+
+    public static BodyPart GetHead(Player self) //lol
 	{
 		return (self.graphicsModule as PlayerGraphics).head;
     }
@@ -2266,7 +2276,7 @@ public class patch_Player
 		
 		//USES OUR MOVEMENT MODIFIER FOR OUR POLE CLIMB SPEED
 		// self.slugcatStats.poleClimbSpeedFac = self.GetBelly().origPoleSpeed * self.GetBelly().runSpeedMod; 
-		self.slugcatStats.poleClimbSpeedFac = self.abstractCreature.GetAbsBelly().origPoleSpeed * Mathf.Lerp(-0.15f, 1f, Mathf.Max(self.GetBelly().runSpeedMod, 0.3f));  //MAKE POLE CLIMBING SPEED CHANGES MORE NOTICEABLE //-0.35f, 1f,
+		self.slugcatStats.poleClimbSpeedFac = self.abstractCreature.GetAbsBelly().origPoleSpeed * Mathf.Lerp(-0.10f, 1f, Mathf.Max(self.GetBelly().runSpeedMod, 0.35f)); //AND THEN TONE IT BACK A BIT... //MAKE POLE CLIMBING SPEED CHANGES MORE NOTICEABLE //-0.35f, 1f,
 
         float newWeight = baseWeight;
 		float corridorSpeedFact = 1f;
@@ -6034,10 +6044,14 @@ public class patch_Player
 			// if (stuffing > 4)
 				// stuffing = Mathf.Min(4 + ((stuffing - 4) / 4), 7);
 			if (stuffing > 3)
-				stuffing = Mathf.Min(3f + ((stuffing - 3) / 4), BPOptions.easilyWinded.Value ? 7f : 6.5f);
-			
-			//WE WTILL WANT TO BE ABLE TO PULL UP AS GOURMAND IF WE'RE GOURMAND EXHAUSTED. BUT MAKE IT HARDER
-			if ((self.lungsExhausted && !self.gourmandExhausted) || (self.gourmandExhausted && self.GetBelly().corridorExhaustion >= 80) && !(self.input[0].jmp && !self.input[1].jmp))
+				stuffing = Mathf.Min(3f + ((stuffing - 3) / 4), BPOptions.easilyWinded.Value ? 7f : 6.2f);
+
+			//LET US CHANGE THE DIRECTION WE PULL UP IF NEEDED
+			if (stuffing > 4 && self.input[0].x != 0)
+				self.flipDirection = self.input[0].x;
+
+            //WE WTILL WANT TO BE ABLE TO PULL UP AS GOURMAND IF WE'RE GOURMAND EXHAUSTED. BUT MAKE IT HARDER
+            if ((self.lungsExhausted && !self.gourmandExhausted) || (self.gourmandExhausted && self.GetBelly().corridorExhaustion >= 80) && !(self.input[0].jmp && !self.input[1].jmp))
 			{
 				MakeStrainSparks(self, 8);
 				self.room.PlaySound(SoundID.Slugcat_Normal_Jump, self.mainBodyChunk.pos, 1.2f, 0.6f);
@@ -7635,16 +7649,16 @@ public class patch_Player
 		//SOME DEBUG TOOLS
 		if (BPOptions.debugTools.Value && self.input[0].jmp && !self.input[1].jmp && self.input[0].thrw)
 		{
-			Lizard lizardPartner = FindLizardInRange(self, 0, 0);
-			if (lizardPartner != null)
-			{
-				lizardPartner.abstractCreature.GetAbsBelly().myFoodInStomach++;
-				patch_Lizard.UpdateBellySize(lizardPartner);
-				self.room.PlaySound(SoundID.HUD_Food_Meter_Fill_Plop_A, self.mainBodyChunk, false, 1f, 1.2f);
-                //self.iVars.tailFatness
-                Debug.Log("--LIZAR FAT :" + (lizardPartner.graphicsModule as LizardGraphics).iVars.tailFatness + " MORE " + (lizardPartner.graphicsModule as LizardGraphics).iVars.fatness );
+			//Lizard lizardPartner = FindLizardInRange(self, 0, 0);
+			//Scavenger scavPartner = patch_Scavenger.FindScavInRange(self);
+			Creature fatCrit = FindFatCreatureInRange(self);
+            if (fatCrit != null)
+            {
+                patch_MiscCreatures.AddFood(fatCrit, 1);
+                self.room.PlaySound(SoundID.HUD_Food_Meter_Fill_Plop_A, self.mainBodyChunk, false, 1f, 1.2f);
+                Debug.Log("--ADDING CREATURE FAT :" + fatCrit.abstractCreature.GetAbsBelly().myFoodInStomach);
             }
-			else
+            else
 			{
 				if (self.input[0].y == -1)
                 {
@@ -7656,7 +7670,6 @@ public class patch_Player
                 {
 					//AddPersonalFood(self, 1);
 					self.AddFood(self.input[0].pckp ? 10 : 1);
-					
 				}
 
 				//Debug.Log("--OK BUT WHATS MY REAL FOOD? CHUB:" + GetAdjChubValue(self) + " OVERSTUFF: " + GetOverstuffed(self) + " SHARED: " + self.FoodInStomach + "-" + self.abstractCreature.GetAbsBelly().myFoodInStomach + "+" + BellyPlus.bonusFood + "+" + BellyPlus.bonusHudPip);

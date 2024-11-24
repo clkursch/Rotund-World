@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using BepInEx;
 using UnityEngine;
-using ExpeditionEnhanced;
+//using ExpeditionEnhanced;
 
 
 //TO REFERENCE PRIVATED VARIABLES (thnx again slime_cubed)

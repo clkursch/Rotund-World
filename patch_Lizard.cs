@@ -38,7 +38,12 @@ public class patch_Lizard
 		UnityEngine.Random.seed = self.abstractCreature.ID.RandomSeed;
 		int critChub = Mathf.FloorToInt(Mathf.Lerp(2, 9, UnityEngine.Random.value));
 
-		if (self.Template.type == CreatureTemplate.Type.YellowLizard)
+        //EXTRA RARE CHANCE FOR AN EVEN FATTER CREATURE
+        int coinFlip = Mathf.FloorToInt(Mathf.Lerp(0, 5, UnityEngine.Random.value)); ////20% CHANCE TO BE TRUE
+        if (critChub == 8 && coinFlip >= 4)
+            critChub += 4;
+
+        if (self.Template.type == CreatureTemplate.Type.YellowLizard)
 			critChub += 1; //BECAUSE IT'S HILARIOUS
 		else if (self.Template.type == MoreSlugcatsEnums.CreatureTemplateType.SpitLizard)
 			critChub = UnityEngine.Random.Range(2, 8);
@@ -145,21 +150,6 @@ public class patch_Lizard
 	{
 		return self.GetBelly().myChubValue; //OPTIMIZED
 	}
-
-
-
-
-	public static void ObjUpdateBellySize(Creature self)
-    {
-		if (self is Lizard)
-			UpdateBellySize(self as Lizard);
-		else if (self is Cicada)
-			patch_Cicada.UpdateBellySize(self as Cicada);
-		else if (self is Vulture)
-			patch_Vulture.UpdateBellySize(self as Vulture);
-	}
-
-
 	
 
 	public static void UpdateBellySize(Lizard self)
@@ -1421,7 +1411,7 @@ public class patch_Lizard
 		if (self.GetBelly().boostCounter > 0)
 			self.GetBelly().boostCounter--;
 
-		if (!IsStuck(self) && self.GetBelly().loosenProg > 0)
+		if (!IsStuck(self) && self.GetBelly().loosenProg > 0 && !self.Stunned)
 			self.GetBelly().loosenProg -= 1 / 2000f;
 
 

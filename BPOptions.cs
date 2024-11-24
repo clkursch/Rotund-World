@@ -29,7 +29,7 @@ public class BPOptions : OptionInterface
         BPOptions.debugTools = this.config.Bind<bool>("debugTools", false);
         BPOptions.debugLogs = this.config.Bind<bool>("debugLogs", false);
         BPOptions.blushEnabled = this.config.Bind<bool>("blushEnabled", false);
-        BPOptions.bpDifficulty = this.config.Bind<float>("bpDifficulty", 0f, new ConfigAcceptableRange<float>(-5f, 5f));
+        BPOptions.bpDifficulty = this.config.Bind<float>("bpDifficulty", -3f, new ConfigAcceptableRange<float>(-5f, 5f));
         BPOptions.sfxVol = this.config.Bind<float>("sfxVol", 0.1f, new ConfigAcceptableRange<float>(-0.1f, 0.4f));
         BPOptions.startThresh = this.config.Bind<int>("startThresh", 4, new ConfigAcceptableRange<int>(-4, 8));//(0, 4)
 		BPOptions.gapVariance = this.config.Bind<float>("gapVariance", 1.0f, new ConfigAcceptableRange<float>(0.5f, 1.75f));
@@ -119,6 +119,11 @@ public class BPOptions : OptionInterface
     //Leviathan
 
 
+    private OpSimpleButton presetSilly;
+    private OpSimpleButton presetBalanced;
+    private OpSimpleButton presetPipeCleaner;
+
+
     public override void Update()
     {
         base.Update();
@@ -132,7 +137,7 @@ public class BPOptions : OptionInterface
                 this.diffSlide.greyedOut = true;
                 this.opLab1.Hidden = true;
                 this.opLab2.Hidden = true;
-                for (int i = 0; i < myBoxes.Length; i++)
+                for (int i = 1; i < myBoxes.Length; i++)
                 {
                     if (myBoxes[i] != null)
                         myBoxes[i].greyedOut = true;
@@ -143,7 +148,7 @@ public class BPOptions : OptionInterface
                 this.diffSlide.greyedOut = false;
                 this.opLab1.Hidden = false;
                 this.opLab2.Hidden = false;
-                for (int i = 0; i < myBoxes.Length; i++)
+                for (int i = 1; i < myBoxes.Length; i++)
                 {
                     if (myBoxes[i] != null)
                         myBoxes[i].greyedOut = false;
@@ -171,6 +176,29 @@ public class BPOptions : OptionInterface
     public static OpCheckBox[] myBoxes;
 
 
+    public void SillyPreset(UIfocusable trigger)
+    {
+        //for (int i = 0; i < MMF.boolPresets.Count; i++)
+        //{
+        //    if (MMF.boolPresets[i].config.BoundUIconfig != null)
+        //    {
+        //        //MMF.boolPresets[i].config.BoundUIconfig.value = ValueConverter.ConvertToString<bool>(MMF.boolPresets[i].remixValue);
+        //    }
+        //}
+        this.diffSlide.SetValueFloat(-3f);
+    }
+
+    public void BalancedPreset(UIfocusable trigger)
+    {
+        this.diffSlide.SetValueFloat(0f);
+    }
+
+    public void PipeCleanerPreset(UIfocusable trigger)
+    {
+        this.diffSlide.SetValueFloat(3f);
+    }
+
+
     public override void Initialize()
     {
         base.Initialize();
@@ -181,18 +209,26 @@ public class BPOptions : OptionInterface
             //opTab
 			new OpTab(this, BPTranslate("Options")),
             new OpTab(this, BPTranslate("Misc")),
-			new OpTab(this, BPTranslate("Creatures")),
+            new OpTab(this, BPTranslate("Creatures")),
             new OpTab(this, BPTranslate("Info"))
         };
 
+        Vector2 btnSize = new Vector2(130f, 25f);
+        float btnHeight = 550f;
+        Tabs[0].AddItems(
+             this.presetSilly = new OpSimpleButton(new Vector2(40f, btnHeight), btnSize, "Silly") { description = OptionInterface.Translate("A more relaxed and goofy experience with fewer downsides to becoming round (Default)") },
+             this.presetBalanced = new OpSimpleButton(new Vector2(40f + 145f, btnHeight), btnSize, "Balanced") { description = OptionInterface.Translate("The original mod experience of risk and reward where each extra pip comes with tradeoffs to consider") },
+             this.presetPipeCleaner = new OpSimpleButton(new Vector2(40f + 290f, btnHeight), btnSize, "Pipe Cleaner") { description = OptionInterface.Translate("A challenge mode for only the most stubborn food enthusiests") }
+           );
+        Tabs[0].AddItems(new OpLabel(40F, 578, BPTranslate("Difficulty Presets")));
+        this.presetSilly.OnClick += this.SillyPreset;
+        this.presetBalanced.OnClick += this.BalancedPreset;
+        this.presetPipeCleaner.OnClick += this.PipeCleanerPreset;
 
 
-        //Tabs = new OpTab[1];
-        //Tabs[0] = new OpTab("Options");
+        float lineCount = 500;
 
-        float lineCount = 530;
-
-        Tabs[0].AddItems(new OpLabel(175f, lineCount + 50, BPTranslate("Hover over a setting to read more info about it")));
+        Tabs[0].AddItems(new OpLabel(175f, 595, BPTranslate("Hover over a setting to read more info about it")));
 
 
         //OpLabel opLabel = new OpLabel(new Vector2(100f, opRect.size.y - 25f), new Vector2(30f, 25f), ":(", FLabelAlignment.Left, true, null)
@@ -257,11 +293,22 @@ public class BPOptions : OptionInterface
         //Makes squeezing through pipes even more difficult for fatter creatures
         //Snug Pipes
         lineCount -= 60;
+        BPOptions.hardMode.Value = false;
+
+        //OKAY MAKE IT BUT DON'T SHOW IT
+        /*-------------------------------------
         string dsc5 = BPTranslate("Outgrowing pipes is more punishing on how long it takes to wiggle through");
         //Tabs[0].AddItems(new OpLabel(50f, lineCount - 20f, BPTranslate("Outgrowing pipes is more punishing on how long it takes to wiggle through")) );
-        OpCheckBox chkBox5 = new OpCheckBox(BPOptions.hardMode, new Vector2(15f, lineCount));
-        Tabs[0].AddItems(chkBox5, new OpLabel(45f, lineCount, BPTranslate("Unforgiving Gap Sizes")) { bumpBehav = chkBox5.bumpBehav, description = dsc5 });
+        OpCheckBox chkBox5 = new OpCheckBox(BPOptions.hardMode, new Vector2(15f + 800f, lineCount - 120f));
+        Tabs[0].AddItems(chkBox5, new OpLabel(45f + 800f, lineCount - 120, BPTranslate("Unforgiving Gap Sizes")) { bumpBehav = chkBox5.bumpBehav, description = dsc5 });
         chkBox5.description = dsc5;
+        */
+
+        string dscHints = BPTranslate("Occasionally show in-game hints related to controls and mechanics of the mod");
+        //Tabs[0].AddItems(new OpLabel(50f, lineCount - 20f, "Occasionally show in-game hints related to controls and mechanics of the mod") ); //{ description = "This is My Text" }
+        OpCheckBox chkBoxHints = new OpCheckBox(BPOptions.hudHints, new Vector2(15f, lineCount));
+        Tabs[0].AddItems(chkBoxHints, new OpLabel(45f, lineCount, BPTranslate("Hud Hints")) { bumpBehav = chkBoxHints.bumpBehav, description = dscHints });
+        chkBoxHints.description = dscHints;
 
 
         string dscArmor = BPTranslate("Increase resistance to bites based on how fat you are") + ", as well as spears, stuns, and coldness";
@@ -327,27 +374,20 @@ public class BPOptions : OptionInterface
         }
 
 
-        lineCount -= 40;
-        string dscHints = BPTranslate("Occasionally show in-game hints related to controls and mechanics of the mod");
-        //Tabs[0].AddItems(new OpLabel(50f, lineCount - 20f, "Occasionally show in-game hints related to controls and mechanics of the mod") ); //{ description = "This is My Text" }
-        OpCheckBox chkBoxHints = new OpCheckBox(BPOptions.hudHints, new Vector2(15f, lineCount));
-        Tabs[0].AddItems(chkBoxHints, new OpLabel(45f, lineCount, BPTranslate("Hud Hints")) { bumpBehav = chkBoxHints.bumpBehav, description = dscHints });
-        chkBoxHints.description = dscHints;
-		
-		
 		if (ModManager.MSC)
         {
+            lineCount -= 40;
             //string dscNeedles = BPTranslate("Spearmaster's needles will gain less food when your belly is full");
             //Diet Needles
             string dscNeedles = BPTranslate("When Spearmaster is full, switching hands (double tap grab) will detatch your needles");
-            this.chkBoxNeedles = new OpCheckBox(BPOptions.detachNeedles, new Vector2(15f + indenting, lineCount));
-            Tabs[0].AddItems(this.chkBoxNeedles, new OpLabel(45f + indenting, lineCount, BPTranslate("Detachable Needles")) { bumpBehav = this.chkBoxNeedles.bumpBehav, description = dscNeedles });
+            this.chkBoxNeedles = new OpCheckBox(BPOptions.detachNeedles, new Vector2(15f + 0, lineCount));
+            Tabs[0].AddItems(this.chkBoxNeedles, new OpLabel(45f + 0, lineCount, BPTranslate("Detachable Needles")) { bumpBehav = this.chkBoxNeedles.bumpBehav, description = dscNeedles });
             this.chkBoxNeedles.description = dscNeedles;
         }
 		
 
         myBoxes = new OpCheckBox[10];
-        myBoxes[0] = chkBox5;
+        myBoxes[0] = null; // chkBox5;
         myBoxes[1] = chkBoxArmor;
         myBoxes[2] = chkBox6;
         myBoxes[3] = chkBox4;

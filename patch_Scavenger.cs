@@ -58,12 +58,18 @@ public class patch_Scavenger
 		//NEW, LETS BASE OUR RANDOM VALUE ON OUR ABSTRACT CREATURE ID
 		UnityEngine.Random.seed = self.abstractCreature.ID.RandomSeed;
 
-        int mouseChub = Mathf.FloorToInt(Mathf.Lerp(2, 9, UnityEngine.Random.value));
-		if (mouseChub != 8 || !patch_MiscCreatures.CheckFattable(self))
-			mouseChub = 4;
-		if (BPOptions.debugLogs.Value)
-			Debug.Log("SCAV SPAWNED! CHUB SIZE: " + mouseChub);
-		self.abstractCreature.GetAbsBelly().myFoodInStomach = mouseChub;
+        int critChub = Mathf.FloorToInt(Mathf.Lerp(2, 9, UnityEngine.Random.value));
+		if (critChub != 8 || !patch_MiscCreatures.CheckFattable(self))
+			critChub = 4;
+
+        //EXTRA RARE CHANCE FOR AN EVEN FATTER CREATURE
+        int coinFlip = Mathf.FloorToInt(Mathf.Lerp(0, 5, UnityEngine.Random.value)); ////20% CHANCE TO BE TRUE
+        if (critChub == 8 && coinFlip >= 4)
+            critChub += 4;
+
+        if (BPOptions.debugLogs.Value)
+			Debug.Log("SCAV SPAWNED! CHUB SIZE: " + critChub);
+		self.abstractCreature.GetAbsBelly().myFoodInStomach = critChub;
 
 		UpdateBellySize(self);
         //Debug.Log("SCAV SPAWNED! - KARMA? " + self.abstractCreature.karmicPotential);
@@ -86,8 +92,12 @@ public class patch_Scavenger
             case 8:
                 newMass = baseWeight * 1.4f;
 				//self.bodyChunks[0].rad = baseRad * 1.5f;
-				self.GetBelly().myFatness = 1.4f;
+				self.GetBelly().myFatness = 1.4f + (patch_Lizard.GetOverstuffed(self) / 10f);
 				break;
+            case 7:
+                newMass = baseWeight * 1.2f;
+                self.GetBelly().myFatness = 1.2f;
+                break;
             default:
 				newMass = baseWeight * 1f;
 				self.GetBelly().myFatness = 1f;

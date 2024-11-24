@@ -115,8 +115,9 @@ public class patch_AbstractCreature
         {
             if (creature.grasps[0] != null && creature.grasps[0].grabbed is Creature)  // && creature.Template.CreatureRelationship(creature.grasps[0].grabbed as Creature).type == CreatureTemplate.Relationship.Type.Eats)
             {
-                creature.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
-                patch_Lizard.ObjUpdateBellySize(creature);
+                //creature.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
+                //patch_Lizard.ObjUpdateBellySize(creature);
+                patch_MiscCreatures.AddFood(creature, 1); //STREAMLINE THIS A BIT
                 Debug.Log("CREATURE DRAGGED PREY OFFSCREEN - EATING A TASTY SNACK! " + creature.abstractCreature.GetAbsBelly().myFoodInStomach);
             }
         }
@@ -145,10 +146,9 @@ public class patch_AbstractCreature
                 //BONUS MEAT IF EATING A HEFTY PLAYER
                 float fatGained = 2;
                 if (mySelf.grasps[0] != null && mySelf.grasps[0].grabbed is Player player)
-                    fatGained += Mathf.Min((patch_Player.GetOverstuffed(player) / 2f), 4f);
+                    fatGained += Mathf.Min((patch_Player.GetOverstuffed(player) / 2f), 6f);
 
-                self.GetAbsBelly().myFoodInStomach += Mathf.CeilToInt(fatGained);
-                patch_Lizard.ObjUpdateBellySize(mySelf as Creature); //CICADAS CAN'T DO THIS... WAIT YES THEY CAN!!
+                patch_MiscCreatures.AddFood(mySelf, Mathf.CeilToInt(fatGained));
                 Debug.Log("CREATURE IN DEN - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
             }
 
@@ -158,15 +158,13 @@ public class patch_AbstractCreature
                 Creature mySelf = self.realizedCreature as Creature;
                 int amnt = (self.GetAbsBelly().myFoodInStomach >= 4) ? 1 : 2; //PAST TWO MEALS, SLOW DOWN THE CHONK
                                                                               //GAIN 2 IF HUNGRY. ONLY 1 IF FAT
-                self.GetAbsBelly().myFoodInStomach += amnt;
-                patch_MiscCreatures.UpdateBellySize(mySelf as DropBug, amnt);
+                patch_MiscCreatures.AddFood(mySelf, amnt);
                 Debug.Log("MINI CREATURE IN DEN - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
             }
 
             if (self.realizedCreature is JetFish fish && fish.AI != null && fish.AI.behavior == JetFishAI.Behavior.ReturnPrey)
             {
-                self.GetAbsBelly().myFoodInStomach += 2;
-                patch_Lizard.ObjUpdateBellySize(fish);
+                patch_MiscCreatures.AddFood(fish, 2);
                 Debug.Log("JETFISH - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
             }
         }

@@ -15,7 +15,7 @@ using System.Linq;
 using static Expedition.ExpeditionProgression;
 //using Rewired;
 using MoreSlugcats;
-using ExpeditionEnhanced; //FOR MOD COMPAT!
+//using ExpeditionEnhanced; //FOR MOD COMPAT!
 using Unity.Jobs;
 
 namespace RotundWorld;

@@ -43,8 +43,8 @@
       <Private>false</Private>
     </Reference>
     <Reference Include="DressMySlugcat">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\Mods(LEGACY)\DressMySlugcat.dll</HintPath>
-      <Private>false</Private>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\312520\2948971756\newest\plugins\DressMySlugcat.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="ExpeditionEnhanced">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\Mods(LEGACY)\ExpeditionEnhanced.dll</HintPath>

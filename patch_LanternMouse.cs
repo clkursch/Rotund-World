@@ -35,11 +35,17 @@ public class patch_LanternMouse
 		UnityEngine.Random.seed = self.abstractCreature.ID.RandomSeed;
 
         int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
-		if (patch_MiscCreatures.CheckFattable(self) == false)
+
+        //EXTRA RARE CHANCE FOR AN EVEN FATTER CREATURE
+        int coinFlip = Mathf.FloorToInt(Mathf.Lerp(0, 5, UnityEngine.Random.value)); ////20% CHANCE TO BE TRUE
+        if (critChub == 8 && coinFlip >= 4)
+            critChub += 4;
+
+        if (patch_MiscCreatures.CheckFattable(self) == false)
 			critChub = 0;
-		
+
 		if (BPOptions.debugLogs.Value)
-			Debug.Log("MOUSE SPAWNED! CHUB SIZE: " + critChub);
+			Debug.Log("MOUSE SPAWNED! CHUB SIZE: " + critChub); // + " - " + coinFlip);
 
         self.abstractCreature.GetAbsBelly().myFoodInStomach = critChub;
 		
@@ -427,6 +433,7 @@ public class patch_LanternMouse
         }
 
         float hipScale = 0;
+		float torsoScale = 0f;
         switch (patch_Lizard.GetChubValue(self.mouse))
         {
             case 0:
@@ -442,7 +449,8 @@ public class patch_LanternMouse
                 hipScale = 5f;
                 break;
             case 4:
-                hipScale = 10f;
+                hipScale = 10f + (patch_Lizard.GetOverstuffed(self.mouse) * 2f);
+				torsoScale += patch_Lizard.GetOverstuffed(self.mouse) * 2f;
                 break;
         }
 
@@ -450,10 +458,10 @@ public class patch_LanternMouse
         float stuckBonus = 1;
         if (patch_LanternMouse.IsStuck(self.mouse))
         {
-            stuckBonus = 1.8f;
+            stuckBonus = 1.8f - Mathf.Min((torsoScale / 10f), 0.8f);
         }
 
-        sLeaser.sprites[self.BodySprite(0)].scaleX = 1 + 0.03f * stuckBonus * hipScale;
+        sLeaser.sprites[self.BodySprite(0)].scaleX = 1 + 0.03f * stuckBonus * (hipScale + torsoScale);
         //THESE REFRESH EVERY FRAME, SO JUST ADD TO THEM
         sLeaser.sprites[self.BodySprite(1)].scaleX += 0.065f * stuckBonus * hipScale;
         sLeaser.sprites[self.BodySprite(1)].scaleY += 0.04f * hipScale;
