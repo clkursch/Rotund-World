@@ -14,7 +14,7 @@ public class patch_RainCycle
 	{
         float newMinutes = minutes;
 		if (BPOptions.extraTime.Value && !BellyPlus.VisualsOnly())
-			newMinutes *= 1.3f + Mathf.Max(0f, (BPOptions.bpDifficulty.Value / 5f));
+			newMinutes *= 1.3f + Mathf.Max(0f, (BellyPlus.BPODifficulty() / 5f));
 		orig.Invoke(self, world, newMinutes);
 	}
 

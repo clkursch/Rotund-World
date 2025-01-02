@@ -6,6 +6,7 @@ using MoreSlugcats;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using System.Linq;
+using RainMeadow;
 
 
 /*
@@ -682,13 +683,13 @@ public class patch_Player
 	//NEW DIFFICULTY SCALING. GAPS DON'T GET ANY TIGHTER IF THE DIFFICULTY SLIDER GOES ABOVE 0. IT JUST GETS CLOSER TO HARDMODE
 	public static float GapDifficulty()
 	{
-		return Mathf.Min(BPOptions.bpDifficulty.Value, 0f);
+		return Mathf.Min(BellyPlus.BPODifficulty(), 0f);
 	}
 
     public static float BottomHeavyDiffScale()
     {
-		float result = BPOptions.bpDifficulty.Value;
-		if (BPOptions.bpDifficulty.Value > 0) //LESS HARSH SCALING FOR DIFFICULTIES ABOVE 0
+		float result = BellyPlus.BPODifficulty();
+		if (BellyPlus.BPODifficulty() > 0) //LESS HARSH SCALING FOR DIFFICULTIES ABOVE 0
 			result /= 3f;
         return result;
     }
@@ -697,7 +698,7 @@ public class patch_Player
 	{
 		if (BPOptions.hardMode.Value)
 			return hardest;
-		return Mathf.Lerp(baseDif, hardest, BPOptions.bpDifficulty.Value / 5f);
+		return Mathf.Lerp(baseDif, hardest, BellyPlus.BPODifficulty() / 5f);
 	}
 
 	
@@ -1415,7 +1416,7 @@ public class patch_Player
 		IntVector2 myTilePos = self.room.GetTilePosition(self.bodyChunks[1].pos + new Vector2(posMod.x * 20, posMod.y * 20));
 		float tileSeed = (myTilePos.x + myTilePos.y) + seedKey;
 		float tileSizeMod = sizeMod;
-		float gapVariance = BPOptions.gapVariance.Value;
+		float gapVariance = BellyPlus.BPOGapVariance();
         //Debug.Log("-----TILE SEED!: " + myTilePos.x + "+" + myTilePos.y + " = "+ tileSeed);
         bool coinFlip = (tileSeed%4 == 0); //25% CHANCE TO BE TRUE ON ANY GIVEN TILE
 
@@ -1552,7 +1553,7 @@ public class patch_Player
 			string myRoom = self.room.roomSettings.name.ToString();
 			if (myRoom == "SS_AI" || myRoom == "DM_AI")
 			{
-				tileSizeMod += 14 * Mathf.Max(1, BPOptions.gapVariance.Value);
+				tileSizeMod += 14 * Mathf.Max(1, BellyPlus.BPOGapVariance());
                 rainWarning = false;
 				gapVariance = 1f;
             }
@@ -1943,7 +1944,7 @@ public class patch_Player
 	public static void ObjGainLoosenProg(Creature obj, float amnt)
 	{
 		if (obj is Player)
-			obj.GetBelly().loosenProg += amnt * (GetLivingPlayers(obj as Player) == 1 ? 2f : 1.75f) * HardmodeScaling(6f, 1f) * Mathf.Lerp(1f, 2f, -BPOptions.bpDifficulty.Value / 5f); //OKAY, EASY MODE GETS EVEN FASTER
+			obj.GetBelly().loosenProg += amnt * (GetLivingPlayers(obj as Player) == 1 ? 2f : 1.75f) * HardmodeScaling(6f, 1f) * Mathf.Lerp(1f, 2f, -BellyPlus.BPODifficulty() / 5f); //OKAY, EASY MODE GETS EVEN FASTER
 		else
 			obj.GetBelly().loosenProg += amnt * HardmodeScaling(6f, 2f);
 	}
@@ -2203,7 +2204,7 @@ public class patch_Player
 		if (ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("bur-rotund") && !self.isNPC)
 			return ((self.slugcatStats.maxFood - self.slugcatStats.foodToHibernate) + 2); // (obj.GetBelly().bigBelly ? 0 : 2));
 		else
-			return -(BPOptions.startThresh.Value + self.abstractCreature.GetAbsBelly().chubModOffset); // - 2;
+			return -(BellyPlus.BPOStartThreshold() + self.abstractCreature.GetAbsBelly().chubModOffset); // - 2;
 	}
 
 	//FINALLY... SHORTCUT TO ONE OF MY MOST USED FORMULA EQUATIONS
@@ -2673,13 +2674,14 @@ public class patch_Player
 					{
 						//DO NOTHING :3c
 					}
-					else if (UnityEngine.Random.value < 0.33f) //1 IN 4
+					//IF ITS A MEADOW SESSION, ALWAYS JUST CRUSH ON THE SECOND SMEAR. TO AVOID DESYNCING
+					else if (UnityEngine.Random.value < 0.33f || BellyPlus.isMeadowSession) //1 IN 4
 					{
                         //MOVED THIS HERE FOR THE INVISIBLE FOOD BUG. BUT I DONT THINK WE EVEN NEED THIS
                         crushFood = true;
 						foodPos = obj.firstChunk.pos;
                         self.ReleaseGrasp(j);
-                        obj.Destroy();
+						obj.Destroy();
                         BellyPlus.smearHintGiven = true; //THEY ALREADY KNOW HOW TO USE THAT!
 					}
 					
@@ -4506,7 +4508,7 @@ public class patch_Player
 					//GOURMAND'S ROLL DAMAGE CODE TAKES CARE OF ALL THE VELOCITY AND DMG STUFF. DMG IS FLAT 1 SO WE DON'T NEED TO TOUCH OUR SPEED
 				
 					//ACTUALLY INSTEAD OF DOING ALL THIS WEIRD NONSENSE. WHAT IF WE JUST REPLICATED THE DAMAGE CODE?
-					float stuffing = GetOverstuffed(wreckingBall) * (1 + (BPOptions.bpDifficulty.Value / 10f));
+					float stuffing = GetOverstuffed(wreckingBall) * (1 + (BellyPlus.BPODifficulty() / 10f));
 					float slamIncrease = 1 + (stuffing * 0.1f);
 					if (wreckingBall.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Gourmand)
 						slamIncrease += (Mathf.Max(GetChubFloatValue(wreckingBall) * 2f - 3f, 0) * 0.1f);
@@ -4548,7 +4550,7 @@ public class patch_Player
 				&& fallHeight > 60
 				&& (otherObject as Creature).abstractCreature.creatureTemplate.smallCreature == false) //SMALL CREATURES WON'T SLOW OUR FALL! (AND DIE IN 1 HIT ANYWAYS)
 			{
-				float stuffing = GetOverstuffed(self) * (1 + (BPOptions.bpDifficulty.Value / 10f));
+				float stuffing = GetOverstuffed(self) * (1 + (BellyPlus.BPODifficulty() / 10f));
 				float slamIncrease = 1 + (stuffing * 0.1f);
 				if (self.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Gourmand)
 					slamIncrease += (Mathf.Max(GetChubFloatValue(self) * 2f - 3f, 0) * 0.1f);
@@ -5007,7 +5009,7 @@ public class patch_Player
             if (self is Player player && !BellyPlus.VisualsOnly() && BPOptions.fatArmor.Value)
             {
                 float fbase = Mathf.Max(GetChubValue(self) - 1f, 0) / 15f; // (0.1 - 0.2)
-                float fptwo = (fbase + (GetOverstuffed(player) / 50f)) * (1 + ((BPOptions.bpDifficulty.Value * 1.2f) / 10f));  //(hits 0.50 at 7 overstuffed)
+                float fptwo = (fbase + (GetOverstuffed(player) / 50f)) * (1 + ((BellyPlus.BPODifficulty() * 1.2f) / 10f));  //(hits 0.50 at 7 overstuffed)
                 float stunResist = Mathf.Max(1f - fptwo, 0.5f); //0.5 //ISN'T THIS BACKWARDS?? SHOULDN'T THE MIN BE 1?
                 //Debug.Log("STUN AMNT " + stunResist + " - " + fptwo + " - " + stunResist);
 				player.stun = Mathf.CeilToInt(player.stun * stunResist);
@@ -5024,7 +5026,7 @@ public class patch_Player
 			return orig.Invoke(self);
 		
 		float fbase = Mathf.Max(GetChubValue(self) - 2f, 0) / 10f;
-		float fptwo = (fbase + (GetOverstuffed(self) / 20f)) * (1 + ((BPOptions.bpDifficulty.Value * 1.2f) / 10f));
+		float fptwo = (fbase + (GetOverstuffed(self) / 20f)) * (1 + ((BellyPlus.BPODifficulty() * 1.2f) / 10f));
 		float armorMod = BPOptions.fatArmor.Value ? Mathf.Min(fptwo, 0.9f) : 0f;
 		if (BPOptions.debugLogs.Value)
 			Debug.Log("FAT ARMOR MOD! * " + armorMod);
@@ -5042,7 +5044,7 @@ public class patch_Player
         if (!BellyPlus.VisualsOnly() && BPOptions.fatArmor.Value && st > 20)
 		{
 			float fbase = Mathf.Max(GetChubValue(self) - 1f, 0) / 15f; // (0.1 - 0.2)
-			float fptwo = (fbase + (GetOverstuffed(self) / 50f)) * (1 + ((BPOptions.bpDifficulty.Value * 1.2f) / 10f));  //(hits 0.50 at 7 overstuffed)
+			float fptwo = (fbase + (GetOverstuffed(self) / 50f)) * (1 + ((BellyPlus.BPODifficulty() * 1.2f) / 10f));  //(hits 0.50 at 7 overstuffed)
 			float stunResist = Mathf.Max(1f - fptwo, 0.5f); //0.5 //ISN'T THIS BACKWARDS?? SHOULDN'T THE MIN BE 1?
 			Debug.Log("STUN AMNT " + Mathf.CeilToInt(st * stunResist) + " - " + fptwo + " - " + stunResist);
 			orig.Invoke(self, Mathf.CeilToInt(st * stunResist));
@@ -5090,7 +5092,7 @@ public class patch_Player
         {
             Player myTarget = result.obj as Player;
 
-            float myFat = (GetOverstuffed(myTarget) + Mathf.Max(GetChubValue(myTarget) - 1f, 0)) * (1 + ((BPOptions.bpDifficulty.Value * 1.2f) / 10f));
+            float myFat = (GetOverstuffed(myTarget) + Mathf.Max(GetChubValue(myTarget) - 1f, 0)) * (1 + ((BellyPlus.BPODifficulty() * 1.2f) / 10f));
             float saveChance = Mathf.Lerp(0f, 0.65f, Mathf.InverseLerp(0, 15, myFat));
             if (UnityEngine.Random.value < saveChance)
             {
@@ -5502,7 +5504,7 @@ public class patch_Player
 		float tileSize = (myChub + GetTileSizeMod(self, tilePosMod, myInputVec, 0, inPipe, self.submerged, false));
 		float preTileSize = tileSize;
 		
-		float diff = (GapDifficulty() * 1.5f) - (Mathf.Max(0, BPOptions.gapVariance.Value - 1) * 5f); //SCALE GAP TIGHTNESS BY VARIANCE SLIGHTLY
+		float diff = (GapDifficulty() * 1.5f) - (Mathf.Max(0, BellyPlus.BPOGapVariance() - 1) * 5f); //SCALE GAP TIGHTNESS BY VARIANCE SLIGHTLY
         //AND THEN THIS ONES FOR THE DIFFICULTY MODIFIER. BUT LETS LEAVE THE FIRST 5 STACKS OF THIS ALONE...
         if (tileSize > 3)
 			tileSize = 3 + ((tileSize - 3) * (1 + (diff / 10f)));
@@ -5797,12 +5799,15 @@ public class patch_Player
 
 				if (self.GetBelly().stuckStrain > (squeezeThresh + ((squeezeThresh > 300 && !(self.GetBelly().boostStrain >= 18 || self.lungsExhausted)) ? 15 : 0)))
 				{
-					PopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
-					self.horizontalCorridorSlideCounter = 0;
-					// Debug.Log("-----SLIIIIIIIIIDE THROUGH AN X ENTRANCE!: ");
-					pushBack = 0;
-					self.GetBelly().stuckStrain = 6; //FAST PASS TO FIX VOLUME N STUFF
-					self.GetBelly().squeezeStrain = 0; //SO WE DON'T ALSO GET THE POP
+					if (BellyPlus.isMeadowSession)
+					{
+						MeadowPopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
+					}
+					else
+					{
+                        PopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
+                        pushBack = 0;
+                    }
 				}
 			}
             else
@@ -5866,13 +5871,16 @@ public class patch_Player
 				{
 					//HIGHER BOOST VALUE IF LAUNCHING UPWARDS
 					float boostVel = (self.bodyChunks[0].pos.y > self.bodyChunks[1].pos.y) ? self.GetBelly().stuckStrain : self.GetBelly().stuckStrain / 2f;
-					PopFree(self, boostVel, self.GetBelly().inPipeStatus);
-					self.horizontalCorridorSlideCounter = 0;
-					// Debug.Log("-----SLIIIIIIIIIDE THROUGH AN Y ENTRANCE!: ");
-					pushBack = 0;
-					self.GetBelly().stuckStrain = 6; //FAST PASS TO FIX VOLUME N STUFF
-					self.GetBelly().squeezeStrain = 0; //SO WE DON'T ALSO GET THE POP
-				}
+                    if (BellyPlus.isMeadowSession)
+                    {
+                        MeadowPopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
+                    }
+                    else
+                    {
+                        PopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
+                        pushBack = 0;
+                    }
+                }
 			}
             else
             {
@@ -6328,7 +6336,7 @@ public class patch_Player
 		if (BPOptions.fatArmor.Value && self.dangerGrasp != null && self.grabbedBy.Count > 0 && self.grabbedBy[0].grabber != null)
 		{
 			float fatness = Mathf.Max(((GetChubValue(self) -2f) * 2f)+ (GetOverstuffed(self) / 2f), 0);
-			fatness *= (1 + ((BPOptions.bpDifficulty.Value * 1.5f) / 10f));
+			fatness *= (1 + ((BellyPlus.BPODifficulty() * 1.5f) / 10f));
 			float escapeThresh = 0.003f * fatness; //0.06666667f
 			//Debug.Log("ESCAPE THRESH " + escapeThresh + "WIGGLE " + self.wiggle);
 			//if (UnityEngine.Random.value < Mathf.Lerp(0f, escapeThresh, self.Wiggle) && self.dangerGraspTime < 60)
@@ -7754,12 +7762,30 @@ public class patch_Player
 		//		self.graphicsModule.DrawSprites(); //HMMM, THIS IS A DELEMA...
 		//}
 	}
-	
-	
-	
-	
-	
-	public static void PopFree(Player self, float power, bool inPipe)
+
+
+    public static void MeadowPopFree(Player self, float power, bool inPipe)
+	{
+		//if (!BellyPlus.isMeadowClient)
+		if (OnlineManager.lobby.isOwner && (OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var onlinePlayer)))
+		{
+            foreach (var player in OnlineManager.players)
+            {
+				if (!player.isMe) //IF WE WERE OPTIMAL...
+				{
+					//player.InvokeOnceRPC(RotundRPCs.MeadowPopFree, onlinePlayer, power, inPipe);
+                    player.InvokeOnceRPC(typeof(RotundRPCs).GetMethod("MeadowPopFree").CreateDelegate(typeof(Action<RPCEvent, OnlinePhysicalObject, float, bool>)), onlinePlayer, power, inPipe);
+                }
+                else
+					PopFree(self, power, inPipe);
+                //WE CANT PASS PLAYER OBJECT TYPES AS ARGUMENTS IN RPCS, SO WE PASS IN THE ONLINEPHYSICALOBJECT INSTEAD
+            }
+        }
+	}
+
+
+
+    public static void PopFree(Player self, float power, bool inPipe)
 	{
 		
 		float popMag = Mathf.Min(power / 120f, 2f); //CAP OUT AT 2
@@ -7903,7 +7929,12 @@ public class patch_Player
 			self.airInLungs = 0.8f;
 			self.lungsExhausted = true;
 		}
-	}
+
+        //SOME LAST MINUTE STUFF
+        self.horizontalCorridorSlideCounter = 0;
+        self.GetBelly().stuckStrain = 6; //FAST PASS TO FIX VOLUME N STUFF
+        self.GetBelly().squeezeStrain = 0; //SO WE DON'T ALSO GET THE POP
+    }
 
 
 

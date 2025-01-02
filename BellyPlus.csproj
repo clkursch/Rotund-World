@@ -94,6 +94,10 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\BepInEx\utils\PUBLIC-Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Rain Meadow">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\312520\3388224007\plugins\Rain Meadow.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\Managed\Rewired_Core.dll</HintPath>
       <Private>false</Private>
@@ -155,6 +159,7 @@
     <Compile Include="patch_Vulture.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="patch_SaveState.cs" />
+    <Compile Include="RotundRPCs.cs" />
     <Compile Include="RWInputMod.cs" />
     <Compile Include="StrainSpark.cs" />
   </ItemGroup>

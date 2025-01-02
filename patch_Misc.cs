@@ -749,7 +749,7 @@ public class patch_Misc
 			}
 			else if (integerTracker5 != null && !integerTracker5.GoalAlreadyFullfilled)
 			{
-				integerTracker5.SetProgress(integerTracker5.progress - Mathf.Max(2 - Mathf.CeilToInt(BPOptions.bpDifficulty.Value / 2), 1) );
+				integerTracker5.SetProgress(integerTracker5.progress - Mathf.Max(2 - Mathf.CeilToInt(BellyPlus.BPODifficulty() / 2), 1) );
 			}
 		}
 		

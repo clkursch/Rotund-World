@@ -16,6 +16,9 @@ using MonoMod.RuntimeDetour;
 using RWCustom;
 using System.Runtime.CompilerServices;
 using System.Net;
+using RainMeadow;
+using MonoMod.Utils;
+using System.Linq;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -175,8 +178,9 @@ public class BellyPlus : BaseUnityPlugin
 			patch_Misc.Patch();
 			patch_OracleBehavior.Patch(); //THESE COUNT AS VISUALS. THE CHANGES CAN STAY
 			patch_OverseerTutorial.Patch();
-			
-		}
+
+            On.GameSession.ctor += GameSession_ctor;
+        }
 		catch (Exception arg)
 		{
             Logger.LogInfo("BELLYPLUS LOAD FAILURE DETECTED!");
@@ -184,7 +188,8 @@ public class BellyPlus : BaseUnityPlugin
             base.Logger.LogError(string.Format("Failed to initialize Rotund World", arg));
 			throw;
 		}
-	}
+        
+    }
 
 
 
@@ -222,6 +227,10 @@ public class BellyPlus : BaseUnityPlugin
             if (ModManager.ActiveMods[i].id == "SplatCat")
             {
                 splatCatEnabled = true;
+            }
+			if (ModManager.ActiveMods[i].id == "henpemaz_rainmeadow")
+            {
+                meadowEnabled = true;
             }
         }
 
@@ -278,11 +287,253 @@ public class BellyPlus : BaseUnityPlugin
         //I BARELY UNDERSTAND HOW THIS WORKS BUT SHUAMBUAM SEEMS TO HAVE IT ON LOCK SO I'LL JUST FOLLOW HIS LEAD
         if (is_post_mod_init_initialized) return;
         is_post_mod_init_initialized = true;
-        if (improvedInputEnabled)
+		
+		//SOME MEADOW SPECIFIC HOOKS
+		On.Player.AddFood += Player_AddFood;
+		On.Player.SubtractFood += Player_SubtractFood;
+        //On.GameSession.ctor += GameSession_ctor;
+        On.Creature.ctor += Creature_ctor;
+        On.Player.ctor += Player_ctor;
+        On.Lizard.ctor += Lizard_ctor;
+
+		if (improvedInputEnabled)
             Initialize_Custom_Input();
 		
 		//patch_Misc.PostPatch(); //NO LONGER NEEDED FOR EXPD ENHANCED
     }
+
+    private void Lizard_ctor(On.Lizard.orig_ctor orig, Lizard self, AbstractCreature abstractCreature, World world)
+    {
+        orig(self, abstractCreature, world);
+        if (isMeadowSession)
+            GetMeadowWeight(self);
+    }
+
+    private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature abstractCreature, World world)
+    {
+		orig(self, abstractCreature, world);
+		if (isMeadowSession)
+            GetMeadowWeight(self);
+    }
+
+    private void GameSession_ctor(On.GameSession.orig_ctor orig, GameSession self, RainWorldGame game)
+    {
+        orig(self, game);
+
+        if (meadowEnabled)
+			MeadowGameSession(orig, self, game);
+	}
+
+	public static bool isMeadowClient;
+    public static bool isMeadowSession;
+
+    public static float lobbyDifficulty;
+    public static int startThresh;
+    public static float gapVariance;
+    public static bool slugSlams;
+    public static bool backFoodStorage;
+    public static bool foodLoverPerk;
+
+	public static float BPODifficulty()
+	{
+		return meadowEnabled ? lobbyDifficulty : BPOptions.bpDifficulty.Value;
+    }
+
+    public static int BPOStartThreshold()
+    {
+		return meadowEnabled ? startThresh : BPOptions.startThresh.Value;
+    }
+
+    public static float BPOGapVariance()
+    {
+        return meadowEnabled ? gapVariance : BPOptions.gapVariance.Value;
+    }
+
+    public static bool BPOSlugSlams()
+    {
+        return meadowEnabled ? slugSlams : BPOptions.slugSlams.Value;
+    }
+
+    public static bool BPOBackFoodStorage()
+    {
+        return meadowEnabled ? backFoodStorage : BPOptions.backFoodStorage.Value;
+    }
+
+    public static bool BPOFoodLoverPerk()
+    {
+        return meadowEnabled ? foodLoverPerk : BPOptions.foodLoverPerk.Value;
+    }
+
+	public static void SyncRemixOptions()
+	{
+		Debug.Log("SYNC REMIX OPTIONS");
+		lobbyDifficulty = BPOptions.bpDifficulty.Value;
+        startThresh = BPOptions.startThresh.Value;
+        gapVariance = BPOptions.gapVariance.Value;
+        slugSlams = BPOptions.slugSlams.Value;
+        backFoodStorage = BPOptions.backFoodStorage.Value;
+        foodLoverPerk = BPOptions.foodLoverPerk.Value;
+    }
+
+    public static void MeadowGameSession(On.GameSession.orig_ctor orig, GameSession self, RainWorldGame game)
+	{
+		if (OnlineManager.lobby == null)
+		{
+            Debug.Log("OFFLINE MODE. THIS IS NOT A MEADOW SESSION");
+            isMeadowClient = false;
+            isMeadowSession = false;
+            SyncRemixOptions();
+			orig(self, game);
+			return; //THIS IS A NON ONLINE GAME. SKIP ALL THIS
+		}
+		else
+		{
+            Debug.Log("MEADOW SESSION = TRUE!");
+            isMeadowSession = true;
+            if (!OnlineManager.lobby.isOwner)
+            {
+                isMeadowClient = true;
+                Debug.Log("MEADOW LOBBY CLIENT! WE ARE NOT THE OWNER");
+            }
+        }
+
+		
+
+		//if (OnlineManager.lobby.isOwner)
+		//{
+			//SyncRemixOptions();
+		//}
+
+		//foreach (var player in self.arenaSitting.players)
+		//{
+		//    player.score = currentPoints;
+		//}
+
+		if (OnlineManager.lobby.isOwner)
+        {
+			//ApplyLobbyRPCs();
+			//MOVING THIS SO IT APPLIES ON CREATURE CONSTRUCTOR I THINK...
+        }
+		/*
+		else
+		{
+            if (OnlineManager.lobby.gameMode is MeadowGameMode)
+			{
+                foreach (var player in OnlineManager.players)
+                {
+                    if (!player.isMe)
+                    {
+                        player.InvokeRPC(typeof(RotundRPCs).GetMethod("InitializeWeight").CreateDelegate(typeof(Action<RPCEvent, OnlinePhysicalObject, int>)), player., food);
+                    }
+                }
+            }
+        }
+		*/
+    }
+
+	public static void ApplyLobbyRPCs()
+	{
+        Debug.Log("LOBBY OWNER, APPLYING RPCS!");
+        SyncRemixOptions();
+        foreach (var player in OnlineManager.players)
+        {
+            if (!player.isMe)
+            {
+                //player.InvokeRPC(RotundRPCs.SyncRemix, lobbyDifficulty, startThresh, gapVariance, slugSlams, backFoodStorage, foodLoverPerk);
+                //_ = new Hook(typeof(Player).GetProperty(nameof(Player.CanPutSlugToBack))!.GetGetMethod(), Player_CanPutSlugToBack_get);
+                //typeof(RotundRPCs).GetMethod("SyncRemix").Invoke(null, new object[] { RotundRPCs.SyncRemix, lobbyDifficulty, startThresh, gapVariance, slugSlams, backFoodStorage, foodLoverPerk });
+                //typeof(RotundRPCs).GetMethod("SyncRemix").Invoke(null, new RainMeadow.RPCEvent[] { RotundRPCs.SyncRemix, lobbyDifficulty, startThresh, gapVariance, slugSlams, backFoodStorage, foodLoverPerk });
+
+                //player.InvokeRPC(typeof(RotundRPCs).GetMethod("SyncRemix").CreateDelegate(typeof(Action<float, int, float, bool, bool, bool>)), lobbyDifficulty, startThresh, gapVariance);
+
+                //player.InvokeRPC(typeof(RotundRPCs).GetMethod("SyncRemix").CreateDelegate(typeof(Action<RPCEvent, float, int, float>)), RotundRPCs.SyncRemix, lobbyDifficulty, startThresh, gapVariance);
+                player.InvokeRPC(typeof(RotundRPCs).GetMethod("SyncRemix").CreateDelegate(typeof(Action<RPCEvent, float, int, float>)), lobbyDifficulty, startThresh, gapVariance);
+            }
+        }
+    }
+
+
+
+    private void Creature_ctor(On.Creature.orig_ctor orig, Creature self, AbstractCreature abstractCreature, World world)
+    {
+		orig(self, abstractCreature, world);
+        //CheckIfMeadowWeight(self);
+        //if (isMeadowSession)
+        //    GetMeadowWeight(self);
+    }
+
+ //   public static void CheckIfMeadowWeight(Creature self)
+	//{
+	//	if (isMeadowSession)
+	//		return GetMeadowWeight(self, int);
+	//	else
+	//		return value;
+	//}
+
+    public static void GetMeadowWeight(Creature self)
+    {
+        //MAY AS WELL INITIALIZE THIS EVERY TIME SOMEONE JOINS...
+        if (OnlineManager.lobby.isOwner)
+        {
+            ApplyLobbyRPCs();
+        }
+
+
+        if (OnlineManager.lobby != null && OnlineManager.lobby.gameMode is MeadowGameMode)
+		{
+            Debug.Log("IN A MEADOW GAMEMODE!");
+            foreach (var playerAvatar in OnlineManager.lobby.playerAvatars.Select(kv => kv.Value))
+            {
+                if (playerAvatar.type == (byte)OnlineEntity.EntityId.IdType.none) continue; // not in game
+                Debug.Log("CHECKING PLAYER..." + (playerAvatar.FindEntity(true) is OnlinePhysicalObject opo2 && opo2.owner.isMe));
+                if (playerAvatar.FindEntity(true) is OnlinePhysicalObject opo && opo.owner.isMe && opo.apo is AbstractCreature ac && ac.realizedCreature is not null)
+                {
+                    Debug.Log("THIS IS MYSELF IN A MEADOW LOBBY!");
+					int food = 200;
+					if (OnlineManager.lobby.isOwner)
+						food = 0;
+                    ac.GetAbsBelly().myFoodInStomach = food; //TO SET THE VALUE FOR US, LOCALLY 
+                    
+					//THEN APPLY IT FOR ALL PLAYERS
+                    foreach (var player in OnlineManager.players)
+                    {
+                        if (!player.isMe)
+                        {
+                            //THIS ONE ISN'T READY YET. BUT SOON...
+							//player.InvokeRPC(typeof(RotundRPCs).GetMethod("InitializeWeight").CreateDelegate(typeof(Action<RPCEvent, OnlinePhysicalObject, int>)), opo.owner, food);
+                        }
+                    }
+
+                    
+                    //if (ac.realizedCreature is Player)
+                    //    patch_Player.UpdateBellySize(ac.realizedCreature as Player);
+                    //else
+                    //    patch_MiscCreatures.ObjUpdateBellySize(ac.realizedCreature);
+                }
+            }
+        }
+
+        
+
+
+
+		/*
+        if (OnlineManager.lobby.isOwner && (OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var onlinePlayer)))
+        {
+            foreach (var player in OnlineManager.players)
+            {
+                if (!player.isMe) //IF WE WERE OPTIMAL...
+                {
+                    //player.InvokeOnceRPC(RotundRPCs.MeadowPopFree, onlinePlayer, power, inPipe);
+                }
+                else
+                    PopFree(self, power, inPipe);
+                //WE CANT PASS PLAYER OBJECT TYPES AS ARGUMENTS IN RPCS, SO WE PASS IN THE ONLINEPHYSICALOBJECT INSTEAD
+            }
+        }*/
+    }
+
+
     public static void Initialize_Custom_Input()
     {
         // wrap it in order to make it a soft dependency only;
@@ -308,6 +559,134 @@ public class BellyPlus : BaseUnityPlugin
 		orig(self, newlyDisabledMods);
 		//BellyPlus.UnregisterValues();
 	}
+	
+	
+	public static void Player_AddFood(On.Player.orig_AddFood orig, Player self, int add)
+	{
+		//HEY! MODDERS! THIS IS NOT HOW YOU SUBTRACT FOOD! LET ME FIX IF FOR YOU
+		if (add < 0)
+		{
+			self.SubtractFood(-add);
+			return;
+		}
+		
+		if (isMeadowSession)
+			MeadowAddFood(orig, self, add);
+		else
+			orig(self, add);
+	}
+	
+	public static void MeadowAddFood(On.Player.orig_AddFood orig, Player self, int add)
+	{
+		if (!OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var onlineEntity)) throw new InvalidProgrammerException("Player doesn't have OnlineEntity counterpart!!");
+		if (onlineEntity.isMine || (self.isNPC && self.isSlugpup))
+		{
+			//self.AddFood(add); //PRETTY SURE THIS WILL JUST INFINI LOOP
+			orig(self, add);
+			return;
+		}
+		//THIS IS THE CONDITION THAT MEADOW SKIPS ORIG
+		
+		
+		add *= BPOptions.foodMult.Value;
+
+		//CORRECT EATMEAT() SHENANIGANS
+        if (self.GetBelly().maxFoodOverrideFlag)
+        {
+            self.slugcatStats.maxFood--;
+            self.GetBelly().maxFoodOverrideFlag = false;
+        }
+		//BUT WHAT IF WE DIDN'T?... COME BACK TO THIS LATER
+
+        //SKIPPING REDS ILLNESS STUFF SORRY
+		patch_Player.AddPersonalFood(self, add);
+		
+
+		// ISN'T THIS ALL WE NEED NOW?
+		Debug.Log("-----MEADOW! ADDING FOOD " + self + " ADD:" + add + "  CURRENT CHUB:" + (patch_Player.GetChubFloatValue(self) + patch_Player.GetOverstuffed(self)) );
+		//orig.Invoke(self, add);
+		
+		
+		/*
+        //DOWNPOUR FIXED THE AWEFUL JOLLYCOOP MESS SO WE CAN SAFELY DO THINGS NORMALLY
+        if (self.FoodInStomach >= self.slugcatStats.maxFood && self.abstractCreature.world.game.IsStorySession)
+		{
+			if (BPOptions.debugLogs.Value)
+				Debug.Log("-----ADDING FOOD PAST FULL " + self + " ADD:" + newAdd + "  CURRENT CHUB:" + GetChubFloatValue(self) + " + " + GetOverstuffed(self) );
+			
+			if (self.AI == null)
+				self.abstractCreature.world.game.GetStorySession.saveState.totFood += newAdd;
+			
+			//PUPS DON'T TRACK BONUS FOOD! THEIR FOODINSTOMACH SAVES PROPERLY SO WE CAN JUST TRACK THAT
+			if (self.isNPC && self.isSlugpup)
+            {
+				self.playerState.foodInStomach += add;
+				skipOrig = true;
+			}
+
+			if (self.room?.game?.cameras[0]?.hud?.foodMeter != null) // && BellyPlus.bonusFood < MaxBonusFood(self))
+				self.PlayHUDSound(SoundID.HUD_Food_Meter_Fill_Quarter_Plop);
+
+		}
+		//NO LONGER AN ELSE
+		if (self.playerState.foodInStomach < self.slugcatStats.maxFood)
+		{
+			int overflowFood = Math.Max((self.playerState.foodInStomach + add) - self.slugcatStats.maxFood, 0);
+			if (BPOptions.debugLogs.Value)
+				Debug.Log("-----RUNNING ORIGINAL ADDFOOD " + add + " OVRFL:" + overflowFood);
+			orig.Invoke(self, add - overflowFood);
+			if (overflowFood > 0)
+			{
+                self.abstractCreature.GetAbsBelly().myFoodInStomach -= overflowFood;//HEY WE'RE ABOUT TO ADD TOO MUCH PERSONAL FOOD BECAUSE WE DIDN'T ACCOUNT FOR OVERFLOW BEFORE RUNNING ADDFOOD AGAIN! JUST SHAVE THE EXTRA OFF THE TOP
+                self.AddFood(overflowFood); //GOTTA DO IT AGAIN CUZ OUR BELLY WILL CUT OFF THE EXTRA.
+			}
+		}
+		else
+		{
+			//if (BPOptions.debugLogs.Value)
+			//	Debug.Log("-----TOOO FULL! SKIPPING ADDFOOD" + self);
+			//BLUH. I GUESS THIS WAS NEEDED TOO...
+			if (!skipOrig)
+				orig.Invoke(self, add);
+		}
+		*/
+		// CheckBonusFood(self, false); //THIS IS ONLY FOR OTHER PLAYERS SO WE DON'T NEED TO CHECK IT
+	}
+	
+	
+	public static void Player_SubtractFood(On.Player.orig_SubtractFood orig, Player self, int sub)
+	{
+		if (isMeadowSession)
+			MeadowSubtractFood(orig, self, sub);
+		else
+			orig(self, sub);
+	}
+	
+	public static void MeadowSubtractFood(On.Player.orig_SubtractFood orig, Player self, int sub)
+	{
+		if (!OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var onlineEntity)) throw new InvalidProgrammerException("Player doesn't have OnlineEntity counterpart!!");
+		if (onlineEntity.isMine || (self.isNPC && self.isSlugpup))
+		{
+			orig.Invoke(self, sub);
+			return;
+		}
+		//THIS IS THE CONDITION THAT MEADOW SKIPS ORIG
+		
+		//IN THIS VERSION WE ONLY SUBTRACT PERSONAL CHUB FROM OURSELVES
+		self.abstractCreature.GetAbsBelly().myFoodInStomach -= sub;
+		
+		//DON'T LET NEGATIVE CHUB VALUES BE A THING, SINCE WE CAN'T HAVE NEGATIVE FOOD
+		if (self.abstractCreature.GetAbsBelly().myFoodInStomach < 0)
+			self.abstractCreature.GetAbsBelly().myFoodInStomach = 0;
+		
+		//orig.Invoke(self, sub);
+		
+		patch_Player.UpdateBellySize(self);
+	}
+	
+	
+	
+	
 
     //MAYBE WE CAN USE THIS TO DETERMINE IF THE BONUS FOOD PIP IS SAVED 
     public static int bonusFood = 0;
@@ -331,6 +710,7 @@ public class BellyPlus : BaseUnityPlugin
 	public static bool individualFoodEnabled = false;
 	public static bool improvedInputEnabled = false;
 	public static bool splatCatEnabled = false;
+	public static bool meadowEnabled = false;
 
     public static bool fullBellyOverride = false;
 	public static bool versionCheck = false;
