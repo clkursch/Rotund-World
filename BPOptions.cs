@@ -35,6 +35,7 @@ public class BPOptions : OptionInterface
 		BPOptions.gapVariance = this.config.Bind<float>("gapVariance", 1.0f, new ConfigAcceptableRange<float>(0.5f, 1.75f));
         BPOptions.jokeContent1 = this.config.Bind<bool>("jokeContent1", true);
         BPOptions.foodMult = this.config.Bind<int>("foodMult", 1, new ConfigAcceptableRange<int>(1, 4));
+        BPOptions.meadowFoodStart = this.config.Bind<int>("meadowFoodStart", 4, new ConfigAcceptableRange<int>(0, 25));
 
         BPOptions.fatP1 = this.config.Bind<bool>("fatP1", true);
 		BPOptions.fatP2 = this.config.Bind<bool>("fatP2", true);
@@ -82,6 +83,7 @@ public class BPOptions : OptionInterface
 	public static Configurable<bool> detachablePopcorn;
 	public static Configurable<bool> foodLoverPerk;
     public static Configurable<int> foodMult;
+    public static Configurable<int> meadowFoodStart;
 
     public static Configurable<bool> fatP1;
 	public static Configurable<bool> fatP2;
@@ -817,6 +819,11 @@ public class BPOptions : OptionInterface
         lineCount -= 25;
         Tabs[infoTab].AddItems(new OpLabel(35f, lineCount, BPTranslate("If you post footage, send me a link! I'd love to see! :D")));
 
+        lineCount -= 35;
+        OpSlider meadowSizeSlider = new OpSlider(BPOptions.meadowFoodStart, new Vector2(55f, lineCount - 0), 200, false);
+        string dscMeadowSizeSlider = BPTranslate("Set how rotund your character will be when playing Meadow game-mode. Requires the Rain Meadow mod");
+        Tabs[infoTab].AddItems(meadowSizeSlider, new OpLabel(50f, lineCount - 15, BPTranslate("Rain Meadow food pips")) { bumpBehav = meadowSizeSlider.bumpBehav, description = dscMeadowSizeSlider });
+        meadowSizeSlider.description = dscMeadowSizeSlider;
 
     }
 

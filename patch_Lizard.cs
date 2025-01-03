@@ -804,9 +804,15 @@ public class patch_Lizard
 				}
 				else
 				{
-					PopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
-					// Debug.Log("LZ!-----SLIIIIIIIIIDE THROUGH AN X ENTRANCE!: ");
-					pushBack = 0;
+					if (BellyPlus.isMeadowSession)
+					{
+						patch_Player.MeadowPopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
+					}
+					else
+					{
+                        PopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
+                        pushBack = 0;
+                    }
 				}
 			}
 			else
@@ -874,10 +880,15 @@ public class patch_Lizard
 				{
 					//HIGHER BOOST VALUE IF LAUNCHING UPWARDS
 					float boostVel = (self.bodyChunks[0].pos.y > self.bodyChunks[1].pos.y) ? self.GetBelly().stuckStrain : self.GetBelly().stuckStrain / 2f;
-					PopFree(self, boostVel, self.GetBelly().inPipeStatus);
-					// Debug.Log("LZ!-----SLIIIIIIIIIDE THROUGH AN Y ENTRANCE!: ");
-					pushBack = 0;
-					
+					if (BellyPlus.isMeadowSession)
+					{
+						patch_Player.MeadowPopFree(self, boostVel, self.GetBelly().inPipeStatus);
+					}
+					else
+					{
+                        PopFree(self, boostVel, self.GetBelly().inPipeStatus);
+                        pushBack = 0;
+                    }
 				}
 			}
 			else

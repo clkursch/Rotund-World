@@ -1,4 +1,5 @@
 ﻿using RainMeadow;
+using System;
 using System.Linq;
 using UnityEngine;
 
@@ -64,24 +65,43 @@ namespace RotundWorld
         }
 
 
+        [RainMeadow.RPCMethod]
+        public static void RequestRemixSync(RPCEvent rpcEvent)
+        {
+            if (OnlineManager.lobby.isOwner)
+            {
+                Debug.Log("--REQUEST FOR REMIX SYNC RECEIVED! SENDING OUT RPCS");
+                foreach (var player in OnlineManager.players)
+                {
+                    if (!player.isMe)
+                    {
+                        player.InvokeRPC(typeof(RotundRPCs).GetMethod("SyncRemix").CreateDelegate(typeof(Action<RPCEvent, float, int, float>)), BellyPlus.lobbyDifficulty, BellyPlus.startThresh, BellyPlus.gapVariance);
+                    }
+                }
+            }
+        }
+
+
 
         [RainMeadow.RPCMethod]
         public static void MeadowPopFree(RPCEvent rpcEvent, OnlinePhysicalObject onlinePlayer, float power, bool inPipe)
         {
             //Debug.Log("MEADOW!! POP FREE RPC " + power); // + startThresh + gapVariance + slugSlams + backFoodStorage + foodLoverPerk);
 
-            Player player = null;
+            // Player player = null;
             //CONVERT ONLINEPHYSICALOBJECT TO PLAYER - HELPFUL CODE PROVIDED BY UO! THNX :3
             foreach (var playerAvatar in OnlineManager.lobby.playerAvatars.Select(kv => kv.Value))
             {
                 if (playerAvatar.type == (byte)OnlineEntity.EntityId.IdType.none) continue; // not in game
                 if (playerAvatar.FindEntity(true) is OnlinePhysicalObject opo && opo.owner == onlinePlayer.owner && opo.apo is AbstractCreature ac && ac.realizedCreature is not null)
                 {
-                    player = (ac.realizedCreature as Player); // now we have the player who did the thing.
+                    // player = (ac.realizedCreature as Player); // now we have the player who did the thing.
+					if (ac.realizedCreature is Player)
+						patch_Player.PopFree((ac.realizedCreature as Player), power, inPipe);
+					else
+						patch_Lizard.PopFree(ac.realizedCreature, power, inPipe);
                 }
             }
-
-            patch_Player.PopFree(player, power, inPipe);
         }
 
 
@@ -94,13 +114,16 @@ namespace RotundWorld
             foreach (var playerAvatar in OnlineManager.lobby.playerAvatars.Select(kv => kv.Value))
             {
                 if (playerAvatar.type == (byte)OnlineEntity.EntityId.IdType.none) continue; // not in game
-                if (playerAvatar.FindEntity(true) is OnlinePhysicalObject opo && opo.owner == onlinePlayer.owner && opo.apo is AbstractCreature ac && ac.realizedCreature is not null)
+                if (playerAvatar.FindEntity(true) is OnlinePhysicalObject opo && opo.owner == onlinePlayer.owner && opo.apo is AbstractCreature ac)
                 {
                     ac.GetAbsBelly().myFoodInStomach = food;
-                    if (ac.realizedCreature is Player)
-                        patch_Player.UpdateBellySize(ac.realizedCreature as Player);
-                    else
-                        patch_MiscCreatures.ObjUpdateBellySize(ac.realizedCreature);
+                    if (ac.realizedCreature is not null)
+                    {
+                        if (ac.realizedCreature is Player)
+                            patch_Player.UpdateBellySize(ac.realizedCreature as Player);
+                        else
+                            patch_MiscCreatures.ObjUpdateBellySize(ac.realizedCreature);
+                    }
                 }
             }
         }

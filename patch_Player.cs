@@ -174,8 +174,8 @@ public class patch_Player
 		
 		expRotund = ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("bur-rotund");
 
-        if (BPOptions.debugLogs.Value)
-			Debug.Log("-FK YOU GIMME MY GODDANG BONUS FRUIT!" + player.abstractCreature.GetAbsBelly().myFoodInStomach + " OVERSTUFFED: " + GetOverstuffed(player) + " CURRENT FOOD:" + player.FoodInStomach + " BONUS:" + player.GetBelly().bigBelly + " " + player.slugcatStats.maxFood);
+		//if (BPOptions.debugLogs.Value)
+			//Debug.Log("-FK YOU GIMME MY GODDANG BONUS FRUIT!" + player.abstractCreature.GetAbsBelly().myFoodInStomach + " OVERSTUFFED: " + GetOverstuffed(player) + " CURRENT FOOD:" + player.FoodInStomach + " BONUS:" + player.GetBelly().bigBelly + " " + player.slugcatStats.maxFood);
 
         //HOLDUP!... CURRENTFOOD ACTUALLY SAVES CORRECLTY!!! WOW THAT IS INCREDIBLE
 		//SO THIS TRIMS OFF THE EXTRA FAT FROM OUR SAVE FILE AND ADDS IT TO OUR P1 INDIVIDUAL WEIGHT. WHICH IS WHAT WE WANT, EVEN IN 1.6
@@ -193,8 +193,8 @@ public class patch_Player
 			//	BellyPlus.tomorrowsBonusFood = 0; //DEPRECIATED
 		}
 		
-		if (BPOptions.debugLogs.Value)
-			Debug.Log("BIG BELLIED SLUG? " + player.GetBelly().bigBelly + " CURR FOOD?" + player.abstractCreature.GetAbsBelly().myFoodInStomach + " - " + player.slugcatStats.name + " - " + player.playerState.slugcatCharacter + " - " + SlugcatStats.SlugcatFoodMeter(player.slugcatStats.name) + " - " + player.slugcatStats.bodyWeightFac + " - " + player.bodyChunks[0].mass);
+		//if (BPOptions.debugLogs.Value)
+		//	Debug.Log("BIG BELLIED SLUG? " + player.GetBelly().bigBelly + " CURR FOOD?" + player.abstractCreature.GetAbsBelly().myFoodInStomach + " - " + player.slugcatStats.name + " - " + player.playerState.slugcatCharacter + " - " + SlugcatStats.SlugcatFoodMeter(player.slugcatStats.name) + " - " + player.slugcatStats.bodyWeightFac + " - " + player.bodyChunks[0].mass);
         //Debug.Log(" CURRENT FOOD:" + player.CurrentFood + " BONUS:" + BellyPlus.bonusFood + " " + BellyPlus.bonusHudPip);
 
 
@@ -263,8 +263,8 @@ public class patch_Player
 		if (!illegalSpawn)
 			BellyPlus.lockEndFood = false;
         UpdateBellySize(player);
-		if (BPOptions.debugLogs.Value)
-			Debug.Log("-FK YOU PT 2 - GIMME MY GODDANG BONUS FRUIT!" + player.abstractCreature.GetAbsBelly().myFoodInStomach + " OVERSTUFFED: " + GetOverstuffed(player) + " CURRENT FOOD:" + player.CurrentFood + " BONUS:" + BellyPlus.bonusFood + " " + BellyPlus.bonusHudPip);
+		//if (BPOptions.debugLogs.Value)
+		//	Debug.Log("-FK YOU PT 2 - GIMME MY GODDANG BONUS FRUIT!" + player.abstractCreature.GetAbsBelly().myFoodInStomach + " OVERSTUFFED: " + GetOverstuffed(player) + " CURRENT FOOD:" + player.CurrentFood + " BONUS:" + BellyPlus.bonusFood + " " + BellyPlus.bonusHudPip);
 	}
 
 
@@ -2247,8 +2247,8 @@ public class patch_Player
 
 
 
-        if (BPOptions.debugLogs.Value)
-			Debug.Log("NEW RUN SPEED: " + spd);
+		//if (BPOptions.debugLogs.Value)
+			//Debug.Log("NEW RUN SPEED: " + spd);
 
         //WAIT A MINUTE! THIS IS RUNNING AT A TERRIBLE TIME BECAUSE THIS ONLY CHECKS ONCE WHEN WE EAT AND THEN APPLIES TO A PERMINANT VAR
         //if (IsPullingOther(self))
@@ -2320,29 +2320,16 @@ public class patch_Player
 		self.bodyChunks[0].mass = Mathf.Min(newWeight, baseWeight * 3f);
 		self.bodyChunks[1].mass = newWeight;
 
-		//if (flip)
-		//{
-		//	radMod = 2.8f;
-		//	flip = false;
-		//}
-		//else
-		//{
-		//	radMod = 1f;
-		//	flip = true;
-		//}
-
-
         self.bodyChunks[0].rad = 9f * (1 + ((radMod - 1) / 3f));
 		self.bodyChunks[0].terrainSqueeze = 1f / (1 + ((radMod - 1) / 3f));
 		self.bodyChunks[1].rad = 8f * radMod;
 		self.bodyChunks[1].terrainSqueeze = 1f / radMod;
-		//baseRad
 
-		if (BPOptions.debugLogs.Value) 
-             Debug.Log("UPDAT BELLY RAD: NEW MASS: " + self.bodyChunks[0].rad + " - " + self.bodyChunks[0].TerrainRad + " - " + self.bodyChunks[0].terrainSqueeze);
+		if (BPOptions.debugLogs.Value)
+			Debug.Log("UPDAT BELLY: " + self.GetBelly().myChubValue); //" RAD: NEW MASS: " + self.bodyChunks[0].rad + " - " + self.bodyChunks[0].TerrainRad + " - " + self.bodyChunks[0].terrainSqueeze);
 
-		//FIX THIS AGAIN
-		self.GetBelly().myCooridorSpeed = self.slugcatStats.corridorClimbSpeedFac * corridorSpeedFact;
+        //FIX THIS AGAIN
+        self.GetBelly().myCooridorSpeed = self.slugcatStats.corridorClimbSpeedFac * corridorSpeedFact;
 
 		//MAKE A FUNNY SOUND IF WE'RE NOW FAT ENOUGH TO SLAM
 		if (BPOptions.slugSlams.Value && BPOptions.hudHints.Value && !self.isGourmand && !self.GetBelly().canSlugSlam && ChunkyFallRequirement(self))//&& oldChub < 3 && GetChubValue(self) >= 3)
@@ -2351,7 +2338,6 @@ public class patch_Player
             self.PlayHUDSound(SoundID.HUD_Karma_Reinforce_Bump);
         }
 			
-
         //CHECK IF OUR BONUS PIP NEES TO BE SAVED FOR END OF CYCLE
         CheckBonusFood(self, false);
 	}
@@ -5801,7 +5787,7 @@ public class patch_Player
 				{
 					if (BellyPlus.isMeadowSession)
 					{
-						MeadowPopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
+						MeadowPopFree(self as Creature, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
 					}
 					else
 					{
@@ -5873,7 +5859,7 @@ public class patch_Player
 					float boostVel = (self.bodyChunks[0].pos.y > self.bodyChunks[1].pos.y) ? self.GetBelly().stuckStrain : self.GetBelly().stuckStrain / 2f;
                     if (BellyPlus.isMeadowSession)
                     {
-                        MeadowPopFree(self, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
+                        MeadowPopFree(self as Creature, self.GetBelly().stuckStrain, self.GetBelly().inPipeStatus);
                     }
                     else
                     {
@@ -7764,7 +7750,7 @@ public class patch_Player
 	}
 
 
-    public static void MeadowPopFree(Player self, float power, bool inPipe)
+    public static void MeadowPopFree(Creature self, float power, bool inPipe)
 	{
 		//if (!BellyPlus.isMeadowClient)
 		if (OnlineManager.lobby.isOwner && (OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var onlinePlayer)))
@@ -7777,7 +7763,12 @@ public class patch_Player
                     player.InvokeOnceRPC(typeof(RotundRPCs).GetMethod("MeadowPopFree").CreateDelegate(typeof(Action<RPCEvent, OnlinePhysicalObject, float, bool>)), onlinePlayer, power, inPipe);
                 }
                 else
-					PopFree(self, power, inPipe);
+				{
+					if (self is Player)
+						PopFree(self as Player, power, inPipe);
+					else
+						patch_Lizard.PopFree(self, power, inPipe);
+				}
                 //WE CANT PASS PLAYER OBJECT TYPES AS ARGUMENTS IN RPCS, SO WE PASS IN THE ONLINEPHYSICALOBJECT INSTEAD
             }
         }
