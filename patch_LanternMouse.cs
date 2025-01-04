@@ -283,14 +283,17 @@ public class patch_LanternMouse
 	public static void BPUUpdatePass5_2(LanternMouse self)
 	{
 		//LET MICE BOOST TOO! JUST DO IT DIFFERENTLY...
-		if (((self.GetBelly().boostCounter < 1 && self.GetBelly().stuckStrain > 65) || (BellyPlus.SafariJumpButton(self) && self.GetBelly().boostCounter < 10))&& !self.GetBelly().lungsExhausted && (IsStuck(self) || self.GetBelly().pushingOther > 0))
+		if (((self.GetBelly().boostCounter < 1 && self.GetBelly().stuckStrain > 65 && !(self.safariControlled || BPMeadowStuff.IsMeadowGameMode())) || ((BellyPlus.SafariJumpButton(self) || self.GetBelly().manualBoost) && self.GetBelly().boostCounter < 10))&& !self.GetBelly().lungsExhausted && (IsStuck(self) || self.GetBelly().pushingOther > 0))
 		{
 			if (patch_Player.ObjIsWedged(self))
 				self.GetBelly().boostStrain += 4;
 			else
 				self.GetBelly().boostStrain += 10;
 
-			self.GetBelly().corridorExhaustion += 30;
+            if (self.GetBelly().manualBoost)
+                self.GetBelly().manualBoost = false;
+
+            self.GetBelly().corridorExhaustion += 30;
 			int boostAmnt = 15;
 			// self.AerobicIncrease(1f);
 			float strainMag = 15f * GetExhaustionMod(self, 60);

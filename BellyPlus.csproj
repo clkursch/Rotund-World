@@ -134,6 +134,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BellyPlusBase.cs" />
+    <Compile Include="BPMeadowStuff.cs" />
     <Compile Include="BPOptions.cs" />
     <Compile Include="CycleFoodChallenge.cs" />
     <Compile Include="Extras.cs" />

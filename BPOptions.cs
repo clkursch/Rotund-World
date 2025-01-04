@@ -216,7 +216,7 @@ public class BPOptions : OptionInterface
         };
 
         Vector2 btnSize = new Vector2(130f, 25f);
-        float btnHeight = 550f;
+        float btnHeight = 548f;
         Tabs[0].AddItems(
              this.presetSilly = new OpSimpleButton(new Vector2(40f, btnHeight), btnSize, "Silly") { description = OptionInterface.Translate("A more relaxed and goofy experience with fewer downsides to becoming round (Default)") },
              this.presetBalanced = new OpSimpleButton(new Vector2(40f + 145f, btnHeight), btnSize, "Balanced") { description = OptionInterface.Translate("The original mod experience of risk and reward where each extra pip comes with tradeoffs to consider") },
@@ -241,8 +241,9 @@ public class BPOptions : OptionInterface
         //Tabs[0].AddItems(new OpLabel(50f, lineCount - 20f, "Makes squeezing through pipes even more difficult for fatter creatures") { description = "This is My Text" });
         // Tabs[0].AddItems(new OpSlider(BPOptions.bpDifficulty, new Vector2(50f, lineCount), 50, false));
         this.diffSlide = new OpFloatSlider(BPOptions.bpDifficulty, new Vector2(55f, lineCount - 0), 250, 0, false);
-        Tabs[0].AddItems(this.diffSlide, new OpLabel(50f, lineCount - 15, BPTranslate("Pipe Size Difficulty")) { bumpBehav = this.diffSlide.bumpBehav, description = BPTranslate("Sets the average difficulty for squeezing through pipes, and the impact weight has on your agility") });
-
+        string discDiff = BPTranslate("Sets the average difficulty for squeezing through pipes, and the impact weight has on your agility");
+        Tabs[0].AddItems(this.diffSlide, new OpLabel(50f, lineCount - 15, BPTranslate("Pipe Size Difficulty")) { bumpBehav = this.diffSlide.bumpBehav, description = discDiff });
+        this.diffSlide.description = discDiff;
         Tabs[0].AddItems(this.opLab1 = new OpLabel(15f, lineCount + 5, BPTranslate("Wide")) { description = BPTranslate("Easy") });
         Tabs[0].AddItems(this.opLab2 = new OpLabel(320f, lineCount + 5, BPTranslate("Snug")) { description = BPTranslate("Hard") });
 
@@ -386,7 +387,15 @@ public class BPOptions : OptionInterface
             Tabs[0].AddItems(this.chkBoxNeedles, new OpLabel(45f + 0, lineCount, BPTranslate("Detachable Needles")) { bumpBehav = this.chkBoxNeedles.bumpBehav, description = dscNeedles });
             this.chkBoxNeedles.description = dscNeedles;
         }
-		
+
+
+        //lineCount -= 40;
+        OpSlider meadowSizeSlider = new OpSlider(BPOptions.meadowFoodStart, new Vector2(15f + indenting, lineCount - 10), 200, false);
+        string dscMeadowSizeSlider = BPTranslate("Set how rotund your character will be when joining Meadow-Mode lobbies online. Requires the Rain Meadow mod");
+        Tabs[0].AddItems(meadowSizeSlider, new OpLabel(15f + indenting, lineCount - 25, BPTranslate("Meadow Mode character fatness")) { bumpBehav = meadowSizeSlider.bumpBehav, description = dscMeadowSizeSlider });
+        meadowSizeSlider.description = dscMeadowSizeSlider;
+
+
 
         myBoxes = new OpCheckBox[10];
         myBoxes[0] = null; // chkBox5;
@@ -445,13 +454,15 @@ public class BPOptions : OptionInterface
 
         lineCount -= 95;
         OpFloatSlider sfxSlide = new OpFloatSlider(BPOptions.sfxVol, new Vector2(45f, lineCount - 25), 300, 1, false);
-        Tabs[1].AddItems(sfxSlide, new OpLabel(45f, lineCount + 15, BPTranslate("Squeeze SFX Volume")) { bumpBehav = sfxSlide.bumpBehav, description = BPTranslate("Volume of the squeeze sound effect when slugcats are stuck") });
+        string dscSFXvol = BPTranslate("Volume of the squeeze sound effect when slugcats are stuck");
+        Tabs[1].AddItems(sfxSlide, new OpLabel(45f, lineCount + 15, BPTranslate("Squeeze SFX Volume")) { bumpBehav = sfxSlide.bumpBehav, description = dscSFXvol });
         Tabs[1].AddItems(new OpLabel(50f, lineCount - 40f, BPTranslate("(If the sfx is too soft or played without headphones)")));
-
+        sfxSlide.description = dscSFXvol;
 
         OpSlider foodMultSlide = new OpSlider(BPOptions.foodMult, new Vector2(400f, lineCount - 25), 120, false);
-        Tabs[1].AddItems(foodMultSlide, new OpLabel(400f, lineCount + 15, BPTranslate("Food Multiplier")) { bumpBehav = foodMultSlide.bumpBehav, description = BPTranslate("Multiplies how much food you get per-food") });
-
+        string dscFoodMult = BPTranslate("Multiplies how much food you get per-food");
+        Tabs[1].AddItems(foodMultSlide, new OpLabel(400f, lineCount + 15, BPTranslate("Food Multiplier")) { bumpBehav = foodMultSlide.bumpBehav, description = dscFoodMult });
+        foodMultSlide.description = dscFoodMult;
 
         lineCount -= 80;
         Tabs[1].AddItems(new OpLabel(50f, lineCount, BPTranslate("Tip: The squeeze sfx pitch hints how close you are to popping free")));
@@ -818,12 +829,6 @@ public class BPOptions : OptionInterface
         Tabs[infoTab].AddItems(new OpLabel(35f, lineCount, BPTranslate("Leave feedback on the mod page and rate the mod if you enjoy it!")));
         lineCount -= 25;
         Tabs[infoTab].AddItems(new OpLabel(35f, lineCount, BPTranslate("If you post footage, send me a link! I'd love to see! :D")));
-
-        lineCount -= 35;
-        OpSlider meadowSizeSlider = new OpSlider(BPOptions.meadowFoodStart, new Vector2(55f, lineCount - 0), 200, false);
-        string dscMeadowSizeSlider = BPTranslate("Set how rotund your character will be when playing Meadow game-mode. Requires the Rain Meadow mod");
-        Tabs[infoTab].AddItems(meadowSizeSlider, new OpLabel(50f, lineCount - 15, BPTranslate("Rain Meadow food pips")) { bumpBehav = meadowSizeSlider.bumpBehav, description = dscMeadowSizeSlider });
-        meadowSizeSlider.description = dscMeadowSizeSlider;
 
     }
 

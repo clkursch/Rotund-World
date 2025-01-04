@@ -99,7 +99,7 @@ public class patch_Player
         On.Player.GraphicsModuleUpdated += Player_GraphicsModuleUpdated;
 		On.SlugcatStats.NourishmentOfObjectEaten += SlugcatStats_NourishmentOfObjectEaten;
         On.Player.UpdateMSC += BPPlayer_UpdateMSC;
-        On.Player.SwallowObject += Player_SwallowObject;
+		On.Player.SwallowObject += Player_SwallowObject;
         On.Player.Regurgitate += Player_Regurgitate;
         On.Creature.Abstractize += Creature_Abstractize; //CERTAIN PARTS OF ROTUND WORLD BREAK (FOODONBACK) WHEN THIS HAPPENS
 
@@ -870,8 +870,8 @@ public class patch_Player
 		if (BellyPlus.VisualsOnly() || self.DreamState || self.isNPC)
 			return;
 
-        //IF WE'D NORMALLY SKIP THIS, RUN IT INSTEAD
-        if (!ModManager.CoopAvailable && !self.isNPC && self.room != null)
+        //IF WE'D NORMALLY SKIP THIS, RUN IT INSTEAD --ALSO DON'T RUN THIS IN MEADOW MODE!! IT BREAKS NON-SLUGCAT PLAYERS
+        if (!ModManager.CoopAvailable && !self.isNPC && self.room != null && !BPMeadowStuff.IsMeadowGameMode())
 		{
 			self.JollyInputUpdate();
 			self.JollyPointUpdate();
@@ -2340,6 +2340,9 @@ public class patch_Player
 			
         //CHECK IF OUR BONUS PIP NEES TO BE SAVED FOR END OF CYCLE
         CheckBonusFood(self, false);
+		//OH MEADOW...
+		if (BellyPlus.isMeadowSession)
+			BPMeadowStuff.BroadcastMeadowBellySize(self);
 	}
 	
 	
@@ -7752,9 +7755,11 @@ public class patch_Player
 
     public static void MeadowPopFree(Creature self, float power, bool inPipe)
 	{
-		//if (!BellyPlus.isMeadowClient)
-		if (OnlineManager.lobby.isOwner && (OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var onlinePlayer)))
-		{
+        //if (!BellyPlus.isMeadowClient)
+        //if (OnlineManager.lobby.isOwner && OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var onlinePlayer))
+        //OKAY INSTEAD OF ONLY THE HOST RUNNING IT, LET ONLY THE CLIENT WHOS STUCK RUN IT
+        if (OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var onlinePlayer) && onlinePlayer.owner.isMe)
+        {
             foreach (var player in OnlineManager.players)
             {
 				if (!player.isMe) //IF WE WERE OPTIMAL...

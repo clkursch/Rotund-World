@@ -1042,7 +1042,7 @@ public class patch_Lizard
 
 				//MAIN CHARACTERS (PETS) GET A BOOST TO VOLUME!
 				float softenValue = 0.85f;
-				if (self.safariControlled || (self is Lizard && (self as Lizard).AI.friendTracker.friend != null))
+				if (self.safariControlled || BPMeadowStuff.IsMeadowGameMode() || (self is Lizard && (self as Lizard).AI.friendTracker.friend != null))
 					softenValue = 1f;
 				
 				
@@ -1301,14 +1301,17 @@ public class patch_Lizard
 	{
 		//LET CREATURES BOOST TOO! JUST DO IT DIFFERENTLY...
 		// bool matchingStuckDir = (IsVerticalStuck(self) && self.input[0].y != 0) || (!IsVerticalStuck(self) && self.input[0].x != 0);
-		if (((self.GetBelly().boostCounter < 1 && self.GetBelly().stuckStrain > 65) || (BellyPlus.SafariJumpButton(self) && self.GetBelly().boostCounter < 10)) && !self.GetBelly().lungsExhausted && ((self.GetBelly().isStuck || patch_Player.ObjIsWedged(self)) || self.GetBelly().pushingOther > 0 || self.GetBelly().pullingOther)) //self.AI.excitement > 0.4f && 
+		if (((self.GetBelly().boostCounter < 1 && self.GetBelly().stuckStrain > 65 && !(self.safariControlled || BPMeadowStuff.IsMeadowGameMode())) || ((BellyPlus.SafariJumpButton(self) || self.GetBelly().manualBoost) && self.GetBelly().boostCounter < 10)) && !self.GetBelly().lungsExhausted && ((self.GetBelly().isStuck || patch_Player.ObjIsWedged(self)) || self.GetBelly().pushingOther > 0 || self.GetBelly().pullingOther)) //self.AI.excitement > 0.4f && 
 		{
 			if (patch_Player.ObjIsWedged(self))
 				self.GetBelly().boostStrain += 4;
 			else
 				patch_Player.ObjGainBoostStrain(self, 0, 10, 18);
 
-			self.GetBelly().corridorExhaustion += 22; //30
+			if (self.GetBelly().manualBoost)
+				self.GetBelly().manualBoost = false;
+
+            self.GetBelly().corridorExhaustion += 22; //30
 			int boostAmnt = 15;
 			// self.AerobicIncrease(1f);
 			float strainMag = 15f * GetExhaustionMod(self, 60);
@@ -1558,7 +1561,7 @@ public class patch_Lizard
 
 		//MAIN CHARACTERS (PETS) GET A BOOST TO VOLUME!
 		float softenValue = 0.95f;
-		if (self is Lizard && (self as Lizard).AI.friendTracker.friend != null)
+		if ((self is Lizard && (self as Lizard).AI.friendTracker.friend != null) || BPMeadowStuff.IsMeadowGameMode())
 			softenValue = 1f;
 
 
