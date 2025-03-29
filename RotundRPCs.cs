@@ -1,6 +1,7 @@
 ﻿using RainMeadow;
 using System;
 using UnityEngine;
+using static TheFriend.FriendThings.FriendCWT;
 
 namespace RotundWorld
 {
@@ -82,5 +83,60 @@ namespace RotundWorld
                 ac.realizedCreature.GetBelly().manualBoost = true;
             }
         }
+		
+		
+		[RainMeadow.RPCMethod]
+        public static void StartFeeding(RPCEvent rpcEvent, OnlinePhysicalObject feederOpo, OnlinePhysicalObject feedeeOpo, OnlinePhysicalObject foodOpo, int grsp)
+        {
+            Debug.Log("----START FEEDING RPC");
+            
+			if (feederOpo.apo.realizedObject is Player feeder && feedeeOpo.apo.realizedObject is Player feedee && foodOpo.apo.realizedObject is PhysicalObject food)
+            {
+                Debug.Log("----FLAG 1");
+                if (feeder == null || feedee == null || food == null)
+					return; //ITS GONE
+                Debug.Log("----FLAG 2");
+                //feeder.wantToPickUp = 0; //WE DON'T NEED THESE FOR MEADOW
+				//feeder.dontGrabStuff = 15; 
+                feeder.GetBelly().frFeed = feedee;
+				feedee.GetBelly().frFed = true;
+                //GUESS WE GOTTA RELEASE IT FIRST
+                //feeder.ReleaseGrasp(grsp); //I DON'T THINK WE CAN EXPECT THE HOST CLIENT INTERACTION TO HANDLE THIS BEFORE WE NEED IT...
+                //WE MIGHT HAVE TO TRY
+
+                Debug.Log("----FLAG 3");
+                bool eu = false; //I GUESS?????
+                food.firstChunk.MoveFromOutsideMyUpdate(eu, feedee.bodyChunks[0].pos);
+				food.firstChunk.vel *= 0f;
+                Debug.Log("----FLAG 4");
+
+                //FORCE THEM TO GRAB OUR OBJECT 
+                if (feedee.IsLocal()) //OKAY BUT ONLY WE CAN DO IT
+                {
+                    feedee.SlugcatGrab(food, Math.Abs(feedee.FreeHand()));
+                }
+				feedee.room.PlaySound(SoundID.Slugcat_Switch_Hands_Complete, feedee.mainBodyChunk, false, 1.3f, 1f);
+                feedee.room.PlaySound(SoundID.Slugcat_Down_On_Fours, feedee.mainBodyChunk, false, 1.4f, 1f);
+                Debug.Log("----FLAG 5");
+            }
+        }
+		
+		
+		[RainMeadow.RPCMethod]
+        public static void EndFeeding(RPCEvent rpcEvent, OnlinePhysicalObject feederOpo, OnlinePhysicalObject feedeeOpo)
+        {
+            Debug.Log("----END FEEDING RPC");
+            
+			if (feederOpo.apo.realizedObject is Player feeder && feedeeOpo.apo?.realizedObject is Player feedee)
+            {
+                if (feeder != null)
+                    feeder.GetBelly().frFeed = null;
+
+                //THIS ONE CAN BE NULL SOMETIMES, IF CALLED BY THE FEEDEE BEING UNABLE TO EAT MORE
+                if (feedee != null)
+                    feedee.GetBelly().frFed = false;
+            }
+        }
+		
     }
 }

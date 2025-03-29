@@ -29,7 +29,7 @@ public class BPOptions : OptionInterface
         BPOptions.debugTools = this.config.Bind<bool>("debugTools", false);
         BPOptions.debugLogs = this.config.Bind<bool>("debugLogs", false);
         BPOptions.blushEnabled = this.config.Bind<bool>("blushEnabled", false);
-        BPOptions.bpDifficulty = this.config.Bind<float>("bpDifficulty", -3f, new ConfigAcceptableRange<float>(-5f, 5f));
+        BPOptions.bpDifficulty = this.config.Bind<float>("bpDifficulty", -2f, new ConfigAcceptableRange<float>(-5f, 5f));
         BPOptions.sfxVol = this.config.Bind<float>("sfxVol", 0.1f, new ConfigAcceptableRange<float>(-0.1f, 0.4f));
         BPOptions.startThresh = this.config.Bind<int>("startThresh", 4, new ConfigAcceptableRange<int>(-4, 8));//(0, 4)
 		BPOptions.gapVariance = this.config.Bind<float>("gapVariance", 1.0f, new ConfigAcceptableRange<float>(0.5f, 1.75f));
@@ -187,7 +187,7 @@ public class BPOptions : OptionInterface
         //        //MMF.boolPresets[i].config.BoundUIconfig.value = ValueConverter.ConvertToString<bool>(MMF.boolPresets[i].remixValue);
         //    }
         //}
-        this.diffSlide.SetValueFloat(-3f);
+        this.diffSlide.SetValueFloat(-2f);
     }
 
     public void BalancedPreset(UIfocusable trigger)

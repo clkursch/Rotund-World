@@ -1700,7 +1700,7 @@ public class patch_Player
 	
 	
 	//WHAT A...
-	public static Player FindPlayerTopInRange(Creature self, float range)
+	public static Player FindPlayerTopInRangeOLD(Creature self, float range)
 	{
 		if (self.room == null)
 			return null; 
@@ -1708,8 +1708,9 @@ public class patch_Player
 		Player closestPlr = null;
 		float closest = range;
 		float fattest = -5;
-		for (int i = 0; i < self.room.game.Players.Count; i++)
-		{
+        for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++)
+        {
+			Debug.Log("CHECKING CRITTERS " + i);
 			if (//self.room.game.Players[i].Room.index == self.room.abstractRoom.index ?? WAS THIS FOR AGAIN??
 				self.room.game.Players[i].realizedCreature != null
 				&& self.room.game.Players[i].realizedCreature != self
@@ -1739,7 +1740,47 @@ public class patch_Player
 	}
 
 
-	public static int GetClosestBodyChunk(Vector2 myPos, Creature target)
+    //MEADOW COMPATIBLE VERSION...
+    public static Player FindPlayerTopInRange(Creature self, float range)
+    {
+        if (self.room == null)
+            return null;
+
+        Player closestPlr = null;
+        float closest = range;
+        float fattest = -5;
+        for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++)
+        {
+            if (
+                self.room.abstractRoom.creatures[i].realizedCreature != null && self.room.abstractRoom.creatures[i].realizedCreature is Player player
+                && player != self
+                && player.room == self.room
+                && player.Consious //WE ADDED THIS SO WE DON'T TRY AND FEED US TO OURSELVES
+                && Custom.DistLess(self.bodyChunks[0].pos, player.bodyChunks[0].pos, range)
+            )
+            {
+                float myFatness = GetChubValue(player);
+                float myDist = Custom.Dist(self.bodyChunks[0].pos, player.bodyChunks[0].pos);
+                if (myFatness > fattest)
+                {
+                    closestPlr = player;
+                    fattest = myFatness;
+                    closest = myDist;
+                }
+                else if (myDist < closest)
+                { //UPDATE SO NOW WE RETURN THE CLOSEST MATCH
+                    closest = myDist;
+                    closestPlr = player;
+                }
+                //return self.room.game.Players[i].realizedCreature as Player;
+                // break;
+            }
+        }
+        return closestPlr;
+    }
+
+
+    public static int GetClosestBodyChunk(Vector2 myPos, Creature target)
 	{
 		int closestChunkID = 0;
 		float closestDist = 100f;
@@ -3127,8 +3168,15 @@ public class patch_Player
         //if (BPOptions.debugLogs.Value)
         //	Debug.Log("-OBJECT EATEN!  CURR:" + self.CurrentFood + " BONUS:" + BellyPlus.bonusFood + " FOOD POINTS:" + edible.FoodPoints);
 
+        //UNTIL RAIN MEADOW FIXES THIS WE SHOULD JUST GO BACK TO NORMAL
         self.GetBelly().frFed = false;
-	}
+		/*
+        if (BPMeadowStuff.IsObjectLocal(self))
+			self.GetBelly().frFed = false;
+		if (BellyPlus.isMeadowSession && BPMeadowStuff.IsObjectLocal(self))
+			BPMeadowStuff.CallEndFeeding(self, null); //myFriend
+		*/
+    }
 
 
     //A STRIPPED DOWN VERSION OF THE EATMEAT FN THAT ONLY ADDS FOOD, PERSONALLY
@@ -3233,7 +3281,9 @@ public class patch_Player
 				self.standing = true;
                 //Debug.Log("-EATA DA MEAT");
                 self.GetBelly().frFed = false;
-			}
+				if (BellyPlus.isMeadowSession && BPMeadowStuff.IsObjectLocal(self))
+					BPMeadowStuff.CallEndFeeding(self, null); //myFriend
+            }
 			
 			//THIS IS THE CHECK THE GAME USES TO SEE WHEN WE SHOULD TOSS MEAT IF WE'RE FULL. JUST DON'T LET IT GET TO THIS POINT
 			if (self.eatMeat % 80 == 0)
@@ -3475,8 +3525,6 @@ public class patch_Player
 		//FIRST TAP
 		if (IsFeedPressed(self))
 		{
-            if (BPOptions.debugLogs.Value)
-				Debug.Log("--TRY AND FEED A PLAYER! ");
             //MEAT
             int grsp = 0;
 			PhysicalObject obj = null; //ModManager.MMF && 
@@ -3504,9 +3552,11 @@ public class patch_Player
 				else
                     fromBehind = (self.bodyChunks[0].pos.y < myFriend.bodyChunks[0].pos.y) == (myFriend.bodyChunks[0].pos.y > myFriend.bodyChunks[1].pos.y);
             }
-			
-			if (myFriend != null && obj != null && !fromBehind) //CHECK FROMBEHIND INSTEAD. THE OTHER ONE IS FLAWED
-                //&& !(IsCramped(myFriend) && PipeStatus(myFriend) == PipeStatus(self))) //NO YOU CAN'T FEED THEM FROM BEHIND...
+
+            //if (BPOptions.debugLogs.Value)
+            //    Debug.Log("--TRY AND FEED A PLAYER! " + (myFriend != null) + (obj != null) + BPMeadowStuff.IsObjectLocal(self));
+
+            if (myFriend != null && obj != null && !fromBehind && BPMeadowStuff.IsObjectLocal(self)) //CHECK FROMBEHIND INSTEAD. THE OTHER ONE IS FLAWED
             {
 				//self.wantToGrab = 0; //WILL ATTEMPT TO REGRAB VIA BUFFER IF WE GRAB AND THROW TOO QUICKLY
 				self.wantToPickUp = 0; //DON'T CONFUSE THIS WITH wantToGrab
@@ -3524,10 +3574,14 @@ public class patch_Player
 
                 //FORCE THEM TO GRAB OUR OBJECT 
                 // myFriend.Grab(obj, 1, obj.mainBodyChunk, Creature.Grasp.Shareability.CanOnlyShareWithNonExclusive, 0.5f, true, false);
-                myFriend.SlugcatGrab(obj, Math.Abs(myFriend.FreeHand()));
+                if (BPMeadowStuff.IsObjectLocal(myFriend))
+                    myFriend.SlugcatGrab(obj, Math.Abs(myFriend.FreeHand()));
 				self.room.PlaySound(SoundID.Slugcat_Switch_Hands_Complete, self.mainBodyChunk, false, 1.3f, 1f); //Slugcat_Regain_Footing
                 self.room.PlaySound(SoundID.Slugcat_Down_On_Fours, self.mainBodyChunk, false, 1.4f, 1f);
                 self.slowMovementStun = 10;
+				
+				if (BellyPlus.isMeadowSession)
+					BPMeadowStuff.CallStartFeeding(self, myFriend, obj, grsp);
             }
 		}
 		
@@ -3554,7 +3608,14 @@ public class patch_Player
 				//THINGS
 			else //WE STOPPED HOLDING THE KEYS, CANCEL THE STUFF
 			{
-                Debug.Log("--ENDING frFeed " + self.input[0].thrw + " - " + self.input[0].pckp + " - " + myFriend.GetBelly().frFed);
+                if (BellyPlus.isMeadowSession)
+				{
+					if (BPMeadowStuff.IsObjectLocal(self))
+						BPMeadowStuff.CallEndFeeding(self, myFriend);
+					else
+						return false; //DON'T RUN STUFF FOR OTHER CLIENTS -WHAT SHOULD WE ACTUALLY RETURN HERE?...
+				}
+				Debug.Log("--ENDING frFeed " + self.input[0].thrw + " - " + self.input[0].pckp + " - " + myFriend.GetBelly().frFed);
                 self.GetBelly().frFeed = null;
 				myFriend.GetBelly().frFed = false; //THIS SHOULD TURN OFF BY ITSELF I THINK
 				

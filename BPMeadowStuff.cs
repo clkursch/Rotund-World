@@ -257,5 +257,63 @@ public class BPMeadowStuff
     {
         return (OnlineManager.lobby != null && OnlineManager.lobby.gameMode is MeadowGameMode);
     }
+	
+	//CHECK IF A PHYSICALOBJECT IS OWNED BY US OR NOT. (IF ITS NOT A MEADOW SESSION THEN YES WE OWN EVERYTHING)
+	public static bool IsObjectLocal(PhysicalObject self)
+    {
+		if (BellyPlus.isMeadowSession)
+			return CheckLocality(self);
+		return true; //OTHERWISE, ASSUME IT'S OURS
+    }
+	
+	public static bool CheckLocality(PhysicalObject self)
+    {
+		if (!OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var opo))
+            throw new InvalidProgrammerException("Object doesn't have OnlineEntity counterpart!!");
+		
+		return opo.isMine;
+    }
+	
+	
+	
+	public static void CallStartFeeding(Player feeder, Player feedee, PhysicalObject food, int grsp)
+    {
+        //MAP THE OPO, IF IT EXISTS
+        if (!OnlinePhysicalObject.map.TryGetValue(feeder.abstractPhysicalObject, out var opoFeeder))
+            throw new InvalidProgrammerException("Feeder doesn't have OnlineEntity counterpart!!");
+		
+		if (!OnlinePhysicalObject.map.TryGetValue(feedee.abstractPhysicalObject, out var opoFeedee))
+            throw new InvalidProgrammerException("Feedee doesn't have OnlineEntity counterpart!!");
+		
+		if (!OnlinePhysicalObject.map.TryGetValue(feedee.abstractPhysicalObject, out var opoFood))
+            throw new InvalidProgrammerException("Food doesn't have OnlineEntity counterpart!!");
+
+        foreach (var player in OnlineManager.players)
+		{
+			if (!player.isMe) //feeder.isMe //feeder.IsLocal()
+            {
+				//player.InvokeRPC(typeof(RotundRPCs).GetMethod("StartFeeding").CreateDelegate(typeof(Action<RPCEvent, OnlinePhysicalObject, OnlinePhysicalObject, OnlinePhysicalObject, int>)), opoFeeder, opoFeedee, opoFood, grsp);
+			}
+		}
+    }
+	
+	
+	public static void CallEndFeeding(Player feeder, Player feedee)
+    {
+        //MAP THE OPO, IF IT EXISTS
+        if (!OnlinePhysicalObject.map.TryGetValue(feeder.abstractPhysicalObject, out var opoFeeder))
+            throw new InvalidProgrammerException("Player doesn't have OnlineEntity counterpart!!");
+		
+		if (!OnlinePhysicalObject.map.TryGetValue(feedee.abstractPhysicalObject, out var opoFeedee))
+            throw new InvalidProgrammerException("Player doesn't have OnlineEntity counterpart!!");
+
+        foreach (var player in OnlineManager.players)
+		{
+            if (!player.isMe)
+            {
+				//player.InvokeRPC(typeof(RotundRPCs).GetMethod("EndFeeding").CreateDelegate(typeof(Action<RPCEvent, OnlinePhysicalObject, OnlinePhysicalObject>)), opoFeeder, opoFeedee);
+			}
+		}
+    }
 
 }
