@@ -331,7 +331,7 @@ public class patch_SeedCob
             AbstractConsumable abstractConsumable = null;
             //NON MSC GAMES NEED A REPLACEMENT
             if (ModManager.MSC)
-                abstractConsumable = new AbstractConsumable(self.room.world, MoreSlugcatsEnums.AbstractObjectType.Seed, null, self.room.GetWorldCoordinate(self.placedPos), self.room.game.GetNewID(), -1, -1, null);
+                abstractConsumable = new AbstractConsumable(self.room.world, DLCSharedEnums.AbstractObjectType.Seed, null, self.room.GetWorldCoordinate(self.placedPos), self.room.game.GetNewID(), -1, -1, null);
             else
                 abstractConsumable = new AbstractConsumable(self.room.world, AbstractPhysicalObject.AbstractObjectType.EggBugEgg, null, self.room.GetWorldCoordinate(self.placedPos), self.room.game.GetNewID(), -1, -1, null);
 

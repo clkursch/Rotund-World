@@ -34,13 +34,13 @@ public class patch_Scavenger
 		
 	}
 
-    private static void Scavenger_PickUpAndPlaceInInventory(On.Scavenger.orig_PickUpAndPlaceInInventory orig, Scavenger self, PhysicalObject obj)
+    private static void Scavenger_PickUpAndPlaceInInventory(On.Scavenger.orig_PickUpAndPlaceInInventory orig, Scavenger self, PhysicalObject obj, bool lethalityBypass)
     {
 		//IF WE'RE PULLING SOMEONE, DON'T INTERRUPT US. UPDATEPASS1 WILL TAKE CARE OF THAT
 		if (patch_Player.IsGraspingActualSlugcat(self))
 			return;
 		else
-			orig.Invoke(self, obj);
+			orig.Invoke(self, obj, lethalityBypass);
 
 	}
 

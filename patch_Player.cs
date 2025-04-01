@@ -834,7 +834,7 @@ public class patch_Player
         }
 		
 		//THESE ARE WORTH FULL ON THE COB. I'M MAKING THEM FULL FROM THE GROUND TOO
-		if (ModManager.MSC && eatenobject is SlimeMold && (eatenobject as PhysicalObject).abstractPhysicalObject.type == MoreSlugcatsEnums.AbstractObjectType.Seed)
+		if (ModManager.MSC && eatenobject is SlimeMold && (eatenobject as PhysicalObject).abstractPhysicalObject.type == DLCSharedEnums.AbstractObjectType.Seed)
         {
             result = 4; //ALWAYS A FULL FOOD PIP
         }

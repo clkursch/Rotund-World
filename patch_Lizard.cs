@@ -45,7 +45,7 @@ public class patch_Lizard
 
         if (self.Template.type == CreatureTemplate.Type.YellowLizard)
 			critChub += 1; //BECAUSE IT'S HILARIOUS
-		else if (self.Template.type == MoreSlugcatsEnums.CreatureTemplateType.SpitLizard)
+		else if (self.Template.type == DLCSharedEnums.CreatureTemplateType.SpitLizard)
 			critChub = UnityEngine.Random.Range(2, 8);
 		
 		if (patch_MiscCreatures.CheckFattable(self) == false)
