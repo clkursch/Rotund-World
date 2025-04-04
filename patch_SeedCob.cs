@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using System;
-using static Rewired.Controller;
+using Watcher;
 
 namespace RotundWorld;
 public class patch_SeedCob
@@ -24,12 +24,10 @@ public class patch_SeedCob
 
         IL.SeedCob.Update += SeedCob_Update;
 
-        //THESE DIDN'T EVEN WORK
-        //On.ItemSymbol.SpriteNameForItem += ItemSymbol_SpriteNameForItem;
-        //On.ItemSymbol.ColorForItem += ItemSymbol_ColorForItem;
+        On.Pomegranate.Update += Pomegranate_Update;
     }
 
-    
+
 
     //THIS ONE WAS WRONG. IT WAS BORKED. THE TRYNEXT WAS CORRECT, BUT THE REST WAS NOT
     public static void SeedCob_Update_OLD(ILContext il)
@@ -330,7 +328,12 @@ public class patch_SeedCob
         {
             AbstractConsumable abstractConsumable = null;
             //NON MSC GAMES NEED A REPLACEMENT
-            if (ModManager.MSC)
+            if (ModManager.Watcher && self.AbstractCob.rotted)
+            {
+                abstractConsumable = new AbstractConsumable(self.room.world, AbstractPhysicalObject.AbstractObjectType.DangleFruit, null, self.room.GetWorldCoordinate(self.placedPos), self.room.game.GetNewID(), -1, -1, null);
+                (abstractConsumable.realizedObject as DangleFruit).AbstrConsumable.rotted = true;
+            }
+            if (ModManager.DLCShared)
                 abstractConsumable = new AbstractConsumable(self.room.world, DLCSharedEnums.AbstractObjectType.Seed, null, self.room.GetWorldCoordinate(self.placedPos), self.room.game.GetNewID(), -1, -1, null);
             else
                 abstractConsumable = new AbstractConsumable(self.room.world, AbstractPhysicalObject.AbstractObjectType.EggBugEgg, null, self.room.GetWorldCoordinate(self.placedPos), self.room.game.GetNewID(), -1, -1, null);
@@ -409,6 +412,7 @@ public class patch_SeedCob
                         {
                             player.handOnExternalFoodSource = new Vector2?(vector3 + Custom.DirVec(pos2, vector3) * 5f);
                             player.eatExternalFoodSourceCounter = 15;
+							player.externalFoodSourceRotten = self.AbstractCob.rotted;
                             if (self.room.game.IsStorySession && player.abstractCreature.creatureTemplate.type == CreatureTemplate.Type.Slugcat && !(player.abstractCreature.creatureTemplate.type == MoreSlugcatsEnums.CreatureTemplateType.SlugNPC) && self.room.game.GetStorySession.playerSessionRecords != null)
                             {
                                 //self.room.game.GetStorySession.playerSessionRecords[(self.room.game.Players[k].state as PlayerState).playerNumber].AddEat(self);
@@ -616,6 +620,67 @@ public class patch_SeedCob
 			else
 				self.canBeHitByWeapons = false;
 		}
+    }
+
+
+
+    //WE'LL PUT MELONS HERE TOO WHY NOT
+    private static void Pomegranate_Update(On.Pomegranate.orig_Update orig, Pomegranate self, bool eu)
+    {
+        orig(self, eu);
+
+        if (self.currentlyEdible)
+        {
+            // IDK WHAT THEY'RE DOING BUT THIS MAKES MORE SENSE
+            for (int k = 0; k < self.room.abstractRoom.creatures.Count; k++)
+            {
+                Creature realizedCreature = self.room.abstractRoom.creatures[k].realizedCreature;
+                if (realizedCreature != null
+                    && realizedCreature is Player player
+                    && realizedCreature.room == self.room
+                    && player.handOnExternalFoodSource == null
+                    && player.eatExternalFoodSourceCounter < 1
+                    && player.dontEatExternalFoodSourceCounter < 1
+                    && player.SlugCatClass != MoreSlugcatsEnums.SlugcatStatsName.Spear
+                    //&& (realizedCreature as Player).FoodInStomach < (realizedCreature as Player).MaxFoodInStomach 
+                    && player.Consious
+                    && ((player.touchedNoInputCounter > 5) || player.input[0].pckp))
+                {
+                    if (player.FreeHand() > -1)
+                    {
+                        Vector2 pos2 = player.mainBodyChunk.pos;
+                        Vector2 vector3 = Custom.ClosestPointOnLineSegment(self.bodyChunks[0].pos, self.bodyChunks[1].pos, pos2);
+                        if (Custom.DistLess(pos2, vector3, 35f))
+                        {
+                            player.handOnExternalFoodSource = new Vector2?(vector3 + Custom.DirVec(pos2, vector3) * 5f);
+                            player.eatExternalFoodSourceCounter = 15;
+                            if (self.room.game.IsStorySession && player.abstractCreature.creatureTemplate.type == CreatureTemplate.Type.Slugcat && !(player.abstractCreature.creatureTemplate.type == MoreSlugcatsEnums.CreatureTemplateType.SlugNPC) && self.room.game.GetStorySession.playerSessionRecords != null)
+                            {
+                                self.room.game.GetStorySession.playerSessionRecords[(player.abstractCreature.state as PlayerState).playerNumber].AddEat(self);
+                            }
+                            if (player.graphicsModule != null)
+                            {
+                                (player.graphicsModule as PlayerGraphics).LookAtPoint(vector3, 100f);
+                            }
+                            //MELON SPECIFIC
+                            if (UnityEngine.Random.value < 0.5f)
+                            {
+                                self.room.AddObject(new Pomegranate.PomegranateSeed(self.firstChunk.pos + Custom.RNV() * UnityEngine.Random.Range(0f, 10f), Custom.RNV() * 4f + new Vector2(0f, 3f), self.baseColor));
+                                self.room.PlaySound(SoundID.Slime_Mold_Terrain_Impact, self.firstChunk.pos, 0.5f, 1f);
+                            }
+                            for (int m = 0; m < UnityEngine.Random.Range(1, 3); m++)
+                            {
+                                self.room.AddObject(new WaterDrip(self.firstChunk.pos + Custom.RNV() * UnityEngine.Random.Range(0f, 10f), Custom.RNV() * UnityEngine.Random.Range(0f, 2f), false));
+                            }
+                            for (int n = 2; n < self.smashedBits.GetLength(0); n++)
+                            {
+                                self.smashedBits[n, 2] += new Vector2(UnityEngine.Random.Range(-2f, 2f), UnityEngine.Random.Range(-2f, 2f));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 

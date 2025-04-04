@@ -15,7 +15,7 @@ using System.Linq;
 using static Expedition.ExpeditionProgression;
 //using Rewired;
 using MoreSlugcats;
-//using ExpeditionEnhanced; //FOR MOD COMPAT!
+using Watcher;
 using Unity.Jobs;
 
 namespace RotundWorld;
@@ -36,24 +36,6 @@ public class patch_Misc
 		
 		On.Menu.MenuScene.BuildScene += BP_BuildScene;
         On.Menu.CustomEndGameScreen.GetDataFromSleepScreen += BP_GetDataFromSleepScreen;
-        //On.Expedition.ChallengeTools.GenerateAchievementScores += BP_GenerateAchievementScores;
-
-        
-        /*On.Expedition.ExpeditionProgression.BurdenName += ExpeditionProgression_BurdenName;
-        On.Expedition.ExpeditionProgression.BurdenManualDescription += ExpeditionProgression_BurdenManualDescription;
-        On.Expedition.ExpeditionProgression.BurdenScoreMultiplier += ExpeditionProgression_BurdenScoreMultiplier;
-        On.Expedition.ExpeditionProgression.BurdenMenuColor += ExpeditionProgression_BurdenMenuColor;
-        On.Expedition.ExpeditionProgression.SetupPerkGroups += ExpeditionProgression_SetupPerkGroups;
-        On.Expedition.ExpeditionProgression.UnlockName += ExpeditionProgression_UnlockName;
-        On.Expedition.ExpeditionProgression.UnlockDescription += ExpeditionProgression_UnlockDescription;
-        On.Expedition.ExpeditionProgression.UnlockSprite += ExpeditionProgression_UnlockSprite;
-        On.Expedition.ExpeditionProgression.UnlockColor += ExpeditionProgression_UnlockColor;
-
-        On.Menu.BurdenManualPage.ctor += BurdenManualPage_ctor;
-        On.Menu.UnlockDialog.ctor += UnlockDialog_ctor; 
-		On.Menu.UnlockDialog.UpdateBurdens += UnlockDialog_UpdateBurdens;
-        On.Menu.UnlockDialog.Update += UnlockDialog_Update;
-		*/
 
         On.Menu.SlugcatSelectMenu.SlugcatPageContinue.ctor += BPSlugcatPageContinue_ctor;
         On.Menu.ControlMap.ctor += BPControlMap_ctor;
@@ -61,9 +43,11 @@ public class patch_Misc
         On.HUD.KarmaMeter.ctor += BPKarmaMeter_ctor; //ACTUAL NONSENSE
         On.PlayerSessionRecord.AddEat += PlayerSessionRecord_AddEat;
 
-
         On.FliesRoomAI.CreateFlyInHive += BP_CreateFlyInHive;
         On.HardmodeStart.HardmodePlayer.Update += BPHardmodePlayer_Update;
+
+        On.Watcher.FlameJet.UpdateDamage += FlameJet_UpdateDamage;
+        On.Watcher.WarpPoint.NewWorldLoaded_Room += WarpPoint_NewWorldLoaded_Room;
 		
 		//MAKE NEURONS EDITABLE
 		BindingFlags propFlags = BindingFlags.Instance | BindingFlags.Public;
@@ -201,225 +185,6 @@ public class patch_Misc
     }
 
 
-
-
-    /* OBSOLETE WITH THE 1.9.14 UPDATE
-    private static void UnlockDialog_Update(On.Menu.UnlockDialog.orig_Update orig, UnlockDialog self)
-    {
-		orig.Invoke(self);
-		
-		if (BellyPlus.expdEnhancedEnabled)
-			return;
-
-		if (rotundBurden.Selected || rotundBurden.IsMouseOverMe)
-		{
-			// self.perkNameLabel.text = self.burdenNames[4];
-			// self.perkDescLabel.text = self.burdenDescriptions[4];
-			//FORGET THAT, THAT'S JUST ASKING FOR TROUBLE
-			self.perkNameLabel.text = self.Translate("OBESE") + "+ 35%";
-			self.perkDescLabel.text = self.Translate("Makes the player exceptionally prone to getting fat, making you struggle with your size even at the minimum food requirment.");
-		}
-	}
-
-    public static BigSimpleButton rotundBurden;
-
-    private static void UnlockDialog_ctor(On.Menu.UnlockDialog.orig_ctor orig, UnlockDialog self, ProcessManager manager, ChallengeSelectPage owner)
-    {
-        if (BellyPlus.expdEnhancedEnabled)
-		{
-            orig.Invoke(self, manager, owner);
-            return;
-        }
-		
-		
-		//UNLOCK THE FOOD LOVER PERK BY DEFAULT
-        if (!ExpeditionData.unlockables.Contains("unl-foodlover"))
-            ExpeditionData.unlockables.Add("unl-foodlover");
-
-        orig.Invoke(self, manager, owner);
-
-        //RECCONECT ALL THE BUTTON SELECTION PATHS SO CONTROLLERS CAN SELECT OUR NEW BUTTON
-        rotundBurden.nextSelectable[3] = self.cancelButton;
-        rotundBurden.nextSelectable[2] = self.blindedBurden;
-        rotundBurden.nextSelectable[0] = (ModManager.MSC ? self.pursuedBurden : self.huntedBurden);
-
-        self.blindedBurden.nextSelectable[0] = rotundBurden;
-        if (ModManager.MSC)
-            self.pursuedBurden.nextSelectable[2] = rotundBurden;
-        else
-            self.huntedBurden.nextSelectable[2] = rotundBurden;
-    }
-
-    public static void UnlockDialog_UpdateBurdens(On.Menu.UnlockDialog.orig_UpdateBurdens orig, UnlockDialog self)
-    {
-		if (BellyPlus.expdEnhancedEnabled)
-        {
-            orig.Invoke(self);
-            return;
-        }
-
-        Vector2 vector1 = new Vector2(680f - (ModManager.MSC ? 325f : 248f), 310f);
-		float num5 = 170f;
-		if (true) //rotundBurden == null)
-		{
-			rotundBurden = new BigSimpleButton(self, self.pages[0], self.Translate(ExpeditionProgression.BurdenName("bur-rotund")), "bur-rotund", vector1 + new Vector2(num5 * 4f, -15f), new Vector2(150f, 50f), FLabelAlignment.Center, true);
-			rotundBurden.buttonBehav.greyedOut = false; // !ExpeditionData.unlockables.Contains("bur-rotund");
-			self.pages[0].subObjects.Add(rotundBurden);
-		}
-
-
-		//THIS MEANS ENABLED, NOT UNLOCKED
-		if (ExpeditionGame.activeUnlocks.Contains("bur-rotund"))
-		{
-			Vector3 vector = Custom.RGB2HSL(ExpeditionProgression.BurdenMenuColor("bur-rotund"));
-			rotundBurden.labelColor = new HSLColor(vector.x, vector.y, vector.z);
-		}
-		else
-		{
-			rotundBurden.labelColor = new HSLColor(1f, 0f, 0.35f);
-		}
-
-		orig.Invoke(self);
-	}
-
-	
-    private static void BurdenManualPage_ctor(On.Menu.BurdenManualPage.orig_ctor orig, Menu.BurdenManualPage self, Menu.Menu menu, Menu.MenuObject owner)
-    {
-		orig.Invoke(self, menu, owner);
-		
-		if (BellyPlus.expdEnhancedEnabled)
-			return;
-		
-		float num = 0f;
-		if (menu.CurrLang == InGameTranslator.LanguageID.German)
-		{
-			num = -15f;
-		}
-		MenuLabel menuLabel9 = new MenuLabel(menu, owner, ExpeditionProgression.BurdenName("bur-rotund") + " +" + ExpeditionProgression.BurdenScoreMultiplier("bur-rotund").ToString() + "%", new Vector2(35f + (menu as ExpeditionManualDialog).contentOffX, -30f + num), default(Vector2), true, null);
-		menuLabel9.label.alignment = FLabelAlignment.Left;
-		menuLabel9.label.color = ExpeditionProgression.BurdenMenuColor("bur-rotund");
-		self.subObjects.Add(menuLabel9);
-		string[] array5 = Regex.Split(ExpeditionProgression.BurdenManualDescription("bur-rotund").WrapText(false, 500f + (menu as ExpeditionManualDialog).wrapTextMargin, false), "\n");
-		for (int m = 0; m < array5.Length; m++)
-		{
-			MenuLabel menuLabel10 = new MenuLabel(menu, owner, array5[m], new Vector2(35f + (menu as ExpeditionManualDialog).contentOffX, menuLabel9.pos.y - 15f - 15f * (float)m + num), default(Vector2), false, null);
-			menuLabel10.label.SetAnchor(0f, 1f);
-			menuLabel10.label.color = new Color(0.7f, 0.7f, 0.7f);
-			self.subObjects.Add(menuLabel10);
-		}
-	}
-
-	    private static void ExpeditionProgression_SetupBurdenGroups(On.Expedition.ExpeditionProgression.orig_SetupBurdenGroups orig)
-    {
-		//orig();
-		orig.Invoke();
-		
-		if (BellyPlus.expdEnhancedEnabled)
-			return;
-		
-		//List<string> oldGroups = ExpeditionProgression.burdenGroups["expedition"];
-		//List<string> value2 = new List<string>
-		//{
-		//	"bur-rotund"
-		//};
-		//ExpeditionProgression.burdenGroups.Add("expedition", value2);
-		ExpeditionProgression.burdenGroups["expedition"].Add("bur-rotund");
-	}
-
-    
-    
-	private static void ExpeditionProgression_SetupPerkGroups(On.Expedition.ExpeditionProgression.orig_SetupPerkGroups orig)
-	{
-		orig.Invoke();
-		
-		if (BellyPlus.expdEnhancedEnabled)
-			return;
-		
-		ExpeditionProgression.perkGroups["expedition"].Add("unl-foodlover");
-	}
-
-
-
-	
-    private static Color ExpeditionProgression_BurdenMenuColor(On.Expedition.ExpeditionProgression.orig_BurdenMenuColor orig, string key)
-    {
-		if (key == "bur-rotund")
-		{
-			return new Color(0.55f, 0.35f, 0f);
-		}
-		return orig.Invoke(key);
-	}
-
-    private static float ExpeditionProgression_BurdenScoreMultiplier(On.Expedition.ExpeditionProgression.orig_BurdenScoreMultiplier orig, string key)
-    {
-		if (key == "bur-rotund")
-		{
-			return 35f;
-		}
-		return orig.Invoke(key);
-	}
-
-    private static string ExpeditionProgression_BurdenManualDescription(On.Expedition.ExpeditionProgression.orig_BurdenManualDescription orig, string key)
-    {
-		if (key == "bur-rotund")
-		{
-			return ExpeditionProgression.IGT.Translate("Makes the player exceptionally prone to getting fat, making you struggle with your size even at the minimum food requirment.");
-		}
-		return orig.Invoke(key);
-	}
-
-    private static string ExpeditionProgression_BurdenName(On.Expedition.ExpeditionProgression.orig_BurdenName orig, string key)
-    {
-		if (key == "bur-rotund")
-		{
-			return ExpeditionProgression.IGT.Translate("OBESE");
-		}
-		return orig.Invoke(key);
-	}
-
-
-    private static string ExpeditionProgression_UnlockName(On.Expedition.ExpeditionProgression.orig_UnlockName orig, string key)
-    {
-		if (key == "unl-foodlover")
-			return ExpeditionProgression.IGT.Translate("Food Lover");
-		else
-			return orig.Invoke(key);
-	}
-
-    private static string ExpeditionProgression_UnlockDescription(On.Expedition.ExpeditionProgression.orig_UnlockDescription orig, string key)
-    {
-		if (key == "unl-foodlover")
-			return ExpeditionProgression.IGT.Translate("Allows the player to eat all food types for their full value");
-		else
-			return orig.Invoke(key);
-	}
-
-
-    private static string ExpeditionProgression_UnlockSprite(On.Expedition.ExpeditionProgression.orig_UnlockSprite orig, string key, bool alwaysShow)
-    {
-		//if (ExpeditionData.unlockables.Contains(key) || alwaysShow)
-		//ALWAYS AVAILABLE
-		if (key == "unl-foodlover")
-		{
-			return "Symbol_EggBugEgg";
-		}
-		
-		return orig.Invoke(key, alwaysShow);
-	}
-
-    private static Color ExpeditionProgression_UnlockColor(On.Expedition.ExpeditionProgression.orig_UnlockColor orig, string key)
-    {
-		if (key == "unl-foodlover")
-			return new Color(0f, 1f, 0.47058824f);
-		else
-			return orig.Invoke(key);
-	}
-	
-	*/
-
-
-
-
     public static bool ShouldBeEdible(PhysicalObject self)
 	{
 		return (self.grabbedBy.Count > 0 && self.grabbedBy[0].grabber is Player player && (player.objectInStomach != null || player.FoodInStomach < player.MaxFoodInStomach));
@@ -441,20 +206,60 @@ public class patch_Misc
 			return false;//orig.Invoke(self); //OTHERWISE, JUST RUN AS NORMAL
 									  //return false;
 	}
-	
-	
-	
-	// public static void BP_ChangeRoom(On.RoomCamera.ChangeRoom orig, RoomCamera self, Room newRoom, int cameraPosition)
-	// {
-		// orig.Invoke(self, newRoom, cameraPosition);
-		// //REFRESH ANY SLUGCAT SQUEEZING SOUNDS
-		// if (this.room != null)
-		// {
-			
-		// }
-	// }
 
-    
+    private static void FlameJet_UpdateDamage(On.Watcher.FlameJet.orig_UpdateDamage orig, FlameJet self)
+    {
+        orig(self);
+
+        for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++)
+        {
+            Creature realizedCreature = self.room.abstractRoom.creatures[i].realizedCreature;
+            if (realizedCreature != null && realizedCreature.abstractPhysicalObject.rippleLayer == 0)
+            {
+                Vector2 vector = realizedCreature.mainBodyChunk.pos - self.pos;
+                if (self.bounds.Vector2Inside(vector))
+                {
+                    for (int j = 0; j < self.jetPos.Length - 1; j++)
+                    {
+                        float t = (float)(Time.frameCount % 10) * 0.1f;
+                        Vector2 b = Vector2.Lerp(self.jetPos[j], self.jetPos[j + 1], t);
+                        float num = Mathf.Lerp(self.jetScale[j], self.jetScale[j + 1], t);
+                        float num2 = Mathf.Clamp((float)j / 3f, 0.5f, 1f);
+                        num2 *= Mathf.Clamp((float)(self.jetPos.Length - 1 - j) / 5f, 0.5f, 1f);
+                        float num3 = Vector2.Distance(vector, b);
+                        Player player = realizedCreature as Player;
+                        if (player != null && num3 < num * 3f)
+                        {
+                            // UN-EXHAUST PLAYERS TRYING TO PULL UP ON BEAMS
+                            if (player.animation == Player.AnimationIndex.GetUpOnBeam)
+                                player.lungsExhausted = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+	//DROP ANY BACKFOOD BEFORE WE WARP. THAT MESSES THINGS UP
+    private static void WarpPoint_NewWorldLoaded_Room(On.Watcher.WarpPoint.orig_NewWorldLoaded_Room orig, WarpPoint self, Room newRoom)
+    {
+        for (int i = 0; i < newRoom.game.Players.Count; i++)
+        {
+            AbstractCreature abstractCreature = newRoom.game.Players[i];
+            if (abstractCreature.realizedCreature != null)
+            {
+                Player player = abstractCreature.realizedCreature as Player;
+                if (player.GetBelly().foodOnBack != null)
+                {
+                    player.GetBelly().foodOnBack.DropFood();
+                }
+            }
+        }
+        
+        orig(self, newRoom);
+    }
+
+
 
     private static string WinState_PassageDisplayName(On.WinState.orig_PassageDisplayName orig, WinState.EndgameID ID)
 	{
