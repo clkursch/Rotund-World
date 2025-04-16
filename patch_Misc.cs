@@ -17,6 +17,7 @@ using static Expedition.ExpeditionProgression;
 using MoreSlugcats;
 using Watcher;
 using Unity.Jobs;
+using Rewired.ControllerExtensions;
 
 namespace RotundWorld;
 public class patch_Misc
@@ -48,6 +49,9 @@ public class patch_Misc
 
         On.Watcher.FlameJet.UpdateDamage += FlameJet_UpdateDamage;
         On.Watcher.WarpPoint.NewWorldLoaded_Room += WarpPoint_NewWorldLoaded_Room;
+
+        On.ItemSymbol.SymbolDataFromItem += ItemSymbol_SymbolDataFromItem;
+        //On.SeedCob.ctor += SeedCob_ctor;
 		
 		//MAKE NEURONS EDITABLE
 		BindingFlags propFlags = BindingFlags.Instance | BindingFlags.Public;
@@ -66,6 +70,37 @@ public class patch_Misc
 			typeof(patch_Misc).GetMethod("BP_FireEgg_Editable", myMethodFlags2) // This gets our hook method
 		);
 
+    }
+
+    private static void SeedCob_ctor(On.SeedCob.orig_ctor orig, SeedCob self, AbstractPhysicalObject abstractPhysicalObject)
+    {
+        //Debug.Log("INIT SEED COB!" + self + " - " + abstractPhysicalObject);
+        //if (abstractPhysicalObject is null)
+        //    Debug.Log("ABSTRACT COB IS NULL");
+        //if (self is null)
+        //    Debug.Log("SELF COB IS NULL");
+        //if (self.AbstractCob is null) //OK BUT THIS IS ALWAYS NULL EVEN WHEN ITS WORKING
+        //    Debug.Log("ABSTRACT COB 2 IS NULL");
+
+        orig(self, abstractPhysicalObject);
+    }
+
+    private static IconSymbol.IconSymbolData? ItemSymbol_SymbolDataFromItem(On.ItemSymbol.orig_SymbolDataFromItem orig, AbstractPhysicalObject item)
+    {
+		
+        if (item.type == AbstractPhysicalObject.AbstractObjectType.SeedCob)
+        {
+            //Debug.Log("ITEM SYMBOL " + item.type);
+            //Debug.Log("ITEM " + item);
+            //Debug.Log("ITEM ABSTRACT " + (item as SeedCob.AbstractSeedCob));
+            if ((item as SeedCob.AbstractSeedCob) is null)
+            {
+                Debug.Log("NULL ABSTRACT COBB DETECTED!!!");
+                item.Destroy();
+                return null;
+            }
+        }
+        return orig(item);
     }
 
     private static void PlayerSessionRecord_AddEat(On.PlayerSessionRecord.orig_AddEat orig, PlayerSessionRecord self, PhysicalObject eatenObject)

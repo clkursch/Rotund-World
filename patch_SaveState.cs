@@ -167,11 +167,11 @@ public class patch_SaveState
 				Debug.Log("COUNTING THE CORN");
 				for (int j = 0; j < thisRoom.entities.Count; j++)
 				{
-					if ((thisRoom.entities[j] as AbstractPhysicalObject).realizedObject != null && (thisRoom.entities[j] as AbstractPhysicalObject).realizedObject is SeedCob myCobb)
+                    if ((thisRoom.entities[j] as AbstractPhysicalObject).realizedObject != null && (thisRoom.entities[j] as AbstractPhysicalObject).realizedObject is SeedCob myCobb)
 					{
 						//BUT LIKE DO ALL THE STUFF FIRST
-						if (!myCobb.AbstractCob.dead)
-						{
+						if (myCobb.AbstractCob != null && !myCobb.AbstractCob.dead) //AFTER SAVING A SEEDCOB IN ANOTHER SHELTER, myCobb1.AbstractCob IS NULL EVEN WHEN THE AbstractPhysicalObject IS NOT NULL
+                        {
 							if (myCobb.AbstractCob.opened)
 								BellyPlus.StoredStumps++;
 							else if (!myCobb.AbstractCob.opened)
@@ -185,7 +185,7 @@ public class patch_SaveState
 						//break;
 					}
 				}
-			}
+            }
         }
     }
 

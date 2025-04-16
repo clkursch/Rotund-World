@@ -649,10 +649,10 @@ public class patch_SeedCob
                     if (player.FreeHand() > -1)
                     {
                         Vector2 pos2 = player.mainBodyChunk.pos;
-                        Vector2 vector3 = Custom.ClosestPointOnLineSegment(self.bodyChunks[0].pos, self.bodyChunks[1].pos, pos2);
+                        Vector2 vector3 = self.firstChunk.pos;
                         if (Custom.DistLess(pos2, vector3, 35f))
                         {
-                            player.handOnExternalFoodSource = new Vector2?(vector3 + Custom.DirVec(pos2, vector3) * 5f);
+                            player.handOnExternalFoodSource = new Vector2?(self.firstChunk.pos + Custom.DirVec(pos2, self.firstChunk.pos) * 5f); // new Vector2?(vector3 + Custom.DirVec(pos2, vector3) * 5f);
                             player.eatExternalFoodSourceCounter = 15;
                             if (self.room.game.IsStorySession && player.abstractCreature.creatureTemplate.type == CreatureTemplate.Type.Slugcat && !(player.abstractCreature.creatureTemplate.type == MoreSlugcatsEnums.CreatureTemplateType.SlugNPC) && self.room.game.GetStorySession.playerSessionRecords != null)
                             {
@@ -660,7 +660,7 @@ public class patch_SeedCob
                             }
                             if (player.graphicsModule != null)
                             {
-                                (player.graphicsModule as PlayerGraphics).LookAtPoint(vector3, 100f);
+                                (player.graphicsModule as PlayerGraphics).LookAtPoint(self.firstChunk.pos, 100f);
                             }
                             //MELON SPECIFIC
                             if (UnityEngine.Random.value < 0.5f)
