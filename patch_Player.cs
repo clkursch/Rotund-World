@@ -7,6 +7,7 @@ using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using System.Linq;
 using RainMeadow;
+using IL.Watcher;
 
 
 /*
@@ -828,7 +829,7 @@ public class patch_Player
 			if (fatness > 0.06f) //(0.15f * 0.7f)
 				result *= 2;
 		}
-        if (eatenobject is Centipede && patch_MiscCreatures.GetChub(eatenobject as Creature) >= 4) //&& (eatenobject as Centipede).Small 
+        if ((eatenobject is Centipede || eatenobject is Tardigrade) && patch_MiscCreatures.GetChub(eatenobject as Creature) >= 4) 
         {
             result *= 2;
         }
@@ -3158,14 +3159,14 @@ public class patch_Player
 			self.room.game.cameras[0].hud.textPrompt.AddMessage(self.room.game.rainWorld.inGameTranslator.Translate("This item can only be swallowed if there are no items stored in your belly"), 0, 200, false, false);
 			BellyPlus.neuronHintGiven = true;
 		}
-		//AddPersonalFood(self, edible.FoodPoints); //NOT NEEDED ANYMORE
+		
+		//COUNT HOW MUCH SLIME MOLD WE'VE EATEN SO IT CAN MAKE OUR BELLY GLOW
+		if (edible is SlimeMold slime && (!ModManager.DLCShared || slime.abstractPhysicalObject.type != DLCSharedEnums.AbstractObjectType.Seed))
+		{
+			self.abstractCreature.GetAbsBelly().slimeGlowEaten += slime.big ? 2 : 1;
+		}
+		
 		orig.Invoke(self, edible);
-
-        // if (self.stillInStartShelter) //CHECK THIS IN ADDFOOD DUMMY
-        // obj.GetBelly().breakfasted = true;
-
-        //if (BPOptions.debugLogs.Value)
-        //	Debug.Log("-OBJECT EATEN!  CURR:" + self.CurrentFood + " BONUS:" + BellyPlus.bonusFood + " FOOD POINTS:" + edible.FoodPoints);
 
         //UNTIL RAIN MEADOW FIXES THIS WE SHOULD JUST GO BACK TO NORMAL
         self.GetBelly().frFed = false;
@@ -7904,10 +7905,13 @@ public class patch_Player
 			if (ObjIsSlick(self))
 				launchSpeed *= 0.8f; //WILL LEAVE THEM AT x1.8 TOTAL
 		}
-		
-		
-		// Vector2 inputVect = self.input[0].IntVec.ToVector2() * launchSpeed * popMag;
-		Vector2 inputVect = self.GetBelly().stuckVector * launchSpeed * popMag;
+
+		//ALRIGHT ALRIGHT, FINE, ILL DO IT FOR YOU, SOFT
+		if ((self.GetBelly().stuckVector.x == 0 && self.input[0].x != 0) || (self.GetBelly().stuckVector.y == 0 && self.input[0].y != 0))
+			launchSpeed /= 4f; //SHARPLY REDUCE THE LAUNCH SPEED IF HOLDING A DIRECTION PERPENDICULAR TO THE STUCK DIRECTION
+
+        // Vector2 inputVect = self.input[0].IntVec.ToVector2() * launchSpeed * popMag;
+        Vector2 inputVect = self.GetBelly().stuckVector * launchSpeed * popMag;
 		self.GetBelly().stuckVector = new Vector2(0,0); //OKAY NOW WE CAN RESET THIS
 	
 		self.bodyChunks[0].vel = inputVect;

@@ -16,8 +16,73 @@ public class patch_OracleBehavior
 		On.SSOracleBehavior.SSSleepoverBehavior.Update += BP_Sleepover_Update;
         On.SSOracleBehavior.SSSleepoverBehavior.ctor += BP_Sleepover_ctor;
         On.SSOracleBehavior.SSOracleMeetPurple.Update += BP_SSOracleMeetPurple_Update;
-		//On.SSOracleBehavior.SSSleepoverBehavior.ctor += SSSleepoverBehavior_ctor;
+
+        //WELL HE 'KIND OF' IS ONE...
+        On.Watcher.PrinceBehavior.Update += PrinceBehavior_Update;
 	}
+	
+	public static bool princeCommentedOnWeight = false;
+
+    public static void PrinceBehavior_Update(On.Watcher.PrinceBehavior.orig_Update orig, Watcher.PrinceBehavior self)
+    {
+        if (self.player == null)
+        {
+			//self.player = self.FindPlayer();
+			PrinceFindFatterPlayer(self);
+        }
+		
+		if (self.saidHello == false)
+			princeCommentedOnWeight = false;
+
+        if (!princeCommentedOnWeight && self.prince.Consious && self.hasNoticedPlayer && self.player != null && self.saidHello && !self.paralyzed && !self.player.dead)
+        {
+            self.lookPoint = self.player.firstChunk.pos;
+
+            if (self.noConversationTime == 30 && self.conversationAfterHello != null)
+            {
+                //HIJACK THE CONVERSATION BEFORE IT STARTS
+                int myChub = patch_Player.GetChubValue(self.player) + (patch_Player.GetOverstuffed(self.player) / 2);
+                int dice = UnityEngine.Random.Range(0, 3);
+				//Debug.Log("MYCHUB " + myChub);
+                if (myChub >= 3)
+                {
+                    if (dice == 0)
+					{
+                        self.dialogBox.Interrupt(self.Translate("Oh such mass you've accumulated!"), 60);
+                        self.dialogBox.NewMessage(self.Translate("You must be seeing and tasting many things, as have I."), 60);
+                    }
+					else if (dice == 1)
+					{
+                        self.dialogBox.Interrupt(self.Translate("Oh, to such size I see before me!"), 60);
+                        self.dialogBox.NewMessage(self.Translate("What have you been indulging in to attain such a stature?"), 60);
+                    }
+                    else
+                        self.dialogBox.Interrupt(self.Translate("Ah, what a shape! Your spoils have been bountiful, I see."), 60);
+                }
+                else if (myChub >= 10)
+                {
+                    if (dice == 0)
+                        self.dialogBox.Interrupt(self.Translate("My goodness! Such an abundance of mass! To think, one day it may even rival my own..."), 60);
+                    else if (dice == 1)
+                    {
+                        self.dialogBox.Interrupt(self.Translate("Friend? ...Oh, yes. It is them, it is you!"), 60);
+                        self.dialogBox.NewMessage(self.Translate("You have achieved a great level of abundance..!"), 60);
+                        self.dialogBox.NewMessage(self.Translate("Even with all that I know, I did not yet recognize you immediately."), 60);
+                    }
+                    else
+					{
+                        self.dialogBox.Interrupt(self.Translate("Ah! You've obtained such incredible roundness!"), 60);
+                        self.dialogBox.NewMessage(self.Translate("Congratulations on your success, my dear friend."), 60);
+                    }
+                }
+
+                self.noConversationTime = 0; //YOINK
+				princeCommentedOnWeight = true;
+            }
+        }
+
+		orig(self);
+    }
 
 
     //SS = SUPER STRUCTURE (DEFAULT 5P)
@@ -157,10 +222,24 @@ public class patch_OracleBehavior
 			}
 		}
 	}
-	
-	
 
-	public static void OracleBehavior_Update(On.SSOracleBehavior.orig_Update orig, SSOracleBehavior self, bool eu)
+    public static void PrinceFindFatterPlayer(Watcher.PrinceBehavior behavior)
+    {
+        foreach (AbstractCreature abstractPlayer in behavior.prince.room.game.Players)
+        {
+            //IF THERES MORE THAN ONE...
+            if (abstractPlayer.Room == behavior.prince.room.abstractRoom && abstractPlayer.realizedCreature is Player player && player != null && player.playerState != null && !player.dead)
+            {
+                //PICK THE FATTER ONE. OR THE ONE THAT IS STILL IN THE ROOM
+                if (behavior.player == null || patch_Player.GetChubValue(player) > patch_Player.GetChubValue(behavior.player) || behavior.player.room != behavior.prince.room)
+                    behavior.player = player;
+            }
+        }
+    }
+
+
+
+    public static void OracleBehavior_Update(On.SSOracleBehavior.orig_Update orig, SSOracleBehavior self, bool eu)
 	{
 		//NOT IF WE'RE MEDITATING. ANYONE CAN FALL ONTO OUR FLOOR
 		if (self.getToWorking == 0)

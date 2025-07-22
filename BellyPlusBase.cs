@@ -492,6 +492,7 @@ public static class AbsBellyClass
 		public float origPoleSpeed;
 		public int externalMass;
 		public int chubModOffset;
+		public int slimeGlowEaten;
     }
 
     // This part lets you access the stored stuff by simply doing "self.GetAbsBelly()" in BellyPlus.cs or everywhere else!
@@ -610,7 +611,10 @@ public static class YourGraphicsClass
 		public float checkRad = 1f; //USED TO DETECT CHANGES IN RAD
 		public bool verified;
 		public bool cloakRipped;
-	}
+		public float lastHipScale;
+        public LightSource slimeGlow; //makes our belly glow if we eat enough slime mold
+        public LightSource slimeGlowOverlay; //makes our belly glow if we eat enough slime mold
+    }
 
 	private static readonly ConditionalWeakTable<PlayerGraphics, YourGraphics> CWT = new();
 	public static YourGraphics GetGraph(this PlayerGraphics player) => CWT.GetValue(player, _ => new());

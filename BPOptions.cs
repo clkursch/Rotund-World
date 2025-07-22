@@ -58,6 +58,9 @@ public class BPOptions : OptionInterface
         BPOptions.fatDeer = this.config.Bind<bool>("fatDeer", true);
         BPOptions.fatYeeks = this.config.Bind<bool>("fatYeeks", true);
         BPOptions.fatLeechs = this.config.Bind<bool>("fatLeechs", true);
+		BPOptions.fatMoths = this.config.Bind<bool>("fatMoths", true);
+		BPOptions.fatTards = this.config.Bind<bool>("fatTards", true);
+        BPOptions.fatLoachs = this.config.Bind<bool>("fatLoachs", true);
     }
 
 
@@ -105,6 +108,9 @@ public class BPOptions : OptionInterface
     public static Configurable<bool> fatDeer;
     public static Configurable<bool> fatYeeks;
     public static Configurable<bool> fatLeechs;
+	public static Configurable<bool> fatMoths;
+	public static Configurable<bool> fatTards;
+    public static Configurable<bool> fatLoachs;
     //Lizard
     //Lantern Mice
     //Scavengers
@@ -470,7 +476,7 @@ public class BPOptions : OptionInterface
         Tabs[1].AddItems(new OpLabel(50f, lineCount, BPTranslate("Spending lots of stamina when you are close to freedom can help you pop through early!")));
 
 
-        for (int j = 0; j < 3; j++)
+        for (int j = 0; j < 2; j++)
         {
             int descLine = 155;
             Tabs[j].AddItems(new OpLabel(25f, descLine + 25f, "--- MOD FEATURES ---"));
@@ -586,7 +592,7 @@ public class BPOptions : OptionInterface
 
         Tabs[critTab].AddItems(new UIelement[]
         {
-            new OpRect(new Vector2(0, lineCount - 235), new Vector2(600, 275))
+            new OpRect(new Vector2(0, lineCount - 285), new Vector2(600, 405))
         });
 
         OpCheckBox critBox1;
@@ -794,6 +800,45 @@ public class BPOptions : OptionInterface
         else
         {
             BPOptions.fatPups.Value = true;
+        }
+		
+		
+		if (ModManager.Watcher)
+        {
+            margin = baseMargin;
+            lineCount -= linePadding;
+
+            OpCheckBox critBox13;
+            dsc = BPTranslate("creaturetype-BigMoth");
+            Tabs[critTab].AddItems(new UIelement[]
+            {
+                critBox13 = new OpCheckBox(BPOptions.fatMoths, new Vector2(margin, lineCount))
+                {description = dsc},
+                new OpLabel(critBox13.pos.x + xPad, critBox13.pos.y + yPad, dsc)
+                {description = dsc}
+            });
+
+
+            margin += 175;
+            OpCheckBox critBox12;
+            dsc = BPTranslate("creaturetype-Tardigrade");
+            Tabs[critTab].AddItems(new UIelement[]
+            {
+                critBox12 = new OpCheckBox(BPOptions.fatTards, new Vector2(margin, lineCount))
+                {description = dsc},
+                new OpLabel(critBox12.pos.x + xPad, critBox12.pos.y + yPad, dsc)
+                {description = dsc}
+            });
+
+            margin += 175;
+            dsc = BPTranslate("creaturetype-Loach");
+            Tabs[critTab].AddItems(new UIelement[]
+            {
+                critBox12 = new OpCheckBox(BPOptions.fatLoachs, new Vector2(margin, lineCount))
+                {description = dsc},
+                new OpLabel(critBox12.pos.x + xPad, critBox12.pos.y + yPad, dsc)
+                {description = dsc}
+            });
         }
 
 

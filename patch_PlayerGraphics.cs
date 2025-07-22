@@ -24,6 +24,8 @@ public class patch_PlayerGraphics
         On.PlayerGraphics.AddToContainer += PlayerGraphics_AddToContainer;
         On.PlayerGraphics.Update += PlayerGraphics_Update;
     }
+	
+	public static Color slimeGlowColor = new Color(1, 1, 1);
 
     public static void BPPlayerGraphics_ctor(On.PlayerGraphics.orig_ctor orig, PlayerGraphics self, PhysicalObject ow)
     {
@@ -90,7 +92,7 @@ public class patch_PlayerGraphics
         if (BPOptions.blushEnabled.Value && !BellyPlus.VisualsOnly())
             PB_InitiateExtraFx(self, sLeaser, rCam);
 
-        
+        slimeGlowColor = Custom.Saturate(SlimeMold.SlimeMoldColorFromPalette(rCam.currentPalette), 1f);
     }
 
 
@@ -407,6 +409,7 @@ public class patch_PlayerGraphics
 		
 		sLeaser.sprites[ct].scaleX += 0.05f * torsoScale;
         sLeaser.sprites[hp].scaleX += 0.05f * hipScale;
+        self.GetGraph().lastHipScale = sLeaser.sprites[hp].scaleX; // 1f + (0.05f * hipScale);
 
         //3 * 2.25
         //1 * 0.75
@@ -695,6 +698,54 @@ public class patch_PlayerGraphics
         {
             float aerobic = Mathf.Min(0.85f, self.player.aerobicLevel);
             self.breath = origBreath + (1f / Mathf.Lerp(60f, 15f, Mathf.Pow(aerobic, 1.5f)));
+        }
+		
+		//SLIME MOLD MAKES OUR BELLY GLOW!
+		int slimesEaten = self.player.abstractCreature.GetAbsBelly().slimeGlowEaten;
+		if (slimesEaten > 3)
+		{
+			if (self.GetGraph().slimeGlow != null)
+            {
+                // float glowStr = Math.Max(0, self.player.abstractCreature.GetAbsBelly().slimeGlowEaten - 3) * 75;
+                float glowStr = Mathf.Max(0, slimesEaten - 3f);
+                glowStr = 20 + patch_Player.ScaledBack(glowStr, 5, 3) * 15;
+                Vector2 bellyPos = Vector2.Lerp(self.player.bodyChunks[1].pos, self.player.bodyChunks[0].pos, 0.3f);
+                self.GetGraph().slimeGlow.setRad = glowStr;
+                self.GetGraph().slimeGlow.stayAlive = true;
+                self.GetGraph().slimeGlow.setPos = bellyPos; // new Vector2 ?(bellyPos);
+                
+                //AND THE OVERLAY
+                float overlayStr = (slimesEaten - 3);
+                overlayStr = Mathf.Min(1f, patch_Player.ScaledBack(overlayStr, 6, 3) * 0.08f);
+                //Debug.Log("LIME " + overlayStr);
+                self.GetGraph().slimeGlowOverlay.setAlpha = overlayStr;
+                self.GetGraph().slimeGlowOverlay.setRad = 15f * self.GetGraph().lastHipScale; // (self.player.bodyChunks[1].rad / 8f);
+                self.GetGraph().slimeGlowOverlay.setPos = bellyPos;
+                self.GetGraph().slimeGlowOverlay.stayAlive = true;
+
+                //OK IT NEEDS THIS OR IT WONT SHOW UP AFTER GOING THROUGH A PIPE
+                if (self.GetGraph().slimeGlow.slatedForDeletetion || self.GetGraph().slimeGlow.room != self.player.room)
+                {
+                    self.GetGraph().slimeGlow = null;
+                    self.GetGraph().slimeGlowOverlay = null;
+                }
+            }
+            else
+			{
+				self.GetGraph().slimeGlow = new LightSource(self.player.mainBodyChunk.pos, false, slimeGlowColor, self.player);
+				self.GetGraph().slimeGlow.requireUpKeep = true;
+				self.GetGraph().slimeGlow.setRad = 0f;
+				self.GetGraph().slimeGlow.setAlpha = 1f;
+				self.player.room.AddObject(self.GetGraph().slimeGlow);
+
+                //ADD A SECOND OVERLAY FOR THE BELLY
+                self.GetGraph().slimeGlowOverlay = new LightSource(self.player.mainBodyChunk.pos, false, slimeGlowColor, self.player);
+                self.GetGraph().slimeGlowOverlay.requireUpKeep = true;
+                self.GetGraph().slimeGlowOverlay.setRad = 60f;
+                self.GetGraph().slimeGlowOverlay.setAlpha = 0f;
+                self.GetGraph().slimeGlowOverlay.flat = true; //THIS IS THE PART THAT MAKES IT AN OVERLAY
+                self.player.room.AddObject(self.GetGraph().slimeGlowOverlay);
+            }
         }
     }
 	

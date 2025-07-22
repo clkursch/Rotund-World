@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using RWCustom;
 using UnityEngine;
 using MoreSlugcats;
-using MonoMod.RuntimeDetour;
+using Watcher;
 
 namespace RotundWorld;
 public class patch_MiscCreatures
@@ -63,10 +63,20 @@ public class patch_MiscCreatures
         On.Leech.Attached += Leech_Attached;
         On.LeechGraphics.Radius += LeechGraphics_Radius;
 
+        On.Watcher.BigMoth.ctor += BigMoth_ctor;
+        On.Watcher.BigMoth.Update += BigMoth_Update;
+        On.Watcher.BigMothGraphics.DrawSprites += BigMothGraphics_DrawSprites;
+		
+		On.Watcher.Tardigrade.ctor += Tardigrade_ctor;
+        On.Watcher.TardigradeGraphics.DrawSprites += TardigradeGraphics_DrawSprites;
+		
+		On.Watcher.Loach.ctor += Loach_ctor;
+        On.Watcher.Loach.Eat += Loach_Eat;
+
         On.StaticWorld.InitStaticWorld += StaticWorld_InitStaticWorld;
         On.Creature.ctor += Creature_ctor;
     }
-
+	
     private static void Creature_ctor(On.Creature.orig_ctor orig, Creature self, AbstractCreature abstractCreature, World world)
     {
         orig(self, abstractCreature, world);
@@ -152,6 +162,12 @@ public class patch_MiscCreatures
             return false;
         if (crit is Leech && !BPOptions.fatLeechs.Value)
             return false;
+		if (crit is BigMoth && !BPOptions.fatMoths.Value)
+            return false;
+        if (crit is Tardigrade && !BPOptions.fatTards.Value)
+            return false;
+        if (crit is Loach && !BPOptions.fatLoachs.Value)
+            return false;
 
         return true;
 	}
@@ -187,6 +203,15 @@ public class patch_MiscCreatures
                 self.abstractCreature.GetAbsBelly().myFoodInStomach = 3; //DROPWIGS DON'T GET A 1 TO 1 RATIO
             //self.abstractCreature.GetAbsBelly().myFoodInStomach = critChub;
             //UpdateBellySize(self as DropBug, self.abstractCreature.GetAbsBelly().myFoodInStomach);
+        }
+
+        if (self is BigMoth && CheckFattable(self))
+        {
+            int critChub = Mathf.FloorToInt(Mathf.Lerp(3, 9, UnityEngine.Random.value));
+            if (critChub == 8)
+                self.abstractCreature.GetAbsBelly().myFoodInStomach = 28;
+            else
+                self.abstractCreature.GetAbsBelly().myFoodInStomach = critChub * 2;
         }
 
         else if (CheckFattable(self))
@@ -238,6 +263,32 @@ public class patch_MiscCreatures
                 num = Mathf.Pow(Mathf.Max(0f, Mathf.Lerp(num, 1f, 0.2f)), 0.7f);
                 self.bodyChunks[i].rad = Mathf.Lerp(10f, 35f, num) * massMod;
             }
+        }
+        else if (self is BigMoth)
+        {
+            patch_Lizard.UpdateChubValue(self);
+            self.GetBelly().myChubValue = (self.GetBelly().myChubValue / 3f) + (patch_Lizard.GetOverstuffed(self) / 8f);
+            if (BPOptions.debugLogs.Value)
+                Debug.Log("MOTH CHUB " + self.GetBelly().myChubValue);
+        }
+		else if (self is Tardigrade)
+        {
+            patch_Lizard.UpdateChubValue(self);
+			self.GetBelly().myChubValue = Mathf.Max(1, self.GetBelly().myChubValue);
+        }
+		else if (self is Loach loach)
+        {
+            patch_Lizard.UpdateChubValue(self);
+			self.GetBelly().myChubValue = Mathf.Max(0, self.GetBelly().myChubValue);
+			//float chubMod = self.abstractCreature.GetAbsBelly().myFoodInStomach;
+			float chubMod = (self.GetBelly().myChubValue / 8f) + (patch_Lizard.GetOverstuffed(self) / 25f);
+            if (BPOptions.debugLogs.Value)
+                Debug.Log("LOACH CHUB " + chubMod);
+            //GRAPHICS UPDATE GOES OFF OF OUR BODY CHUNK SIZE SO THIS SHOULD WORK
+            self.bodyChunks[2].rad = 40f * (loach.creatureParams.sizeMultiplier + (chubMod / 2f)); //SIZE MULT IS ALWAYS 1 IN THE CODE
+			self.bodyChunks[3].rad = 45f * (loach.creatureParams.sizeMultiplier + chubMod);
+			self.bodyChunks[4].rad = 55f * (loach.creatureParams.sizeMultiplier + chubMod);
+			self.bodyChunks[5].rad = 50f * (loach.creatureParams.sizeMultiplier + chubMod);
         }
     }
 
@@ -797,11 +848,164 @@ public class patch_MiscCreatures
 		//if (self.digestingCounter == 1 && self.graphicsModule != null)
 		//	self.graphicsModule.Reset();
 	}
+
+
+    private static void Tardigrade_ctor(On.Watcher.Tardigrade.orig_ctor orig, Tardigrade self, AbstractCreature abstractCreature, World world)
+    {
+        orig(self, abstractCreature, world);
+        CheckIn(self);
+        ObjUpdateBellySize(self);
+    }
+
+    private static void TardigradeGraphics_DrawSprites(On.Watcher.TardigradeGraphics.orig_DrawSprites orig, TardigradeGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        orig(self, sLeaser, rCam, timeStacker, camPos);
+
+        if (BPOptions.fatTards.Value)
+        {
+            if (self.culled)
+                return;
+
+            //CAN WE REALLIGN THINGS HERE?
+            TardigradeGraphics.Spine spine = new TardigradeGraphics.Spine(self, timeStacker);
+            float bunScale8 = 8f * self.bunny.scale;
+            Vector2 spineVector = spine.chunkPositions[3] + Custom.DirVec(spine.chunkPositions[2], spine.chunkPositions[3]);
+            float bitesLeftScale = (float)self.bunny.BitesLeft / 3f;
+            for (int j = 0; j < 6; j++)
+            {
+                float f = 1f - Mathf.InverseLerp(0f, 5f, (float)j) * bitesLeftScale;
+                Vector2 BezierVector = Custom.Bezier(spine.chunkPositions[0], spine.handles[0], spine.chunkPositions[3], spine.handles[1], f);
+                Vector2 perpVec = Custom.PerpendicularVector(BezierVector, spineVector);
+                //float bunScale8alt = 8f * self.bunny.scale;
+                //float bunScale8alt = 8f * self.bunny.scale * (1f + (j / 1f)); //INCREASE!
+                float chubScale = 1f;
+                float chubValue = self.bunny.GetBelly().myChubValue; //if (GetChub(self) >= 4)
+                if (j == 1 || j == 4)
+                    chubScale = chubValue / 2.35f; //1.7f;
+                else if (j == 2 || j == 3)
+                    chubScale = chubValue / 1.8f; //2.2f;
+
+                /*
+                if (j == 0)
+                    chubScale = 1.5f; //REAR END
+                if (j == 1)
+                    chubScale = 2.0f;
+                else if (j == 2 || j == 3)
+                    chubScale = 2.2f;
+                else if (j == 4)
+                    chubScale = 1.5f; 
+                else if (j == 5)
+                    chubScale = 1.2f; //HEAD
+				*/
+                float bunScale8alt = 8f * self.bunny.scale * chubScale; //INCREASE!
+                (sLeaser.sprites[self.BodyMesh] as TriangleMesh).MoveVertice(j * 4, (spineVector + BezierVector) / 2f - perpVec * (bunScale8alt + bunScale8) * 0.5f - camPos);
+                (sLeaser.sprites[self.BodyMesh] as TriangleMesh).MoveVertice(j * 4 + 1, (spineVector + BezierVector) / 2f + perpVec * (bunScale8alt + bunScale8) * 0.5f - camPos);
+                (sLeaser.sprites[self.BodyMesh] as TriangleMesh).MoveVertice(j * 4 + 2, BezierVector - perpVec * bunScale8alt - camPos);
+                (sLeaser.sprites[self.BodyMesh] as TriangleMesh).MoveVertice(j * 4 + 3, BezierVector + perpVec * bunScale8alt - camPos);
+                spineVector = BezierVector;
+                bunScale8 = bunScale8alt; //DON'T FORGET THIS PART OR THEY BECOME SPIKEY AND ACCORDIAN LIKE
+            }
+
+            //OKAY WE'LL SKIP REALIGNING THE LEGS BUT AT LEAST DO THIS
+            for (int n = 0; n < self.cosmetics.Count; n++)
+            {
+                self.cosmetics[n].DrawSprites(sLeaser, rCam, timeStacker, camPos, spine);
+            }
+        }
+    }
+
+
+    private static void BigMoth_ctor(On.Watcher.BigMoth.orig_ctor orig, BigMoth self, AbstractCreature abstractCreature, World world)
+    {
+        orig(self, abstractCreature, world);
+        CheckIn(self);
+        ObjUpdateBellySize(self);
+    }
+
+    private static void BigMothGraphics_DrawSprites(On.Watcher.BigMothGraphics.orig_DrawSprites orig, BigMothGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        self.bug.iVars.chub = Mathf.Max(self.bug.iVars.chub, self.bug.GetBelly().myChubValue); //BE FAT
+        orig(self, sLeaser, rCam, timeStacker, camPos);
+    }
+
+    private static void BigMoth_Update(On.Watcher.BigMoth.orig_Update orig, BigMoth self, bool eu)
+    {
+        if (self.room == null || !self.Consious || !CheckFattable(self))
+        {
+            orig(self, eu);
+            return;
+        }
+
+        //ADD FOOD IF WE'RE ABOUT TO DRAIN A MEAT POINT OR HP
+        if (self.drinkChunk != null && self.drinkingChunk && self.room != null && self.Consious)
+        {
+            Creature creature = self.drinkChunk.owner as Creature;
+            if (creature != null)
+            {
+                // MOTHS CAN'T ACTUALLY "EAT" CREATURES STILL ALIVE BUT WE CAN AT LEAST USE THIS AS A TIMER TO CONVERT HP DRAINED TO FAT
+                self.eatCounter++;
+                self.eatCounter--;
+                if (!creature.dead)
+                {
+                    self.eatCounter++;
+                    if ((float)self.eatCounter > 200f / self.scale)
+                    {
+                        AddFood(self, 1);
+                        self.eatCounter = 0;
+                        Debug.Log("MOTH ADD FOOD ");
+                    }
+                }
+                else if ((float)self.eatCounter > (200f / self.scale) - 1)
+                {
+                    AddFood(self, 1);
+                    Debug.Log("MOTH ADD FOOD ");
+                }
+            }
+        }
+
+        //INCREASE GRAVITY BASED ON OUR CHONK
+        if (self.legsOnGround < 2 && !BellyPlus.VisualsOnly())
+        {
+            for (int i = 1; i < 3; i++)
+            {
+                //self.bodyChunks[i].vel.y = Mathf.Min(0, self.bodyChunks[i].vel.y * (0.97f + 0.03f * (1f - Mathf.Sin(this.flapness * 3.1415927f))));
+                self.bodyChunks[i].vel.y -= self.GetBelly().myChubValue / 10f;
+            }
+        }
+        orig(self, eu);
+    }
 	
 	
-	public static float BP_Rad(On.PoleMimic.orig_Rad orig, PoleMimic self, int index)
+	
+	private static void Loach_ctor(On.Watcher.Loach.orig_ctor orig, Loach self, AbstractCreature abstractCreature, World world)
+    {
+        orig(self, abstractCreature, world);
+        CheckIn(self);
+        ObjUpdateBellySize(self);
+    }
+	
+	
+	//public void Eat(bool eu)
+	private static void Loach_Eat(On.Watcher.Loach.orig_Eat orig, Loach self, bool eu)
 	{
-		return (orig.Invoke(self, index) * 8f);
+		//RUN ALL THIS RIGHT BEFORE THEY GET DELETED
+		for (int i = self.eatObjects.Count - 1; i >= 0; i--)
+		{
+			if (self.eatObjects[i].progression > 1f)
+			{
+				int foodPips = 1; //THIS COVERS SLIME MOLD -WHICH THEY CANT EVEN EAT! LAME...
+				//FOR ONCE WE'RE ADDING PIPS BASED ON CREATURE SIZE
+				if (self.eatObjects[i].chunk.owner is Creature)
+                {
+                    foodPips = Mathf.CeilToInt((self.eatObjects[i].chunk.owner as Creature).Template.bodySize);
+                    foodPips = Mathf.CeilToInt(patch_Player.ScaledBack(foodPips, 4, 2f));
+                }
+                
+				AddFood(self, foodPips); 
+			}
+		}
+		
+		orig(self, eu);
 	}
-	
+
 }
