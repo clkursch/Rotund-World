@@ -2858,7 +2858,7 @@ public class patch_Player
 
         //SPECIAL EXCEPTIONS FOR SOME CHALLENGE MODE LEVELS 
         if (ModManager.MSC && self.room != null && self.room.game.IsArenaSession 
-			&& self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.gameType == MoreSlugcatsEnums.GameTypeID.Challenge)
+			&& self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.gameType == DLCSharedEnums.GameTypeID.Challenge)
 		{
 			if (add == 5 && (self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.challengeID == 63 || self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.challengeID == 45))
 			{
@@ -3820,8 +3820,8 @@ public class patch_Player
 					//OH! IT ONLY RUNS WHEN EATCOUNTER REACHES 0, AND THIS IS THE FIRST PART IT REACHES BEFORE THAT HAPPENS...
 					//SAINT'S SPECIAL ABILITY TO POP HANDHELD CREATURES!
 					if (ModManager.MSC && self.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Saint && (self.KarmaCap == 9 
-						|| (self.room.game.IsArenaSession && self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.gameType != MoreSlugcatsEnums.GameTypeID.Challenge) 
-						|| (self.room.game.session is ArenaGameSession && self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.gameType == MoreSlugcatsEnums.GameTypeID.Challenge && self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.challengeMeta.ascended)) 
+						|| (self.room.game.IsArenaSession && self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.gameType != DLCSharedEnums.GameTypeID.Challenge) 
+						|| (self.room.game.session is ArenaGameSession && self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.gameType == DLCSharedEnums.GameTypeID.Challenge && self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.challengeMeta.ascended)) 
 						&& self.grasps[num3].grabbed is Fly && self.eatCounter < 1
 						&& !self.GetBelly().frFed //FORCE FEEDING US 
                         && !IsFoodLover()) //SKIP IF FOOD-LOVER IS ENABLED! SAIMNT CAN EAT EM

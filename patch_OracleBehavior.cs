@@ -25,7 +25,7 @@ public class patch_OracleBehavior
 
     public static void PrinceBehavior_Update(On.Watcher.PrinceBehavior.orig_Update orig, Watcher.PrinceBehavior self)
     {
-        if (self.player == null)
+        if (self.bestPlayer == null)
         {
 			//self.player = self.FindPlayer();
 			PrinceFindFatterPlayer(self);
@@ -34,14 +34,14 @@ public class patch_OracleBehavior
 		if (self.saidHello == false)
 			princeCommentedOnWeight = false;
 
-        if (!princeCommentedOnWeight && self.prince.Consious && self.hasNoticedPlayer && self.player != null && self.saidHello && !self.paralyzed && !self.player.dead)
+        if (!princeCommentedOnWeight && self.prince.Consious && self.hasNoticedPlayer && self.bestPlayer != null && self.saidHello && !self.paralyzed && !self.bestPlayer.dead)
         {
-            self.lookPoint = self.player.firstChunk.pos;
+            self.lookPoint = self.bestPlayer.firstChunk.pos;
 
             if (self.noConversationTime == 30 && self.conversationAfterHello != null)
             {
                 //HIJACK THE CONVERSATION BEFORE IT STARTS
-                int myChub = patch_Player.GetChubValue(self.player) + (patch_Player.GetOverstuffed(self.player) / 2);
+                int myChub = patch_Player.GetChubValue(self.bestPlayer) + (patch_Player.GetOverstuffed(self.bestPlayer) / 2);
                 int dice = UnityEngine.Random.Range(0, 3);
 				//Debug.Log("MYCHUB " + myChub);
                 if (myChub >= 3)
@@ -231,8 +231,8 @@ public class patch_OracleBehavior
             if (abstractPlayer.Room == behavior.prince.room.abstractRoom && abstractPlayer.realizedCreature is Player player && player != null && player.playerState != null && !player.dead)
             {
                 //PICK THE FATTER ONE. OR THE ONE THAT IS STILL IN THE ROOM
-                if (behavior.player == null || patch_Player.GetChubValue(player) > patch_Player.GetChubValue(behavior.player) || behavior.player.room != behavior.prince.room)
-                    behavior.player = player;
+                if (behavior.bestPlayer == null || patch_Player.GetChubValue(player) > patch_Player.GetChubValue(behavior.bestPlayer) || behavior.bestPlayer.room != behavior.prince.room)
+                    behavior.bestPlayer = player;
             }
         }
     }
