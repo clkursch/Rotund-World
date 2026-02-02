@@ -59,7 +59,7 @@ namespace RotundWorld
         [RainMeadow.RPCMethod]
         public static void InitializeWeight(RPCEvent rpcEvent, OnlinePhysicalObject opo, int food)
         {
-            Debug.Log("MEADOW!! INITIALIZE WEIGHT " + food);
+            //Debug.Log("MEADOW!! INITIALIZE WEIGHT " + food); //DISABLING BECAUSE THIS IS GETTING SPAMMED
             
 			if (opo.apo is AbstractCreature ac)
             {

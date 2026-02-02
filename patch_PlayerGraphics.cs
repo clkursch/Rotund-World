@@ -154,6 +154,7 @@ public class patch_PlayerGraphics
     public static float GetTailBonus(PlayerGraphics self)
     {
         float bonusChubVal = patch_Player.GetOverstuffed(self.player);
+        bonusChubVal *= BPOptions.visualFatScale.Value;
         if (BellyPlus.VisualsOnly())
             bonusChubVal = Math.Min(bonusChubVal, 10);
 
@@ -188,7 +189,7 @@ public class patch_PlayerGraphics
 		
 		
 		//WE SHOULD HAVE ADDED THIS SAFTEY NET LONG AGO! MAKE SURE WE'RE NOT ABOUT TO UPDATE NON EXISTING TAIL SIZES
-		if (self.tail.Length != self.GetGraph().tailBase.Length)
+		if (self?.tail?.Length != self.GetGraph().tailBase.Length)
 			TailBaseRefresh(self);
 
         //(0-4) DON'T LET THIS BE NEGATIVE. WE DON'T HAVE NEGATIVE ARRAY VALUES
@@ -335,9 +336,13 @@ public class patch_PlayerGraphics
 				//limbScale = 10f;
                 break;
         }
-		
-		//EXTRA CHUB IN ARENA MODE - OR IN EVERY MODE!
-		int stuffing = patch_Player.GetOverstuffed(self.player);
+
+        hipScale *= BPOptions.visualFatScale.Value;
+        torsoScale *= BPOptions.visualFatScale.Value;
+
+        //EXTRA CHUB IN ARENA MODE - OR IN EVERY MODE!
+        int stuffing = patch_Player.GetOverstuffed(self.player);
+        stuffing = Mathf.FloorToInt(stuffing * BPOptions.visualFatScale.Value);
         if (BellyPlus.VisualsOnly())
             stuffing = Math.Min(stuffing, 10);
         //Debug.Log("STUFFING!): " + stuffing + " CHUB" + patch_Player.GetChubValue(self.player));
@@ -368,11 +373,10 @@ public class patch_PlayerGraphics
 
             sLeaser.sprites[hp].scaleY += 0.05f * heighBonus;
         }
-        //}
-		
-		
-		//OKAY WIDE CHARACTERS LOOK TOO WONKY. WE CAN TRY AND RESHAPE IT AS WE INCREASE IN SIZE
-		float extraLoad = sLeaser.sprites[hp].scaleX - 1.1f;
+
+
+        //OKAY WIDE CHARACTERS LOOK TOO WONKY. WE CAN TRY AND RESHAPE IT AS WE INCREASE IN SIZE
+        float extraLoad = sLeaser.sprites[hp].scaleX - 1.1f;
         float baseWidth = (self.player.playerState.isPup && self.player.isGourmand) ? 0f : 10f;
         if (extraLoad > 0.1f && stuffing > baseWidth)
 		{

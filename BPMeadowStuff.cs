@@ -253,6 +253,14 @@ public class BPMeadowStuff
             return false;
     }
 
+    public static bool IsMeadowLobbyOwner()
+    {
+        if (IsMeadowGameMode())
+            return OnlineManager.lobby.isOwner;
+        else
+            return false;
+    }
+
     public static bool CheckMGM()
     {
         return (OnlineManager.lobby != null && OnlineManager.lobby.gameMode is MeadowGameMode);

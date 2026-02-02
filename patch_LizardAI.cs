@@ -53,7 +53,7 @@ public class patch_LizardAI
 
         
 		//MORNING UPDATE OUR SAVED BELLY SIZE
-		if (self.friendTracker.friend != null && (self.friendTracker.friend as Player).stillInStartShelter && BellyPlus.lizardFood != 0)
+		if (self.friendTracker.friend != null && self.friendTracker.friend is Player && (self.friendTracker.friend as Player).stillInStartShelter && BellyPlus.lizardFood != 0)
 		{
 			self.creature.GetAbsBelly().myFoodInStomach = BellyPlus.lizardFood;
 			if (BPOptions.debugLogs.Value)

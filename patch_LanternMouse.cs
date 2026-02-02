@@ -79,6 +79,7 @@ public class patch_LanternMouse
                 && self.room.abstractRoom.creatures[i].realizedCreature is LanternMouse crit
                 && crit != self && crit.room != null && crit.room == self.room && !crit.dead
                 && Custom.DistLess(self.mainBodyChunk.pos, crit.bodyChunks[1].pos, 35f)
+                && crit.abstractPhysicalObject.rippleLayer == self.abstractPhysicalObject.rippleLayer
             )
             {
                 return crit;

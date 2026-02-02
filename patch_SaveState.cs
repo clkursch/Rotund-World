@@ -209,9 +209,19 @@ public class patch_SaveState
 			tailPips = self.food - SlugcatStats.SlugcatFoodMeter(self.saveStateNumber).x;
 			Debug.Log("WE WERE STARVIN! APPEND EXTRRA FOOD " + tailPips);
 		}
-			
-		
-		orig.Invoke(self, game, survived, newMalnourished);
+
+        //SPECIAL CASE FOR MEADOW CLIENTS IN STORY MODE
+        if (BellyPlus.isMeadowSession && !BPMeadowStuff.IsMeadowLobbyOwner())
+        {
+            Debug.Log("SESSION ENDING RAIN MEADOW GAME AS A CLIENT! REMEMBER OUR BONUS PIPS  " + BellyPlus.bonusFood + " - " + SlugcatStats.SlugcatFoodMeter(self.saveStateNumber).x);
+            BellyPlus.meadowClientPipsInitialized = false;
+			if (survived)
+                BellyPlus.meadowClientBonusPips = BellyPlus.bonusFood; //REMEMBER OUR NEW BONUS PIP COUNT IF WE SURVIVED
+            
+        }
+
+
+        orig.Invoke(self, game, survived, newMalnourished);
 
         if (survived && BellyPlus.bonusFood > 0)
         {

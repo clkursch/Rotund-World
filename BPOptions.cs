@@ -36,6 +36,7 @@ public class BPOptions : OptionInterface
         BPOptions.jokeContent1 = this.config.Bind<bool>("jokeContent1", true);
         BPOptions.foodMult = this.config.Bind<int>("foodMult", 1, new ConfigAcceptableRange<int>(1, 4));
         BPOptions.meadowFoodStart = this.config.Bind<int>("meadowFoodStart", 4, new ConfigAcceptableRange<int>(0, 25));
+        BPOptions.visualFatScale = this.config.Bind<float>("visualFatScale", 1.0f, new ConfigAcceptableRange<float>(0.33f, 1.00f));
 
         BPOptions.fatP1 = this.config.Bind<bool>("fatP1", true);
 		BPOptions.fatP2 = this.config.Bind<bool>("fatP2", true);
@@ -87,6 +88,7 @@ public class BPOptions : OptionInterface
 	public static Configurable<bool> foodLoverPerk;
     public static Configurable<int> foodMult;
     public static Configurable<int> meadowFoodStart;
+    public static Configurable<float> visualFatScale;
 
     public static Configurable<bool> fatP1;
 	public static Configurable<bool> fatP2;
@@ -459,16 +461,21 @@ public class BPOptions : OptionInterface
 
 
         lineCount -= 95;
-        OpFloatSlider sfxSlide = new OpFloatSlider(BPOptions.sfxVol, new Vector2(45f, lineCount - 25), 300, 1, false);
+        OpFloatSlider sfxSlide = new OpFloatSlider(BPOptions.sfxVol, new Vector2(30f, lineCount - 25), 250, 2, false);
         string dscSFXvol = BPTranslate("Volume of the squeeze sound effect when slugcats are stuck");
-        Tabs[1].AddItems(sfxSlide, new OpLabel(45f, lineCount + 15, BPTranslate("Squeeze SFX Volume")) { bumpBehav = sfxSlide.bumpBehav, description = dscSFXvol });
-        Tabs[1].AddItems(new OpLabel(50f, lineCount - 40f, BPTranslate("(If the sfx is too soft or played without headphones)")));
+        Tabs[1].AddItems(sfxSlide, new OpLabel(30f, lineCount + 15, BPTranslate("Squeeze SFX Volume")) { bumpBehav = sfxSlide.bumpBehav, description = dscSFXvol });
+        Tabs[1].AddItems(new OpLabel(10f, lineCount - 40f, BPTranslate("(If the sfx is too soft or played without headphones)")));
         sfxSlide.description = dscSFXvol;
 
-        OpSlider foodMultSlide = new OpSlider(BPOptions.foodMult, new Vector2(400f, lineCount - 25), 120, false);
+        OpSlider foodMultSlide = new OpSlider(BPOptions.foodMult, new Vector2(325f, lineCount - 25), 125, false);
         string dscFoodMult = BPTranslate("Multiplies how much food you get per-food");
-        Tabs[1].AddItems(foodMultSlide, new OpLabel(400f, lineCount + 15, BPTranslate("Food Multiplier")) { bumpBehav = foodMultSlide.bumpBehav, description = dscFoodMult });
+        Tabs[1].AddItems(foodMultSlide, new OpLabel(325f, lineCount + 15, BPTranslate("Food Multiplier")) { bumpBehav = foodMultSlide.bumpBehav, description = dscFoodMult });
         foodMultSlide.description = dscFoodMult;
+
+        OpFloatSlider fatScaleSlider = new OpFloatSlider(BPOptions.visualFatScale, new Vector2(475f, lineCount - 25), 125, 1, false); //WHY DOES THIS NOT WORK IF ITS 2 DECIMALS?????? HELLO???
+        string dscFatScale = BPTranslate("The scale at which food points affect your visual size. Lower numbers makes fat look less pronounced.");
+        Tabs[1].AddItems(fatScaleSlider, new OpLabel(475f, lineCount + 15, BPTranslate("Fat Visual Scale")) { bumpBehav = fatScaleSlider.bumpBehav, description = dscFatScale });
+        fatScaleSlider.description = dscFatScale;
 
         lineCount -= 80;
         Tabs[1].AddItems(new OpLabel(50f, lineCount, BPTranslate("Tip: The squeeze sfx pitch hints how close you are to popping free")));

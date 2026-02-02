@@ -106,39 +106,39 @@ public class patch_Player
 
 		//OKAY THIS ONE IS FOR ALL CREATURES
 		On.Creature.Violence += BP_Violence;
-		// }
+        // }
 
         On.StoryGameSession.CreateJollySlugStats += StoryGameSession_CreateJollySlugStats;
-		On.RainWorldGame.Update += RainWorldGame_Update;
+        On.RainWorldGame.Update += RainWorldGame_Update;
         //SLIME_CUBED REPORTED THAT THIS IS NEEDED TO WORK AROUND A BUG WHERE MOD PRIORITIES FOR OTHER MODS AREN'T RESET UNLESS YOU RESET IT MANUALLY
         // using (new DetourContext()) { } //ISN'T A THING IN 1.9 UNFORTUNATELY...
     }
 
     //THE GAME SETS EVERYONES WEIGHTFAC TO 1 IN CO-OP. THAT SUCKS. UNDO THAT
-    private static void StoryGameSession_CreateJollySlugStats(On.StoryGameSession.orig_CreateJollySlugStats orig, StoryGameSession self, bool m)
+    private static void StoryGameSession_CreateJollySlugStats(On.StoryGameSession.orig_CreateJollySlugStats orig, StoryGameSession self, bool m, bool malnourishedByCreature, int playerNumber)
     {
         if (self.game.Players.Count == 0)
         {
-            orig(self, m); //JollyCustom.Log("[JOLLY] NO PLAYERS IN SESSION!!", false);
+            orig(self, m, malnourishedByCreature, playerNumber); //JollyCustom.Log("[JOLLY] NO PLAYERS IN SESSION!!", false);
             return;
         }
 
-        orig(self, m); //RUN THE ORIG THAT SETS OUR WEIGHT WRONG
+        orig(self, m, malnourishedByCreature, playerNumber); //RUN THE ORIG THAT SETS OUR WEIGHT WRONG
 
         //self.characterStatsJollyplayer = new SlugcatStats[4];
         PlayerState playerState = self.game.Players[0].state as PlayerState;
         for (int i = 0; i < self.game.world.game.Players.Count; i++)
         {
-			//RECREATED PRETTY MUCH MOST OF THIS... THIS SHOULD REALLY BE AN IL BUT WHATEV
+            //RECREATED PRETTY MUCH MOST OF THIS... THIS SHOULD REALLY BE AN IL BUT WHATEV
             playerState = (self.game.Players[i].state as PlayerState);
             SlugcatStats.Name playerClass = self.game.rainWorld.options.jollyPlayerOptionsArray[playerState.playerNumber].playerClass;
             if (playerClass == null)
             {
                 playerClass = self.saveState.saveStateNumber;
             }
-			//GET OUR REAL CLASS'S WEIGHT AND REASSIGN IT TO US
+            //GET OUR REAL CLASS'S WEIGHT AND REASSIGN IT TO US
             SlugcatStats reStats = new SlugcatStats(playerClass, m);
-			self.characterStatsJollyplayer[playerState.playerNumber].bodyWeightFac = reStats.bodyWeightFac;
+            self.characterStatsJollyplayer[playerState.playerNumber].bodyWeightFac = reStats.bodyWeightFac;
         }
     }
 
@@ -193,11 +193,25 @@ public class patch_Player
 			//else
 			//	BellyPlus.tomorrowsBonusFood = 0; //DEPRECIATED
 		}
-		
-		//if (BPOptions.debugLogs.Value)
-		//	Debug.Log("BIG BELLIED SLUG? " + player.GetBelly().bigBelly + " CURR FOOD?" + player.abstractCreature.GetAbsBelly().myFoodInStomach + " - " + player.slugcatStats.name + " - " + player.playerState.slugcatCharacter + " - " + SlugcatStats.SlugcatFoodMeter(player.slugcatStats.name) + " - " + player.slugcatStats.bodyWeightFac + " - " + player.bodyChunks[0].mass);
+
+        //if (BPOptions.debugLogs.Value)
+        //	Debug.Log("BIG BELLIED SLUG? " + player.GetBelly().bigBelly + " CURR FOOD?" + player.abstractCreature.GetAbsBelly().myFoodInStomach + " - " + player.slugcatStats.name + " - " + player.playerState.slugcatCharacter + " - " + SlugcatStats.SlugcatFoodMeter(player.slugcatStats.name) + " - " + player.slugcatStats.bodyWeightFac + " - " + player.bodyChunks[0].mass);
         //Debug.Log(" CURRENT FOOD:" + player.CurrentFood + " BONUS:" + BellyPlus.bonusFood + " " + BellyPlus.bonusHudPip);
 
+		//HANDLE BONUS PIPS FOR RAIN MEADOW NON-HOST PLAYERS!
+        if (BellyPlus.isMeadowSession && BPMeadowStuff.IsObjectLocal(player) && !BPMeadowStuff.IsMeadowGameMode() && !BPMeadowStuff.IsMeadowLobbyOwner() && !BellyPlus.meadowClientPipsInitialized) //SPECIAL CASE IF THIS IS MEADOW STORY MODE AND WE ARE JOINING A LOBBY
+		{
+            Debug.Log("--- JOINING RAIN MEADOW GAME AS A CLIENT! ADD OUR BONUS PIPS FROM THE PREVIOUS CYCLE " + BellyPlus.meadowClientBonusPips);
+			//APPEND THE PREVIOUS LEFTOVER PIPS TO OUR FOOD BAR IN THE CORRECT WAY (IT'S COMPLICATED)
+			int leftoverBonusPips = BellyPlus.meadowClientBonusPips;
+			while (player.FoodInStomach < player.slugcatStats.maxFood && leftoverBonusPips > 0)
+			{
+				player.AddFood(1);
+                leftoverBonusPips -= 1;
+            }
+			player.AddFood(Math.Max(leftoverBonusPips, 0) * 2);
+            BellyPlus.meadowClientPipsInitialized = true;
+		}
 
         //IF THERE ARE MULTIPLE PLAYERS, CHECK OUR INDIVIDUAL LONG TERM STORED FOOD FROM PREVIOUS SESSIONS, IF ANY
         if (player.abstractCreature.world.game.IsStorySession && !player.isSlugpup && player.abstractCreature.world.game.Players.Count > 1)
@@ -1687,7 +1701,8 @@ public class patch_Player
 				&& checkPlayer.room == self.room
 				&& checkPlayer.dead == false
 				&& Custom.DistLess(self.mainBodyChunk.pos, checkPlayer.bodyChunks[1].pos, 35f)
-			)
+				&& checkCreature.abstractPhysicalObject.rippleLayer == self.abstractPhysicalObject.rippleLayer
+            )
 			{
 				//return self.room.game.Players[i].realizedCreature as Player;
 				if (closestPlayer == null)
@@ -1758,6 +1773,7 @@ public class patch_Player
                 && player.room == self.room
                 && player.Consious //WE ADDED THIS SO WE DON'T TRY AND FEED US TO OURSELVES
                 && Custom.DistLess(self.bodyChunks[0].pos, player.bodyChunks[0].pos, range)
+				&& player.abstractPhysicalObject.rippleLayer == self.abstractPhysicalObject.rippleLayer
             )
             {
                 float myFatness = GetChubValue(player);
@@ -1813,6 +1829,7 @@ public class patch_Player
 				&& checkLizard.room == self.room
                 && !checkLizard.dead
 				&& Custom.DistLess(self.bodyChunks[myChunk].pos, checkLizard.bodyChunks[lizChunk].pos, 35f)
+				&& checkLizard.abstractPhysicalObject.rippleLayer == self.abstractPhysicalObject.rippleLayer
             )
 			{
                 return checkLizard;
@@ -1836,6 +1853,7 @@ public class patch_Player
                 && crit != self && !(crit is Player) && !crit.dead
                 && crit.room != null && crit.room == self.room
                 && Custom.DistLess(self.bodyChunks[1].pos, crit.mainBodyChunk.pos, 50f)
+				&& crit.abstractPhysicalObject.rippleLayer == self.abstractPhysicalObject.rippleLayer
             )
             {
                 return crit;
@@ -2847,7 +2865,14 @@ public class patch_Player
 			self.SubtractFood(-add);
 			return;
 		}
-		add *= BPOptions.foodMult.Value;
+
+        if (add == 0) //HOLD IT! THIS IS LIKELY MEADOW SHENANIGANS ATTEMPTING TO SYNC CLIENT VALUES. DON'T FALL FOR THEIR TRICKS, JUST RUN ORIG
+        {
+            orig(self, add);
+            return;
+        }
+
+        add *= BPOptions.foodMult.Value;
 
 		//CORRECT EATMEAT() SHENANIGANS
         if (self.GetBelly().maxFoodOverrideFlag)
@@ -2937,7 +2962,7 @@ public class patch_Player
 				skipOrig = true;
 			}
 
-			if (self.room?.game?.cameras[0]?.hud?.foodMeter != null) // && BellyPlus.bonusFood < MaxBonusFood(self))
+			if (self.room?.game?.cameras[0]?.hud?.foodMeter != null && !BPMeadowStuff.IsMeadowGameMode()) // MEADOW INITIALIZES AND RUNS ADDFOOD LIKE EVERY 0.25 SECONDS SO WE CAN'T DO THIS HERE FOR MEADOW...
 				self.PlayHUDSound(SoundID.HUD_Food_Meter_Fill_Quarter_Plop);
 
 		}
@@ -3176,7 +3201,7 @@ public class patch_Player
 		if (BellyPlus.isMeadowSession && BPMeadowStuff.IsObjectLocal(self))
 			BPMeadowStuff.CallEndFeeding(self, null); //myFriend
 		*/
-    }
+	}
 
 
     //A STRIPPED DOWN VERSION OF THE EATMEAT FN THAT ONLY ADDS FOOD, PERSONALLY
@@ -3681,8 +3706,16 @@ public class patch_Player
 				{
 					if (self.pickUpCandidate is IPlayerEdible)
 					{
-						// Debug.Log("--WE WANT THIS FOOD TO GO STRAIGHT TO OUR BACK (unless it's occupied) ");
-						if (self.GetBelly().foodOnBack.FoodToBack(self.pickUpCandidate)) //IDK MAN, IT'S HERE SOMEWHERE...
+						//QUICK SWITCHAROO FOR THE MEADOW BUG, SINCE YOU CAN JUST GRAB OTHER PEOPLE BACK FOOD
+						if (BellyPlus.isMeadowSession)
+						{
+							PhysicalObject origHeldItem = self.grasps[0].grabbed;
+                            self.Grab(self.pickUpCandidate, 0, 0, Creature.Grasp.Shareability.CanOnlyShareWithNonExclusive, 0.5f, true, false);
+							self.SlugcatGrab(origHeldItem, 0);
+                        }
+                        
+                        // Debug.Log("--WE WANT THIS FOOD TO GO STRAIGHT TO OUR BACK (unless it's occupied) ");
+                        if (self.GetBelly().foodOnBack.FoodToBack(self.pickUpCandidate)) //IDK MAN, IT'S HERE SOMEWHERE...
 						{
 							self.wantToPickUp = 0;
 							return;
@@ -6799,6 +6832,7 @@ public class patch_Player
 		
 		//IF WE'RE GETTING GIGANTIC, LET'S LET IMAGINATION TAKE HOLD
 		float stuffing = GetOverstuffed(self) - (self.playerState.isPup ? 5 : 10);
+		stuffing *= BPOptions.visualFatScale.Value;
         if (stuffing > 0f && !BellyPlus.VisualsOnly() && (self.animation != Player.AnimationIndex.GetUpToBeamTip))// || self.animation != Player.AnimationIndex.BeamTip)) //BeamTip
         {
             //if (stuffing > 10) //STUFFING PAST 10 WILL ONLY COUNT AS A THIRD OF IT'S NORMAL SIZE

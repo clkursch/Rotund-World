@@ -138,6 +138,7 @@ public class patch_Scavenger
                 && self.room.abstractRoom.creatures[i].realizedCreature is Scavenger crit
                 && crit != self && crit.room != null && crit.room == self.room && !crit.dead
                 && Custom.DistLess(self.mainBodyChunk.pos, crit.bodyChunks[1].pos, 35f)
+                && crit.abstractPhysicalObject.rippleLayer == self.abstractPhysicalObject.rippleLayer
             )
             {
                 return crit;
@@ -160,6 +161,7 @@ public class patch_Scavenger
 				&& crit != self && crit.room != null && crit.room == self.room && !crit.dead
                 && patch_Player.ObjIsStuck(crit)
                 && Custom.DistLess(self.mainBodyChunk.pos, crit.bodyChunks[0].pos, 60f)
+                && crit.abstractPhysicalObject.rippleLayer == self.abstractPhysicalObject.rippleLayer
             )
             {
                 return crit;

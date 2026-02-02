@@ -300,9 +300,12 @@ public class BellyPlus : BaseUnityPlugin
 
 	public static bool isMeadowClient;
     public static bool isMeadowSession;
+	//TRACK INDIVIDUAL CLIENT BONUS PIPS ON OUR OWN INSTANCE. KINDA SUCKS BUT THIS IS PROBABLY THE BEST WAY TO TRACK IT
+    public static int meadowClientBonusPips = 0; //WON'T BE ACCURATE IF CHANGING WORLDSTATE AND WILL RESET ON CLOSING THE GAME BUT OH WELL
+    public static bool meadowClientPipsInitialized;
 
 
-	public static float BPODifficulty()
+    public static float BPODifficulty()
 	{
 		return meadowEnabled ? BPMeadowStuff.lobbyDifficulty : BPOptions.bpDifficulty.Value;
     }

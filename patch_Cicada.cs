@@ -60,6 +60,7 @@ public class patch_Cicada
                 && self.room.abstractRoom.creatures[i].realizedCreature is Cicada crit
                 && crit != self && crit.room != null && crit.room == self.room && !crit.dead
                 && Custom.DistLess(self.mainBodyChunk.pos, crit.bodyChunks[1].pos, 35f)
+                && crit.abstractPhysicalObject.rippleLayer == self.abstractPhysicalObject.rippleLayer
             )
             {
                 return crit;
