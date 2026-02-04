@@ -255,7 +255,7 @@ public class BPMeadowStuff
 
     public static bool IsMeadowLobbyOwner()
     {
-        if (IsMeadowGameMode())
+        if (BellyPlus.meadowEnabled)
             return OnlineManager.lobby.isOwner;
         else
             return false;

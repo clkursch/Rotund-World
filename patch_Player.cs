@@ -202,8 +202,12 @@ public class patch_Player
         if (BellyPlus.isMeadowSession && BPMeadowStuff.IsObjectLocal(player) && !BPMeadowStuff.IsMeadowGameMode() && !BPMeadowStuff.IsMeadowLobbyOwner() && !BellyPlus.meadowClientPipsInitialized) //SPECIAL CASE IF THIS IS MEADOW STORY MODE AND WE ARE JOINING A LOBBY
 		{
             Debug.Log("--- JOINING RAIN MEADOW GAME AS A CLIENT! ADD OUR BONUS PIPS FROM THE PREVIOUS CYCLE " + BellyPlus.meadowClientBonusPips);
-			//APPEND THE PREVIOUS LEFTOVER PIPS TO OUR FOOD BAR IN THE CORRECT WAY (IT'S COMPLICATED)
-			int leftoverBonusPips = BellyPlus.meadowClientBonusPips;
+            //APPEND THE PREVIOUS LEFTOVER PIPS TO OUR FOOD BAR IN THE CORRECT WAY (IT'S COMPLICATED)
+            int leftoverBonusPips = BellyPlus.meadowClientBonusPips;
+            //OKAY WAIT I DIDN'T THINK THIS THROUGH. IF THE HOST IS FULL AT THE START OF THE CYCLE WE WONT LOSE ANY BONUS PIPS. 
+            if (player.FoodInStomach >= player.slugcatStats.maxFood) //IF THE FOOD BAR IS ALREADY FULL, SHOW US MERCY AND AT LEAST REDUCE HOW MANY PIPS WE SHOULD HAVE LOST
+                leftoverBonusPips -= SlugcatStats.SlugcatFoodMeter(world.game.StoryCharacter).y;
+            //AND IF IT WASN'T FULL, APPEND THE REMAINING PIPS ONTO THE FOOD METER
 			while (player.FoodInStomach < player.slugcatStats.maxFood && leftoverBonusPips > 0)
 			{
 				player.AddFood(1);
