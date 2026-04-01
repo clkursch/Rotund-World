@@ -1,6 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using RWCustom;
+using static Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics;
 
 namespace RotundWorld;
 public class patch_LizardGraphics
@@ -9,13 +10,14 @@ public class patch_LizardGraphics
     {
         On.LizardGraphics.DrawSprites += PG_DrawSprites;
         On.LizardGraphics.Update += LizardGraphics_Update;
+        //On.LizardLimb.Update += LizardLimb_Update;
 		On.LizardCosmetics.JumpRings.DrawSprites += JumpRings_DrawSprites;
     }
 
-	
 
-	//FIX CYAN RINGS LOOKING TOO DERPY
-	private static void JumpRings_DrawSprites(On.LizardCosmetics.JumpRings.orig_DrawSprites orig, LizardCosmetics.JumpRings self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+
+    //FIX CYAN RINGS LOOKING TOO DERPY
+    private static void JumpRings_DrawSprites(On.LizardCosmetics.JumpRings.orig_DrawSprites orig, LizardCosmetics.JumpRings self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
     {
 		orig(self, sLeaser, rCam, timeStacker, camPos);
 		if (self.lGraphics.iVars.fatness > 2f)
@@ -39,6 +41,17 @@ public class patch_LizardGraphics
     //TODO! LIZARD AND MOUSE GRAPHICS NEED AN OVERHAUL SO THINGS UPDATE AT THE CORRECT TIME
     private static void LizardGraphics_Update(On.LizardGraphics.orig_Update orig, LizardGraphics self)
     {
+        if (self.lizard.GetBelly().bellyUp)
+        {
+            foreach (LizardLimb lizardLimb in self.limbs)
+            {
+                //lizardLimb.mode = Limb.Mode.HuntRelativePosition;
+                //lizardLimb.relativeHuntPos = new Vector2(0, 10f); //OK THIS ISN'T WORKING...
+                lizardLimb.mode = Limb.Mode.Retracted;
+                //lizardLimb.retract = true;
+            }
+        }
+
         orig(self);
 
         //MINI VERSION FOR VISUALS ONLY
@@ -144,7 +157,23 @@ public class patch_LizardGraphics
             self.iVars.fatness = lizFatness * (1 + bellyBulge);
             self.iVars.tailFatness = Mathf.Max(Mathf.Min(1f, lizFatness), 0f);
             self.iVars.tailFatness = Mathf.Min(1f, 1f / Mathf.Sqrt(lizFatness));
+
+            if (self.lizard.GetBelly().bellyUp)
+            {
+                self.depthRotation = 1 * self.lizard.GetBelly().myFlipValX;
+                self.lastDepthRotation = 1 * self.lizard.GetBelly().myFlipValX;
+            }
         }
+    }
+
+
+    private static void LizardLimb_Update(On.LizardLimb.orig_Update orig, LizardLimb self)
+    {
+        self.mode = Limb.Mode.HuntRelativePosition;
+        self.relativeHuntPos = new Vector2(0, 10f);
+        orig(self);
+        self.mode = Limb.Mode.HuntRelativePosition;
+        self.relativeHuntPos = new Vector2(0, 10f);
     }
 
 

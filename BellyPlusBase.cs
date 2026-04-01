@@ -590,6 +590,8 @@ public static class BellyClass
 		public int slamThreshold; //for modders to adjust what level their modcat can activate slugslams
 		public bool maxFoodOverrideFlag; //for eatMeat shenanigans because I hate IL hooks
 		public int tailPushedAngle; //If our tail gets squished up or down by pushers
+		public int doubleTapDownTimer = 0;
+		public bool bellyUp;
         public PhysicalObject forceEatTarget;
 		public ChunkSoundEmitter squeezeLoop;
 		public patch_Player.FoodOnBack foodOnBack;

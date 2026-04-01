@@ -23,8 +23,8 @@ public class patch_MiscCreatures
         On.Centipede.Die += BPCentipede_Die;
         //On.CentipedeGraphics.DrawSprites += Centipede_DrawSprites;
 
-        //On.PoleMimicGraphics.DrawSprites += BPPoleMimic_DrawSprites;
-        //On.PoleMimicGraphics.PoleMimicRopeGraphics.DrawSprite += BPPoleMimicRopeGraphics_DrawSprite;
+        On.PoleMimic.ctor += PoleMimic_ctor;
+        On.PoleMimicGraphics.PoleMimicRopeGraphics.DrawSprite += BPPoleMimicRopeGraphics_DrawSprite;
 
         On.MirosBirdGraphics.DrawSprites += BPMirosBirdGraphics_DrawSprites;
         On.MirosBird.Act += BPMirosBird_Act;
@@ -76,7 +76,7 @@ public class patch_MiscCreatures
         On.StaticWorld.InitStaticWorld += StaticWorld_InitStaticWorld;
         On.Creature.ctor += Creature_ctor;
     }
-	
+
     private static void Creature_ctor(On.Creature.orig_ctor orig, Creature self, AbstractCreature abstractCreature, World world)
     {
         orig(self, abstractCreature, world);
@@ -167,6 +167,8 @@ public class patch_MiscCreatures
         if (crit is Tardigrade && !BPOptions.fatTards.Value)
             return false;
         if (crit is Loach && !BPOptions.fatLoachs.Value)
+            return false;
+        if (crit is PoleMimic && !BPOptions.fatPolePlants.Value)
             return false;
 
         return true;
@@ -512,44 +514,52 @@ public class patch_MiscCreatures
         }
     }
 
+
+    private static void PoleMimic_ctor(On.PoleMimic.orig_ctor orig, PoleMimic self, AbstractCreature abstractCreature, World world)
+    {
+        orig(self, abstractCreature, world);
+        CheckIn(self);
+        ObjUpdateBellySize(self);
+    }
+
+
     private static void BPPoleMimicRopeGraphics_DrawSprite(On.PoleMimicGraphics.PoleMimicRopeGraphics.orig_DrawSprite orig, PoleMimicGraphics.PoleMimicRopeGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
     {
-        if (GetChub(self.owner.pole) >= 0) //3)
-        {
-			float extraChonk = 3f;
-			
-			if ((sLeaser.sprites[0] as TriangleMesh).vertices.Length != self.segments.Length * 4)
-            {
-                self.InitiateSprites(sLeaser, rCam);
+        orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
 
-            }
+        if (BPOptions.fatPolePlants.Value)
+        {
+            float extraChonk = Mathf.Max(1f, self.owner.pole.abstractCreature.GetAbsBelly().myFoodInStomach / 4f);
+            //Debug.Log("MY CHONK " + extraChonk);
+			
+			//JUST RUN THE WHOLE THING AGAIN BUT WITH EXTRA CHONK LOL...
             Vector2 vector = self.owner.pole.rootPos - self.owner.pole.stickOutDir * 30f;
             vector += Custom.DirVec(Vector2.Lerp(self.segments[1].lastPos, self.segments[1].pos, timeStacker), vector) * 1f;
-            float num = 2f;
+            float a = 2f;
+            
             for (int i = 0; i < self.segments.Length; i++)
             {
-                float num2 = (float)i / (float)(self.segments.Length - 1);
+                float num = (float)i / (float)(self.segments.Length - 1);
                 Vector2 vector2 = Vector2.Lerp(self.segments[i].lastPos, self.segments[i].pos, timeStacker);
                 Vector2 normalized = (vector - vector2).normalized;
-                Vector2 vector3 = Custom.PerpendicularVector(normalized) ;
-                float num3 = Vector2.Distance(vector, vector2) / 3f * extraChonk;
-                float num4 = self.owner.StemLookLikePole(num2, timeStacker);
-                float num5 = Mathf.Lerp((i % 2 == 0) ? Mathf.Lerp(4f, 1.5f, num2) : Mathf.Lerp(1.4f, 0.75f, num2), 2f, Mathf.Pow(num4, 0.75f));
-                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4, vector - normalized * num3 - vector3 * Mathf.Lerp(num, num5, 0.5f) - camPos);
-                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4 + 1, vector - normalized * num3 + vector3 * Mathf.Lerp(num, num5, 0.5f) - camPos);
-                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 + normalized * num3 - vector3 * num5 - camPos);
-                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + normalized * num3 + vector3 * num5 - camPos);
-                float num6 = (1f + rCam.room.lightAngle.magnitude / 10f) * Mathf.Pow(num4, 1.8f);
-                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4, vector - normalized * num3 - vector3 * (Mathf.Lerp(num, num5, 0.5f) + num6) - camPos);
-                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4 + 1, vector - normalized * num3 + vector3 * (Mathf.Lerp(num, num5, 0.5f) + num6) - camPos);
-                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 + normalized * num3 - vector3 * (num5 + num6) - camPos);
-                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + normalized * num3 + vector3 * (num5 + num6) - camPos);
+                Vector2 a2 = Custom.PerpendicularVector(normalized) ;
+                float d = Vector2.Distance(vector, vector2) / 3f;
+                
+                float f = self.owner.StemLookLikePole(num, timeStacker);
+                float num2 = Mathf.Lerp((i % 2 == 0) ? Mathf.Lerp(4f, 1.5f, num) : Mathf.Lerp(1.4f, 0.75f, num), 2f * extraChonk, Mathf.Pow(f, 0.75f));
+                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4, vector - normalized * d - a2 * Mathf.Lerp(a, num2, 0.5f) - camPos);
+                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4 + 1, vector - normalized * d + a2 * Mathf.Lerp(a, num2, 0.5f) - camPos);
+                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 + normalized * d - a2 * num2 - camPos);
+                (sLeaser.sprites[0] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + normalized * d + a2 * num2 - camPos);
+                float num3 = (1f + rCam.room.lightAngle.magnitude / 10f) * Mathf.Pow(f, 1.8f);
+                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4, vector - normalized * d - a2 * (Mathf.Lerp(a, num2, 0.5f) + num3) - camPos);
+                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4 + 1, vector - normalized * d + a2 * (Mathf.Lerp(a, num2, 0.5f) + num3) - camPos);
+                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 + normalized * d - a2 * (num2 + num3) - camPos);
+                (sLeaser.sprites[1] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + normalized * d + a2 * (num2 + num3) - camPos);
                 vector = vector2;
-                num = num5;
+                a = num2;
             }
         }
-        else
-            orig.Invoke(self, sLeaser, rCam, timeStacker, camPos);
     }
 
 

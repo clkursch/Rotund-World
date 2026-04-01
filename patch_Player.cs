@@ -18,6 +18,20 @@ using IL.Watcher;
 
 //Lantern mice sprites to scale past 8
 //Extra cycle time now scales based on difficulty. Higher difficulty will allow a bit of extra time.
+
+
+-Finally, all of the rotund world features nobody asked for!
+-Rotund pole plants
+-Rotund iterators
+
+-Double tap crouch to roll onto your back (it does nothing)
+-Double tap crouch while on top of a tamed lizard to command it to roll onto it's back (it does nothing. but you can rub their bellay)
+-Slugbeds feature has expanded to Lizards! you can now curl up and sleep on your tamed matress friends
+
+-Bonus pip ping sounds now gradually increase in pitch the fuller you get
+-Fixed a skill issue where a scavenger pulling on you could pull you into a den and softlock you
+-:mitzi dance emote:
+
 */
 
 
@@ -206,14 +220,18 @@ public class patch_Player
             int leftoverBonusPips = BellyPlus.meadowClientBonusPips;
             //OKAY WAIT I DIDN'T THINK THIS THROUGH. IF THE HOST IS FULL AT THE START OF THE CYCLE WE WONT LOSE ANY BONUS PIPS. 
             if (player.FoodInStomach >= player.slugcatStats.maxFood) //IF THE FOOD BAR IS ALREADY FULL, SHOW US MERCY AND AT LEAST REDUCE HOW MANY PIPS WE SHOULD HAVE LOST
+			{
                 leftoverBonusPips -= SlugcatStats.SlugcatFoodMeter(world.game.StoryCharacter).y;
+                //Debug.Log("--- OUR MEADOW HOST IS FULL! SUBTRACTING PIPS: " + SlugcatStats.SlugcatFoodMeter(world.game.StoryCharacter).y);
+            }
             //AND IF IT WASN'T FULL, APPEND THE REMAINING PIPS ONTO THE FOOD METER
 			while (player.FoodInStomach < player.slugcatStats.maxFood && leftoverBonusPips > 0)
 			{
 				player.AddFood(1);
                 leftoverBonusPips -= 1;
             }
-			player.AddFood(Math.Max(leftoverBonusPips, 0) * 2);
+            //Debug.Log("--- FINAL MEADOW FOOD PIP COUNT " + leftoverBonusPips + " ORIG " + player.playerState.foodInStomach);
+            player.AddFood(Math.Max(leftoverBonusPips, 0) * 2);
             BellyPlus.meadowClientPipsInitialized = true;
 		}
 
@@ -700,9 +718,16 @@ public class patch_Player
     }
 	
 	//NEW DIFFICULTY SCALING. GAPS DON'T GET ANY TIGHTER IF THE DIFFICULTY SLIDER GOES ABOVE 0. IT JUST GETS CLOSER TO HARDMODE
-	public static float GapDifficulty()
+	public static float GapDifficulty(Player self)
 	{
-		return Mathf.Min(BellyPlus.BPODifficulty(), 0f);
+		//MITSUMI SCALING...
+		bool isMitsu = false;
+		if (ModManager.JollyCoop && !self.isNPC)
+		{
+			string myName = JollyCoop.JollyCustom.GetPlayerName(self.playerState.playerNumber).ToLower();
+            isMitsu = myName.Contains("mitsu") || myName.Contains("mitsumi") || myName.Contains("mizi");
+        }
+		return Mathf.Min(BellyPlus.BPODifficulty(), 0f) - (isMitsu ? 3f : 0f);
 	}
 
     public static float BottomHeavyDiffScale()
@@ -1179,7 +1204,7 @@ public class patch_Player
 		//EXTRA CHONKY FELLAS GET EVEN SLOWER
 		if (self is Player)
         {
-			tileSeed -= ((Math.Min(GetOverstuffed(self as Player), 12) - self.shortcutDelay) * 0.2f) * (1 + (GapDifficulty() / 7.5f)); //LET EASY MODE PLAYERS GET UP MUCH EASIER ;
+			tileSeed -= ((Math.Min(GetOverstuffed(self as Player), 12) - self.shortcutDelay) * 0.2f) * (1 + (GapDifficulty(self as Player) / 7.5f)); //LET EASY MODE PLAYERS GET UP MUCH EASIER ;
 			//DON'T TRAP PLAYERS BEHIND US FROM LEAVING PIPES WE'RE BLOCKING
 			tileSeed += ((self.GetBelly().fwumpFlag) * 0.5f) + (self.shortcutDelay * 0.2f);
 		}
@@ -2966,10 +2991,11 @@ public class patch_Player
 				skipOrig = true;
 			}
 
+			float pingPitch = 1f + Mathf.InverseLerp(1f, 150f, BellyPlus.bonusHudPip) * 1.5f;
 			if (self.room?.game?.cameras[0]?.hud?.foodMeter != null && !BPMeadowStuff.IsMeadowGameMode()) // MEADOW INITIALIZES AND RUNS ADDFOOD LIKE EVERY 0.25 SECONDS SO WE CAN'T DO THIS HERE FOR MEADOW...
-				self.PlayHUDSound(SoundID.HUD_Food_Meter_Fill_Quarter_Plop);
+                self.room?.game?.cameras[0]?.virtualMicrophone.PlaySound(SoundID.HUD_Food_Meter_Fill_Quarter_Plop, 0f, 1f, pingPitch); //self.PlayHUDSound(SoundID.HUD_Food_Meter_Fill_Quarter_Plop);
 
-		}
+        }
 		//NO LONGER AN ELSE
 		if (self.playerState.foodInStomach < self.slugcatStats.maxFood)
 		{
@@ -4813,41 +4839,29 @@ public class patch_Player
 		}
 
         //SLUGBED 
-        else if (otherObject is Player bedge && (bedge.emoteSleepCounter > 0.1 || bedge.GetBelly().slugBed != 0 || (bedge.touchedNoInputCounter > 6 && bedge.bodyMode == Player.BodyModeIndex.Crawl) || (GetChubValue(self) > GetChubValue(bedge) && bedge.bodyMode == Player.BodyModeIndex.Crawl)) 
-			&& !self.standing && self.bodyChunks[1].ContactPoint.y != -1 && self.bodyChunks[0].ContactPoint.y != -1 && !bedge.isNPC && !self.isNPC && !self.input[0].jmp //THIS IS A GOOD ONE TO MAKE SURE WE AREN'T TRYING TO GET OFF
+        else if (otherObject is Player bedge && (bedge.emoteSleepCounter > 0.1 || bedge.GetBelly().slugBed != 0 || (bedge.touchedNoInputCounter > 6 && bedge.bodyMode == Player.BodyModeIndex.Crawl) || (GetChubValue(self) > GetChubValue(bedge) && bedge.bodyMode == Player.BodyModeIndex.Crawl))
+            && !self.standing && self.bodyChunks[1].ContactPoint.y != -1 && self.bodyChunks[0].ContactPoint.y != -1 && !bedge.isNPC && !self.isNPC && !self.input[0].jmp //THIS IS A GOOD ONE TO MAKE SURE WE AREN'T TRYING TO GET OFF
             && !IsCramped(bedge) && !IsCramped(self) && !bedge.dead && self.bodyChunks[myChunk].pos.y > bedge.bodyChunks[otherChunk].pos.y) //(GetChubValue(self) >= 3 || GetChubValue(bedge) >= 3 || bedge.GetBelly().slugBed != 0) && 
         {
-            int targChunk = (self.flipDirection == bedge.flipDirection) ? 1 : 0;
-			float strgt = (self.input[0].x == 0 || self.input[5].x == 0) ? 0.25f : 0f;
-            self.bodyChunks[1].pos.x = Mathf.Lerp(self.bodyChunks[1].pos.x, bedge.bodyChunks[targChunk].pos.x, strgt);
-            self.bodyChunks[1].vel.x *= 0.1f;
-            self.bodyChunks[1].vel.y = Mathf.Max(-1, self.bodyChunks[1].vel.y);
-			if (myChunk == 1)
-				self.bodyChunks[1].pos.y += 3;
-			else
-                self.bodyChunks[1].pos.y += 1;
-			
-            //DON'T SLIDE THE OTHER OBJECT AROUND. A LITTLE CHEESY BUT LETS TRY IT
-            bedge.bodyChunks[0].vel.x *= 0.1f;
-            bedge.bodyChunks[1].vel.x *= 0.1f;
+			SlugBed(self, bedge, myChunk);
+        }
+        //AND A LIZARD VERSION?
+        else if (otherObject is Lizard bledge && (bledge.Consious) && patch_Lizard.IsTamed(bledge)
+            && !self.standing && self.bodyChunks[1].ContactPoint.y != -1 && self.bodyChunks[0].ContactPoint.y != -1 && !self.isNPC && !self.input[0].jmp
+            && !IsCramped(bledge) && !IsCramped(self) && self.bodyChunks[myChunk].pos.y > bledge.bodyChunks[otherChunk].pos.y)
+        {
+			SlugBed(self, bledge, myChunk);
+        }
 
-            self.GetBelly().slugBed = 2;
-            
-			if (self.graphicsModule != null) //BRING OUR GRAPHICS TO FRONT
-                self.graphicsModule.BringSpritesToFront();
-
-            //IF THE TOP IS HEAVIER THAN THE BOTTOM
-            int myChub = GetChubValue(self) + (GetOverstuffed(self) / 4);
-            if (myChub >= 3 && myChub > (GetChubValue(bedge) + 3))
+		//COMMAND OUR LIZARD TO ROLL OVER
+        if (self.GetBelly().bellyUp && otherObject is Lizard liz && patch_Lizard.IsTamed(liz))
+		{
+			if (liz.GetBelly().bellyUp == false)
 			{
-                bedge.GetBelly().slugBed = -2; //SQUASH THE BEDGE
-                //self.bodyChunks[0].vel.y = Mathf.Max(-1, self.bodyChunks[0].vel.y);
-                //self.bodyChunks[0].pos.y += 1;
+                liz.GetBelly().bellyUp = true;
+                self.GetBelly().bellyUp = false;
             }
-
-            //self.emoteSleepCounter > 1.4f
-            if (self.slugcatStats?.name?.value == "NoirCatto" && bedge.slugcatStats?.name?.value == "Friend" && self.emoteSleepCounter > 1.4f)
-                patch_PlayerGraphics.SolaceUpdate(self);
+			
         }
 
         //ROLLY POLY!!
@@ -4960,6 +4974,53 @@ public class patch_Player
 			PlayExternalSound(self, BellyPlus.Fwump1, soundVol, 1f);
 		}
 	}
+
+    public static void SlugBed(Player self, Creature bedge, int myChunk)
+    {
+        //FOR LIZARDS, WE COULD TRY ledge.BodyDirection() OR WE COULD JUST DO 1 AND FORCE IT TO BE CENTERED
+        int targChunk = 1;
+		float trgOffset = 0f;
+        if (bedge is Player sledge)
+		{
+            targChunk = (self.flipDirection == sledge.flipDirection) ? 1 : 0;
+        }
+		if (bedge is Lizard ledge)
+		{
+            targChunk = (self.flipDirection == ledge.GetBelly().myFlipValX) ? 2 : 1;
+            trgOffset = 10f * ledge.GetBelly().myFlipValX;
+        }
+        float strgt = (self.input[0].x == 0 || self.input[5].x == 0) ? 0.25f : 0f;
+        self.bodyChunks[1].pos.x = Mathf.Lerp(self.bodyChunks[1].pos.x, bedge.bodyChunks[targChunk].pos.x + trgOffset, strgt);
+        self.bodyChunks[1].vel.x *= 0.1f;
+        self.bodyChunks[1].vel.y = Mathf.Max(-1, self.bodyChunks[1].vel.y);
+        if (myChunk == 1)
+            self.bodyChunks[1].pos.y += 3;
+        else
+            self.bodyChunks[1].pos.y += 1;
+
+        //DON'T SLIDE THE OTHER OBJECT AROUND. A LITTLE CHEESY BUT LETS TRY IT
+        bedge.bodyChunks[0].vel.x *= 0.1f;
+        bedge.bodyChunks[1].vel.x *= 0.1f;
+
+        self.GetBelly().slugBed = 2;
+
+        if (self.graphicsModule != null) //BRING OUR GRAPHICS TO FRONT
+            self.graphicsModule.BringSpritesToFront();
+
+        //SLUG SPECIFIC BEDS
+        if (bedge is Player sledge2)
+        {
+            //IF THE TOP IS HEAVIER THAN THE BOTTOM
+            int myChub = GetChubValue(self) + (GetOverstuffed(self) / 4);
+            if (myChub >= 3 && myChub > (GetChubValue(bedge) + 3))
+            {
+                bedge.GetBelly().slugBed = -2; //SQUASH THE BEDGE
+            }
+
+            if (self.slugcatStats?.name?.value == "NoirCatto" && sledge2.slugcatStats?.name?.value == "Friend" && self.emoteSleepCounter > 1.4f)
+                patch_PlayerGraphics.SolaceUpdate(self);
+        }
+    }
 
     public static void Player_JollyEmoteUpdate(On.Player.orig_JollyEmoteUpdate orig, Player self)
     {
@@ -5591,7 +5652,7 @@ public class patch_Player
 		float tileSize = (myChub + GetTileSizeMod(self, tilePosMod, myInputVec, 0, inPipe, self.submerged, false));
 		float preTileSize = tileSize;
 		
-		float diff = (GapDifficulty() * 1.5f) - (Mathf.Max(0, BellyPlus.BPOGapVariance() - 1) * 5f); //SCALE GAP TIGHTNESS BY VARIANCE SLIGHTLY
+		float diff = (GapDifficulty(self) * 1.5f) - (Mathf.Max(0, BellyPlus.BPOGapVariance() - 1) * 5f); //SCALE GAP TIGHTNESS BY VARIANCE SLIGHTLY
         //AND THEN THIS ONES FOR THE DIFFICULTY MODIFIER. BUT LETS LEAVE THE FIRST 5 STACKS OF THIS ALONE...
         if (tileSize > 3)
 			tileSize = 3 + ((tileSize - 3) * (1 + (diff / 10f)));
@@ -7795,7 +7856,23 @@ public class patch_Player
 		}
         //self.input[0].mp
 
+        //DOUBLE TAP CROUCH TO LAY ON YOUR BACK
+        if (self.input[0].y == -1 && self.input[1].y != -1)
+        {
+            if (self.GetBelly().doubleTapDownTimer < 10)
+			{
+                self.GetBelly().bellyUp = true;
+				//self.bodyChunks[0].pos.y += 1f;
+				self.bodyChunks[1].pos.y += 8f;
+			}
+            self.GetBelly().doubleTapDownTimer = 0;
+        }
 
+        if (self.GetBelly().doubleTapDownTimer < 100)
+            self.GetBelly().doubleTapDownTimer++;
+
+        if (self.standing || self.superLaunchJump >= 20 || self.input[0].x != 0)
+            self.GetBelly().bellyUp = false;
     }
 
 

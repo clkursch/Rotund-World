@@ -188,8 +188,9 @@ public class patch_Scavenger
 		else if (patch_Player.IsGraspingActualSlugcat(self))
 		{
 			Player mySlug = patch_Player.GetGraspedCreature(self) as Player;
-			
-			if ((self.AI.behavior == ScavengerAI.Behavior.Flee || self.AI.behavior == ScavengerAI.Behavior.Attack) && UnityEngine.Random.value < 0.1f)
+			self.shortcutDelay = 2; //OK BUT DON'T ENTER DENS WHILE HOLDING A SLUGCAT THAT WILL SOFTLOCK US.
+
+            if ((self.AI.behavior == ScavengerAI.Behavior.Flee || self.AI.behavior == ScavengerAI.Behavior.Attack) && UnityEngine.Random.value < 0.1f)
 			{
 				self.ReleaseGrasp(0);
 				Debug.Log("SC! RELEASING THE SLUG BECAUSE OF BEHAVIOR: " + self.AI.behavior);

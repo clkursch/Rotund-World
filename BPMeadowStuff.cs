@@ -274,6 +274,7 @@ public class BPMeadowStuff
 		return true; //OTHERWISE, ASSUME IT'S OURS
     }
 	
+    //WE COULD PROBABLY REPLACE THIS WHOLE THING WITH .IsLocal()
 	public static bool CheckLocality(PhysicalObject self)
     {
 		if (!OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var opo))

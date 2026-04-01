@@ -62,6 +62,9 @@ public class BPOptions : OptionInterface
 		BPOptions.fatMoths = this.config.Bind<bool>("fatMoths", true);
 		BPOptions.fatTards = this.config.Bind<bool>("fatTards", true);
         BPOptions.fatLoachs = this.config.Bind<bool>("fatLoachs", true);
+
+        BPOptions.fatIterators = this.config.Bind<bool>("fatIterators", true);
+        BPOptions.fatPolePlants = this.config.Bind<bool>("fatPolePlants", true);
     }
 
 
@@ -113,6 +116,9 @@ public class BPOptions : OptionInterface
 	public static Configurable<bool> fatMoths;
 	public static Configurable<bool> fatTards;
     public static Configurable<bool> fatLoachs;
+
+    public static Configurable<bool> fatIterators;
+    public static Configurable<bool> fatPolePlants;
     //Lizard
     //Lantern Mice
     //Scavengers
@@ -807,13 +813,14 @@ public class BPOptions : OptionInterface
         else
         {
             BPOptions.fatPups.Value = true;
-        }
-		
-		
-		if (ModManager.Watcher)
-        {
-            margin = baseMargin;
             lineCount -= linePadding;
+        }
+
+
+        margin = baseMargin;
+        lineCount -= linePadding;
+        if (ModManager.Watcher)
+        {
 
             OpCheckBox critBox13;
             dsc = BPTranslate("creaturetype-BigMoth");
@@ -849,7 +856,32 @@ public class BPOptions : OptionInterface
         }
 
 
+        margin = baseMargin;
+        lineCount -= linePadding;
 
+        Tabs[critTab].AddItems(new OpLabel(margin, lineCount, BPTranslate("Joke Content"), bigText: true));
+
+        lineCount -= linePadding;
+
+        //OpCheckBox critBox13;
+        dsc = BPTranslate("creaturetype-PoleMimic");
+        Tabs[critTab].AddItems(new UIelement[]
+        {
+                critBox10 = new OpCheckBox(BPOptions.fatPolePlants, new Vector2(margin, lineCount))
+                {description = dsc},
+                new OpLabel(critBox10.pos.x + xPad, critBox10.pos.y + yPad, dsc)
+                {description = dsc}
+        });
+
+        margin += 175;
+        dsc = BPTranslate("Iterator");
+        Tabs[critTab].AddItems(new UIelement[]
+        {
+                critBox10 = new OpCheckBox(BPOptions.fatIterators, new Vector2(margin, lineCount))
+                {description = dsc},
+                new OpLabel(critBox10.pos.x + xPad, critBox10.pos.y + yPad, dsc)
+                {description = dsc}
+        });
 
 
         //------------------ ANOTHER NEW TAB FOR OTHER STUFF

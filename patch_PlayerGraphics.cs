@@ -641,7 +641,33 @@ public class patch_PlayerGraphics
 		//FOR THOSE PESKY GRAPHICS MODS...
 		self.GetGraph().verified = true;
 
-        
+
+        //CHECK FOR FLIPS
+        if (self.player.GetBelly().bellyUp)
+        {
+            sLeaser.sprites[3].scaleX = -1f * self.player.flipDirection;
+            sLeaser.sprites[3].y -= 3f;
+            sLeaser.sprites[9].scaleY *= -1f;
+            sLeaser.sprites[9].y += 3f;
+
+            sLeaser.sprites[0].y -= 3f;
+            sLeaser.sprites[1].y -= 2.5f;
+            sLeaser.sprites[3].y -= 3f;
+            sLeaser.sprites[9].y -= 6f;
+
+            //sLeaser.sprites[3].rotation += -90 * self.player.flipDirection;
+            //sLeaser.sprites[9].rotation += -90 * self.player.flipDirection;
+            self.player.Blink(5);
+
+            sLeaser.sprites[ct].scaleX *= -1f;
+            sLeaser.sprites[hp].scaleX *= -1f;
+        }
+        else if (!self.player.Sleeping)
+        {
+            sLeaser.sprites[3].scaleX = 1f * self.player.flipDirection;
+        }
+
+
         bool debugBar = false;
         if (debugBar)
         {

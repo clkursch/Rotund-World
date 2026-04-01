@@ -12,10 +12,10 @@ public class patch_LizardAI
     {
 		On.LizardAI.Update += BP_Update;
 		On.LizardAI.DoIWantToHoldThisWithMyTongue += Lizard_DoIWantToHoldThisWithMyTongue;
-		// On.LizardAI.ctor += BPLizardAI_ctor;
+        // On.LizardAI.ctor += BPLizardAI_ctor;
 	}
-	
-	public static void BPLizardAI_ctor(On.LizardAI.orig_ctor orig, LizardAI self, AbstractCreature creature, World world)
+
+    public static void BPLizardAI_ctor(On.LizardAI.orig_ctor orig, LizardAI self, AbstractCreature creature, World world)
     {
         orig.Invoke(self, creature, world);
 		
@@ -202,12 +202,27 @@ public class patch_LizardAI
 
 		}
 
+        //Debug.Log("LIZARD " + self.pathFinder.GetDestination + " - " + self.pathFinder.creaturePos);
+        //Debug.Log("LIZARD " + self.pathFinder.GetDestination + " - " + self.pathFinder.nextDestination);
+        //WHY IS THIS SO HARD???
+        if (self.lizard.GetBelly().bellyUp && self.friendTracker.friend != null)
+		{
+            if (self.friendTracker.RunSpeed() > 0f || self.behavior != LizardAI.Behavior.FollowFriend)
+			{
+                self.lizard.GetBelly().bellyUp = false;
+                foreach (LizardLimb lizardLimb in (self.lizard.graphicsModule as LizardGraphics).limbs)
+                {
+                    lizardLimb.mode = Limb.Mode.HuntAbsolutePosition;
+                    //lizardLimb.retract = true;
+                }
+            }
+        }
 	}
 
 
 
-	// public static void RemoteControl(LizardAI self, float origRunspeed)
-	public static void RemoteControl(Creature self, float origRunspeed)
+    // public static void RemoteControl(LizardAI self, float origRunspeed)
+    public static void RemoteControl(Creature self, float origRunspeed)
     {
 		
 		bool behaviorConditions = false;
@@ -216,7 +231,7 @@ public class patch_LizardAI
 		if (self is Player && (self as Player).AI != null)
 			behaviorConditions = ((self as Player).AI.behaviorType == SlugNPCAI.BehaviorType.Following || (self as Player).AI.behaviorType == SlugNPCAI.BehaviorType.Idle);
 		
-		if (self.room != null && behaviorConditions) // &&  && self.lizard.room == self.friendTracker.friend.room)
+		if (self.room != null && behaviorConditions && !self.GetBelly().bellyUp) 
 		{
 			Player myFriend = null; // self.AI.friendTracker.friend as Player;
             if (self is Lizard)

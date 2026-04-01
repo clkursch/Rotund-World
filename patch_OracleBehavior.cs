@@ -19,9 +19,11 @@ public class patch_OracleBehavior
 
         //WELL HE 'KIND OF' IS ONE...
         On.Watcher.PrinceBehavior.Update += PrinceBehavior_Update;
-	}
-	
-	public static bool princeCommentedOnWeight = false;
+
+        On.Oracle.ctor += Oracle_ctor; //SILLY...
+    }
+
+    public static bool princeCommentedOnWeight = false;
 
     public static void PrinceBehavior_Update(On.Watcher.PrinceBehavior.orig_Update orig, Watcher.PrinceBehavior self)
     {
@@ -718,6 +720,17 @@ public class patch_OracleBehavior
             //IF THEY'RE SOMEHOW STILL STUCK, START GETTING MAD AGAIN
             if (stuckCounter > secondTry + 400)
                 self.owner.inActionCounter++;
+        }
+    }
+
+
+    private static void Oracle_ctor(On.Oracle.orig_ctor orig, Oracle self, AbstractPhysicalObject abstractPhysicalObject, Room room)
+    {
+        orig(self, abstractPhysicalObject, room);
+        if (BPOptions.fatIterators.Value)
+        {
+            self.bodyChunks[0].rad *= 1.50f;
+            self.bodyChunks[1].rad *= 2f;
         }
     }
 }

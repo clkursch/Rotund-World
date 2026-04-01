@@ -167,6 +167,17 @@ public class patch_AbstractCreature
                 patch_MiscCreatures.AddFood(fish, 2);
                 Debug.Log("JETFISH - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
             }
+
+            if (self.realizedCreature is PoleMimic mimic && !mimic.GetBelly().fatDisabled)
+            {
+                if (mimic.grasps[0] != null && mimic.grasps[0].grabbed is Creature)
+                {
+                    //creature.abstractCreature.GetAbsBelly().myFoodInStomach += 1;
+                    //patch_Lizard.ObjUpdateBellySize(creature);
+                    patch_MiscCreatures.AddFood(mimic, 2); //STREAMLINE THIS A BIT
+                    Debug.Log("POLE PLANT - EATING A TASTY SNACK! " + self.GetAbsBelly().myFoodInStomach);
+                }
+            }
         }
 
         orig.Invoke(self, den);
