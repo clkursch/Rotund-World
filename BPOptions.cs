@@ -63,8 +63,8 @@ public class BPOptions : OptionInterface
 		BPOptions.fatTards = this.config.Bind<bool>("fatTards", true);
         BPOptions.fatLoachs = this.config.Bind<bool>("fatLoachs", true);
 
-        BPOptions.fatIterators = this.config.Bind<bool>("fatIterators", true);
-        BPOptions.fatPolePlants = this.config.Bind<bool>("fatPolePlants", true);
+        BPOptions.fatIterators = this.config.Bind<bool>("fatIterators2", false);
+        BPOptions.fatPolePlants = this.config.Bind<bool>("fatPolePlants2", false);
     }
 
 

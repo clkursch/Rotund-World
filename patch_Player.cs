@@ -716,33 +716,42 @@ public class patch_Player
 
         BellyPlus.Logger.LogInfo("BELLYPLUS RAD-TO-TERRAIN_RAD IL LINES ADDED! " + x);
     }
-	
-	//NEW DIFFICULTY SCALING. GAPS DON'T GET ANY TIGHTER IF THE DIFFICULTY SLIDER GOES ABOVE 0. IT JUST GETS CLOSER TO HARDMODE
-	public static float GapDifficulty(Player self)
-	{
-		//MITSUMI SCALING...
-		bool isMitsu = false;
-		if (ModManager.JollyCoop && !self.isNPC)
-		{
-			string myName = JollyCoop.JollyCustom.GetPlayerName(self.playerState.playerNumber).ToLower();
-            isMitsu = myName.Contains("mitsu") || myName.Contains("mitsumi") || myName.Contains("mizi");
+
+    public static float PersonalDifficulty(Player self)
+    {
+        //MITSUMI SCALING...
+        bool isMitsu = false;
+        if (ModManager.JollyCoop && !self.isNPC)
+        {
+            string myName = JollyCoop.JollyCustom.GetPlayerName(self.playerState.playerNumber).ToLower();
+            isMitsu = myName.Contains("mitsu") || myName.Contains("mitsumi") || myName.Contains("mizi") || myName.Contains("ez_");
         }
-		return Mathf.Min(BellyPlus.BPODifficulty(), 0f) - (isMitsu ? 3f : 0f);
+        return BellyPlus.BPODifficulty()- (isMitsu ? 3f : 0f);
+    }
+
+    //NEW DIFFICULTY SCALING. GAPS DON'T GET ANY TIGHTER IF THE DIFFICULTY SLIDER GOES ABOVE 0. IT JUST GETS CLOSER TO HARDMODE
+    public static float GapDifficulty(Player self)
+	{
+		return Mathf.Min(PersonalDifficulty(self), 0f);
 	}
 
-    public static float BottomHeavyDiffScale()
+    public static float BottomHeavyDiffScale(Player self)
     {
-		float result = BellyPlus.BPODifficulty();
-		if (BellyPlus.BPODifficulty() > 0) //LESS HARSH SCALING FOR DIFFICULTIES ABOVE 0
+		float result = PersonalDifficulty(self);
+		if (PersonalDifficulty(self) > 0) //LESS HARSH SCALING FOR DIFFICULTIES ABOVE 0
 			result /= 3f;
         return result;
     }
 
-    public static float HardmodeScaling(float baseDif, float hardest)
+    public static float HardmodeScaling(Creature self, float baseDif, float hardest)
 	{
 		if (BPOptions.hardMode.Value)
 			return hardest;
-		return Mathf.Lerp(baseDif, hardest, BellyPlus.BPODifficulty() / 5f);
+		float diff = BellyPlus.BPODifficulty();
+		if (self is Player plr)
+			diff = PersonalDifficulty(plr);
+
+        return Mathf.Lerp(baseDif, hardest, diff / 5f);
 	}
 
 	
@@ -1625,7 +1634,7 @@ public class patch_Player
 		if (tileSeed >= 7 && !shortcutFlag && coinFlip && !wetHazard && !rainWarning)
         {
 			if (self is Player)
-				tileSizeMod += myChub * HardmodeScaling(1f, 2f) + Mathf.Min((GetOverstuffed(self as Player) / 2), 12);
+				tileSizeMod += myChub * HardmodeScaling(self, 1f, 2f) + Mathf.Min((GetOverstuffed(self as Player) / 2), 12);
 			else
 				tileSizeMod += myChub; //NON-PLAYERS  GET IT EASIER OFF, BECAUSE WE DON'T WANT THEM IN OUR WAY...
 
@@ -2033,9 +2042,9 @@ public class patch_Player
 	public static void ObjGainLoosenProg(Creature obj, float amnt)
 	{
 		if (obj is Player)
-			obj.GetBelly().loosenProg += amnt * (GetLivingPlayers(obj as Player) == 1 ? 2f : 1.75f) * HardmodeScaling(6f, 1f) * Mathf.Lerp(1f, 2f, -BellyPlus.BPODifficulty() / 5f); //OKAY, EASY MODE GETS EVEN FASTER
+			obj.GetBelly().loosenProg += amnt * (GetLivingPlayers(obj as Player) == 1 ? 2f : 1.75f) * HardmodeScaling(obj, 6f, 1f) * Mathf.Lerp(1f, 2f, -BellyPlus.BPODifficulty() / 5f); //OKAY, EASY MODE GETS EVEN FASTER
 		else
-			obj.GetBelly().loosenProg += amnt * HardmodeScaling(6f, 2f);
+			obj.GetBelly().loosenProg += amnt * HardmodeScaling(obj, 6f, 2f);
 	}
 	
 	public static int ObjBeingPushed(Creature obj)
@@ -2318,7 +2327,7 @@ public class patch_Player
         if (BPOptions.easilyWinded.Value)
             reduce += Mathf.Max(GetChubFloatValue(self) / 20f, 0f); // (0 - 0.2)   -0.2f if 4 chub.  -0.1f at 3 chub
 
-        reduce = Mathf.Min(reduce + GetOverstuffed(self) * (0.05f * (1f + (BottomHeavyDiffScale() * 0.15f))), minSpd); //0.5f
+        reduce = Mathf.Min(reduce + GetOverstuffed(self) * (0.05f * (1f + (BottomHeavyDiffScale(self) * 0.15f))), minSpd); //0.5f
 
 		if (self.slugcatStats?.name?.value == "Cloudtail")
 			reduce = Mathf.Max(0, (reduce - 0.15f) * 0.1f);
@@ -4120,7 +4129,7 @@ public class patch_Player
             float stuffing = GetOverstuffed(self) + ((GetChubFloatValue(self)) - (BPOptions.easilyWinded.Value ? 1 : 3) - (self.gourmandExhausted ? 2 : 0));
             //float preStuffing = stuffing;
             //WITH THIS SETUP, WEIGHT PENALTY CAPS AT 14 (OR LIKE 7+ EXTRA FOOD PIPS)
-            stuffing *= (1 + (Mathf.Min(BottomHeavyDiffScale() * 1.2f, 0) / 10f)); //LET EASY MODE PLAYERS GET UP MUCH EASIER 
+            stuffing *= (1 + (Mathf.Min(BottomHeavyDiffScale(self) * 1.2f, 0) / 10f)); //LET EASY MODE PLAYERS GET UP MUCH EASIER 
                                                                                          //Debug.Log("-----STUFFING TEST!: " + stuffing + " PRE: " + preStuffing);
 
             if (self.slugcatStats?.name?.value == "Cloudtail")
@@ -5667,7 +5676,7 @@ public class patch_Player
 		// if (squeezeThresh > scaleCap)
 			// squeezeThresh = scaleCap + ((squeezeThresh - scaleCap) / (BPOptions.hardMode.Value ? 1 : 2));
 		if (squeezeThresh > 450)
-			squeezeThresh = 450 + ((squeezeThresh - 450) / HardmodeScaling(2f, 1f));
+			squeezeThresh = 450 + ((squeezeThresh - 450) / HardmodeScaling(self, 2f, 1f));
 		
 		// if (squeezeThresh > 0f && squeezeThresh <= 30f)
 			// squeezeThresh = 0; //CLOSE ENOUGH. WE DON'T NEED TO BOTHER WITH SQUEEZES THIS SHORT
@@ -5871,7 +5880,7 @@ public class patch_Player
         //FROM THE DELAYED SHOVE
         if (self.GetBelly().fwumpDelay == 8)
         {
-			self.GetBelly().stuckStrain += (130f + bonusMomentum + HardmodeScaling(30f, 0f)) * (ObjIsSlick(self) ? 1.25f : 1f);
+			self.GetBelly().stuckStrain += (130f + bonusMomentum + HardmodeScaling(self, 30f, 0f)) * (ObjIsSlick(self) ? 1.25f : 1f);
 			self.GetBelly().corridorExhaustion += 40;
 			self.AerobicIncrease(2f);
 			self.GetBelly().fwumpDelay = 0;
@@ -6075,7 +6084,7 @@ public class patch_Player
 			//self.GetBelly().loosenProg += Mathf.Sqrt(Mathf.Max(self.GetBelly().stuckStrain - 200f, 0)) / ((GetLivingPlayers(self) > 1) ? 2000f : 1500f); //MULTIPLYING THIS BY 4. LETS SEE HOW IT GOES .stuckStrain - 100f, 0)) / 6000f
 			float loosenAmnt = Mathf.Sqrt(Mathf.Max(Mathf.Min(self.GetBelly().stuckStrain, 280) - 200f, 0)) / ((GetLivingPlayers(self) > 1) ? 2000f : 1500f);
 			//RESISTANCE TO SNOWBALLING PROGRESS (DISABLED IN EASY MODE)
-			if (HardmodeScaling(0f, 1f) > 0f)
+			if (HardmodeScaling(self, 0f, 1f) > 0f)
             {
 				float loosenResist = Mathf.Max(1f, self.GetBelly().loosenProg / 3);
 				self.GetBelly().loosenProg += (loosenAmnt / loosenResist);
@@ -6190,7 +6199,7 @@ public class patch_Player
 		if (self.animation == Player.AnimationIndex.GetUpOnBeam) // && self.straightUpOnHorizontalBeam == false)
 		{
 			float stuffing = GetOverstuffed(self) + ((GetChubFloatValue(self) - 1) * (BPOptions.easilyWinded.Value ? 2 : 1.5f));
-			stuffing *= (1 + (Mathf.Min(BottomHeavyDiffScale() * 1.2f, 0) / 10f)); //LET EASY MODE PLAYERS GET UP MUCH EASIER 
+			stuffing *= (1 + (Mathf.Min(BottomHeavyDiffScale(self) * 1.2f, 0) / 10f)); //LET EASY MODE PLAYERS GET UP MUCH EASIER 
 			
 			Player backPlayer = GetHeaviestPlayerOnBack(self); //, playerNum);
 			if (backPlayer != null)
