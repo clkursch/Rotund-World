@@ -617,6 +617,7 @@ public static class YourGraphicsClass
 		public bool verified;
 		public bool cloakRipped;
 		public float lastHipScale;
+		public bool forceFlip;
         public LightSource slimeGlow; //makes our belly glow if we eat enough slime mold
         public LightSource slimeGlowOverlay; //makes our belly glow if we eat enough slime mold
     }

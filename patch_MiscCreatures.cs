@@ -369,7 +369,7 @@ public class patch_MiscCreatures
     {
         orig(self, ow);
 
-        if (GetChub(self.bug) >= 4)
+        if (GetChub(self.bug) >= 4 && BPOptions.fatCentis.Value)
         {
             self.bodyThickness += 2f;
         }

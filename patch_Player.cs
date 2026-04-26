@@ -3856,7 +3856,7 @@ public class patch_Player
 	{
 		//OVEREATING! (NPCS CAN DO THIS TOO)
 		bool flag = self.input[0].x == 0 && self.input[0].y == 0 && !self.input[0].jmp && !self.input[0].thrw && (self.mainBodyChunk.submersion < 0.5f || self.isRivulet);
-		if (flag)
+		if (flag && patch_MiscCreatures.CheckFattable(self))
 		{
 			int num3 = -1;
 			int num5 = 0;
@@ -3867,20 +3867,6 @@ public class patch_Player
 					num3 = num5;
 					self.swallowAndRegurgitateCounter = 0; //SO GOURMAND DOESNT FABRICATE STUFF WHILE WE'RE OVEREATING
 				}
-
-                //SOME SPECIALTIES FOR THE OUTSIDER
-    //            if (self.slugcatStats?.name?.value == "Outsider") // && self.FoodInStomach >= self.MaxFoodInStomach)
-				//{
-    //                Debug.Log("BP - CAMERA TRIGGER FAILED TO SWITCH " + self.swallowAndRegurgitateCounter);
-    //                if (self.swallowAndRegurgitateCounter >= 29 && self.grasps[num5] != null && (self.grasps[num5].grabbed is FlareBomb || self.grasps[num5].grabbed is FirecrackerPlant || self.grasps[num5].grabbed is FlyLure || self.grasps[num5].grabbed is BubbleGrass || self.grasps[num5].grabbed is PuffBall))
-    //                {
-				//		self.SwallowObject(num5);
-    //                    self.swallowAndRegurgitateCounter = 0;
-    //                    (self.graphicsModule as PlayerGraphics).swallowing = 20;
-				//		return;
-    //                }
-    //            }
-
                 num5++;
 			}
 
@@ -4869,6 +4855,8 @@ public class patch_Player
 			{
                 liz.GetBelly().bellyUp = true;
                 self.GetBelly().bellyUp = false;
+                if (self.graphicsModule != null)
+                    (self.graphicsModule as PlayerGraphics).GetGraph().forceFlip = true;
             }
 			
         }
@@ -7880,8 +7868,13 @@ public class patch_Player
         if (self.GetBelly().doubleTapDownTimer < 100)
             self.GetBelly().doubleTapDownTimer++;
 
-        if (self.standing || self.superLaunchJump >= 20 || self.input[0].x != 0)
+        if (self.GetBelly().bellyUp && (self.standing || self.superLaunchJump >= 20 || self.input[0].x != 0))
+		{
             self.GetBelly().bellyUp = false;
+			if (self.graphicsModule != null)
+				(self.graphicsModule as PlayerGraphics).GetGraph().forceFlip = true;
+        }
+            
     }
 
 

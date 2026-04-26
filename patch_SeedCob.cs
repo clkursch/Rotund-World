@@ -398,6 +398,7 @@ public class patch_SeedCob
                     && player.eatExternalFoodSourceCounter < 1
                     && player.dontEatExternalFoodSourceCounter < 1
                     && player.SlugCatClass != MoreSlugcatsEnums.SlugcatStatsName.Spear
+                    && patch_MiscCreatures.CheckFattable(player)
                     //&& (realizedCreature as Player).FoodInStomach < (realizedCreature as Player).MaxFoodInStomach 
                     && player.dead == false //HOW DID I FORGET THIS?
                                             //AND DON'T AUTO EAT IF WE'RE UPROOTED

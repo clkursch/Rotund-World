@@ -662,9 +662,10 @@ public class patch_PlayerGraphics
             sLeaser.sprites[ct].scaleX *= -1f;
             sLeaser.sprites[hp].scaleX *= -1f;
         }
-        else if (!self.player.Sleeping)
+        else if (self.GetGraph().forceFlip) //(!self.player.Sleeping)
         {
             sLeaser.sprites[3].scaleX = 1f * self.player.flipDirection;
+            self.GetGraph().forceFlip = false;
         }
 
 
