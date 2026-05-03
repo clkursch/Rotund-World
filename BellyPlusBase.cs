@@ -496,6 +496,7 @@ public static class AbsBellyClass
 		public int externalMass;
 		public int chubModOffset;
 		public int slimeGlowEaten;
+		public bool initialized; //BECAUSE SOME PEOPLE REEAALLY WANNA ADD FOOD BEFORE ROTUND WORLD PLAYER.CTOR HAS INITIALIZED...
     }
 
     // This part lets you access the stored stuff by simply doing "self.GetAbsBelly()" in BellyPlus.cs or everywhere else!

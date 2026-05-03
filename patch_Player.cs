@@ -167,25 +167,23 @@ public class patch_Player
         IntVector2 personalBelly = SlugcatStats.SlugcatFoodMeter(player.slugcatStats.name); //BECAUSE PLAYERSTATS.MAXFOOD ONLY GIVES PLAYER 1'S BELLY SIZE
         player.GetBelly().bigBelly = player.isGourmand || (personalBelly.x > 10 && personalBelly.x - personalBelly.y >= 4);
 
-        //OKAY INDIVIDUAL FOOD BARS BEATS US TO THE PUNCH SO WE HAVE TO SET THIS HERE TOO
-        if (player.abstractCreature.GetAbsBelly().origPoleSpeed == 0)
-            player.abstractCreature.GetAbsBelly().origPoleSpeed = player.slugcatStats.poleClimbSpeedFac;
-
         if (player.GetBelly().foodOnBack == null) //INITIALIZE THIS TOO, IF WE'RE MISSING IT
             player.GetBelly().foodOnBack = new FoodOnBack(player); //player.GetBelly().foodOnBack.ReplaceOwner(player);
 
         //IF OUR FOOD LEVEL WAS ALREADY INITIALIZED, SKIP THE REST
-        if (player.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
+        if (player.abstractCreature.GetAbsBelly().initialized) //(player.abstractCreature.GetAbsBelly().myFoodInStomach != -1)
 		{
             illegalSpawn = true;
             Debug.Log("ILLEGAL SPAWN! CANCEL THE STARTUP " + playerNumber);
 			UpdateBellySize(player); //STILL DO THIS THOUGH. THIS WEIRD CLONE MAY WANT IT
             return;
 		}
-		else if (player.abstractCreature.GetAbsBelly().myFoodInStomach == -1) //INITIALIZE FOOD LEVEL IF IT HASN'T BEEN ALREADY
+		else //INITIALIZE FOOD LEVEL IF IT HASN'T BEEN ALREADY
         {
 			player.abstractCreature.GetAbsBelly().myFoodInStomach = player.FoodInStomach;
-		}
+            player.abstractCreature.GetAbsBelly().origPoleSpeed = player.slugcatStats.poleClimbSpeedFac;
+            player.abstractCreature.GetAbsBelly().initialized = true;
+        }
 		
 		expRotund = ModManager.Expedition && Custom.rainWorld.ExpeditionMode && Expedition.ExpeditionGame.activeUnlocks.Contains("bur-rotund");
 
@@ -2370,12 +2368,12 @@ public class patch_Player
         if (self.graphicsModule != null)
 			patch_PlayerGraphics.UpdateTailThickness(self.graphicsModule as PlayerGraphics); //, tailThick);
 		
-		if (BellyPlus.VisualsOnly())
+		if (BellyPlus.VisualsOnly() || self.abstractCreature.GetAbsBelly().initialized == false)
 			return;
-		
+
 		//USES OUR MOVEMENT MODIFIER FOR OUR POLE CLIMB SPEED
-		// self.slugcatStats.poleClimbSpeedFac = self.GetBelly().origPoleSpeed * self.GetBelly().runSpeedMod; 
-		self.slugcatStats.poleClimbSpeedFac = self.abstractCreature.GetAbsBelly().origPoleSpeed * Mathf.Lerp(-0.10f, 1f, Mathf.Max(self.GetBelly().runSpeedMod, 0.35f)); //AND THEN TONE IT BACK A BIT... //MAKE POLE CLIMBING SPEED CHANGES MORE NOTICEABLE //-0.35f, 1f,
+		if (self.abstractCreature.GetAbsBelly().origPoleSpeed != 0) //IDK HOW THIS MANAGES TO RUN BEFORE PLAYER.CTOR BUT I GUESS IT'S CAUSING ISSUES...
+			self.slugcatStats.poleClimbSpeedFac = self.abstractCreature.GetAbsBelly().origPoleSpeed * Mathf.Lerp(-0.10f, 1f, Mathf.Max(self.GetBelly().runSpeedMod, 0.35f)); //AND THEN TONE IT BACK A BIT... //MAKE POLE CLIMBING SPEED CHANGES MORE NOTICEABLE //-0.35f, 1f,
 
         float newWeight = baseWeight;
 		float corridorSpeedFact = 1f;
