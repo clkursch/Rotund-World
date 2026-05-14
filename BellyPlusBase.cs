@@ -20,6 +20,7 @@ using RainMeadow;
 using MonoMod.Utils;
 using System.Linq;
 
+
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 
@@ -180,7 +181,7 @@ public class BellyPlus : BaseUnityPlugin
 			patch_OverseerTutorial.Patch();
 
             //On.GameSession.ctor += GameSession_ctor;
-			//On.RainWorldGame.SpawnPlayers_bool_bool_bool_bool_WorldCoordinate += RainWorldGame_SpawnPlayers_bool_bool_bool_bool_WorldCoordinate;
+            //On.RainWorldGame.SpawnPlayers_bool_bool_bool_bool_WorldCoordinate += RainWorldGame_SpawnPlayers_bool_bool_bool_bool_WorldCoordinate;
         }
 		catch (Exception arg)
 		{
@@ -284,7 +285,13 @@ public class BellyPlus : BaseUnityPlugin
 
     private void RainWorld_PostModsInit(On.RainWorld.orig_PostModsInit orig, RainWorld self)
     {
-        orig(self);
+        foreach (ModManager.Mod mod in ModManager.ActiveMods)
+        {
+            if (mod.id == "rainworldlastwish")
+                BPLastWishFixes.LastWishContent();
+        }
+
+		orig(self);
         //I BARELY UNDERSTAND HOW THIS WORKS BUT SHUAMBUAM SEEMS TO HAVE IT ON LOCK SO I'LL JUST FOLLOW HIS LEAD
         if (is_post_mod_init_initialized) return;
         is_post_mod_init_initialized = true;
@@ -294,7 +301,7 @@ public class BellyPlus : BaseUnityPlugin
 
         if (improvedInputEnabled)
             Initialize_Custom_Input();
-		
+
 		//patch_Misc.PostPatch(); //NO LONGER NEEDED FOR EXPD ENHANCED
     }
 

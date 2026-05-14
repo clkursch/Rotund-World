@@ -127,6 +127,10 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="VoidTemplate">
+      <HintPath>Resources\VoidTemplate.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="YeekFix">
       <HintPath>Resources\YeekFix.dll</HintPath>
       <Private>false</Private>
@@ -134,6 +138,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BellyPlusBase.cs" />
+    <Compile Include="BPLastWishFixes.cs" />
     <Compile Include="BPMeadowStuff.cs" />
     <Compile Include="BPOptions.cs" />
     <Compile Include="CycleFoodChallenge.cs" />
