@@ -336,12 +336,14 @@ public class patch_SeedCob
             if (ModManager.DLCShared)
                 abstractConsumable = new AbstractConsumable(self.room.world, DLCSharedEnums.AbstractObjectType.Seed, null, self.room.GetWorldCoordinate(self.placedPos), self.room.game.GetNewID(), -1, -1, null);
             else
-                abstractConsumable = new AbstractConsumable(self.room.world, AbstractPhysicalObject.AbstractObjectType.EggBugEgg, null, self.room.GetWorldCoordinate(self.placedPos), self.room.game.GetNewID(), -1, -1, null);
+                abstractConsumable = new AbstractConsumable(self.room.world, AbstractPhysicalObject.AbstractObjectType.SlimeMold, null, self.room.GetWorldCoordinate(self.placedPos), self.room.game.GetNewID(), -1, -1, null); //EggBugEgg REQUIRES PASSING IN A HUE...
 
             self.room.abstractRoom.AddEntity(abstractConsumable);
             abstractConsumable.pos = self.room.GetWorldCoordinate(self.placedPos);
             abstractConsumable.RealizeInRoom();
             abstractConsumable.realizedObject.firstChunk.HardSetPosition(Vector2.Lerp(self.bodyChunks[0].pos, self.bodyChunks[1].pos, (float)i / 5f));
+            if (!ModManager.DLCShared)
+                (abstractConsumable.realizedObject as SlimeMold).JellyfishMode = true; //.hue = UnityEngine.Random.value;
         }
         self.AbstractCob.spawnedUtility = true;
     }

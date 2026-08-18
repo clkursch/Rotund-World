@@ -3,6 +3,7 @@ using RWCustom;
 using UnityEngine;
 using MonoMod.RuntimeDetour;
 using Pearlcat;
+using System.Linq;
 
 namespace RotundWorld;
 
@@ -124,8 +125,8 @@ public class patch_PlayerGraphics
 
         self.GetGraph().blSprt = bls;
         sLeaser.sprites[bls].shader = rCam.game.rainWorld.Shaders["FlatLightNoisy"];
-		
-		if (self.player?.slugcatStats?.name?.value == "Guide") //GUIDE GETS A UNIQUE COLOR
+
+        if (self.player?.slugcatStats?.name?.value == "Guide") //GUIDE GETS A UNIQUE COLOR
             self.GetGraph().blColor = new Color(0.0f, 0.78f, 1f);
 
         if (BellyPlus.dressMySlugcatEnabled) //FOR DMS SPECIFIC ONES
@@ -216,6 +217,25 @@ public class patch_PlayerGraphics
         if (Pearlcat.ModOptions.DisableCosmetics.Value)
             return;
 
+
+        if (self.player.GetBelly().beingPushed > 0 && self.player.GetBelly().tailPushedAngle > 0 && self != null)
+        {
+            int i = 1;
+            if (self.player.slugcatStats?.name?.value == "Pearlcat")
+            {
+                foreach (var bodyPart in self.player.graphicsModule.bodyParts.OfType<TailSegment>())
+                {
+                    bodyPart.vel.y += 8f / i;
+                    bodyPart.vel.y = Mathf.Min(bodyPart.vel.y, 8f);
+                    i++;
+                    if (i == 3)
+                        break;
+                }
+            }
+            Pearlcat.PlayerGraphics_Helpers.ApplyTailMovement(self);
+        }
+
+
         if (self.owner.bodyChunks[1].mass > 0.55f)
         {
             if (!self.GetGraph().cloakRipped && self.player.room != null)
@@ -271,6 +291,12 @@ public class patch_PlayerGraphics
             sleeveLSprite.isVisible = false;
             sleeveRSprite.isVisible = false;
             scarfSprite.isVisible = false;
+        }
+
+        //ADULT PEARLPUP GRAPHICS ARE TOO COMPLICATED FOR THIS. JUST DISABLE THE SFX SPRITE.
+        if (playerModule.IsAdultPearlpupAppearance && BPOptions.blushEnabled.Value && !BellyPlus.VisualsOnly())
+        {
+            sLeaser.sprites[self.GetGraph().blSprt].isVisible = false;
         }
     }
 
@@ -444,7 +470,8 @@ public class patch_PlayerGraphics
 			
 			if (!inPipe) //IT LOOKS FUNKY IF WE'RE IN A PIPE
 				sLeaser.sprites[hp].ScaleAroundPointRelative(new Vector2(0, 8), Mathf.Lerp(1f, 1f + sqScl, boostPerc), Mathf.Lerp(1f, 1f - sqScl, boostPerc));
-            self.tail[0].pos += patch_Player.ObjGetStuckVector(self.player) * (3f + (0.05f * hipScale)) * (boostPerc) * (sqScl * 5f);
+            if (self.player?.slugcatStats?.name?.value != "Pearlcat")
+                self.tail[0].pos += patch_Player.ObjGetStuckVector(self.player) * (3f + (0.05f * hipScale)) * (boostPerc) * (sqScl * 5f);
         }
         self.GetGraph().lastSquish = frc;
 
@@ -559,6 +586,11 @@ public class patch_PlayerGraphics
             
             if (!patch_Player.IsPushingOther(self.player) && !patch_Player.IsPullingOther(self.player))
             {
+                //NECK STRETCH
+                self.head.pos += patch_Player.ObjGetStuckVector(self.player) * Mathf.Sqrt(Mathf.Max(0, patch_Player.GetBoostStrain(self.player) - 14));
+                if (!patch_Player.IsVerticalStuck(self.player))
+                    self.head.pos.y += 0.5f * Mathf.Sqrt(Mathf.Max(0, patch_Player.GetBoostStrain(self.player) - 14));
+
                 if (!patch_Player.IsVerticalStuck(self.player))
                 {
                     //sLeaser.sprites[9].x += (5.0f * self.player.flipDirection);
@@ -601,33 +633,7 @@ public class patch_PlayerGraphics
                 sLeaser.sprites[9].scaleY = 1f;
         }
 
-
-
-
-        //EVERGREEN CHANGES!
-        /*
-		if (patch_Player.ChunkyEvergreen(self.player))
-		{
-            Debug.Log("-----CHUNKY EVERGREEN!!: ");
-            if (self.player.animation == Player.AnimationIndex.Roll && sLeaser.sprites[0].element.name == "EvergreenBody")
-			{
-				//sLeaser.sprites[0].element = Futile.atlasManager.GetElementWithName("EvergreenSpikedBody");
-				//sLeaser.sprites[1].element = Futile.atlasManager.GetElementWithName("EvergreenSpikedHips");
-                ReplaceDMSSprite(self, 0, "EvergreenSpikedBody");
-                ReplaceDMSSprite(self, 1, "EvergreenSpikedHips");
-            }
-			else if (self.player.stopRollingCounter > 0 && sLeaser.sprites[0].element.name == "EvergreenSpikedBody")
-			{
-				//sLeaser.sprites[0].element = Futile.atlasManager.GetElementWithName("EvergreenBody");
-				//sLeaser.sprites[1].element = Futile.atlasManager.GetElementWithName("EvergreenHips");
-                ReplaceDMSSprite(self, 0, "EvergreenBody");
-                ReplaceDMSSprite(self, 1, "EvergreenHips");
-            }
-		}
-		*/
-        //Debug.Log("SPRITE" + sLeaser.sprites[3].element.name); //HMM NOPE 
-        //Debug.Log("SPRITE" + DressMySlugcat.Customization.For(self.player).CustomSprites[0].SpriteSheetID);
-        
+        //EVERGREEN WORKS! DMS SPRITES WERE REPLACED WITH PROPER ONES. WE'RE DONE HERE
 
         //QUIT STARING OFF INTO SPACE!
         //if (self.player.bodyMode == Player.BodyModeIndex.CorridorClimb && !(patch_Player.ObjIsWedged(self.player) && self.player.input[0].IntVec != new IntVector2(0,0)))

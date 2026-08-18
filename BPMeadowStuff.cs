@@ -265,9 +265,26 @@ public class BPMeadowStuff
     {
         return (OnlineManager.lobby != null && OnlineManager.lobby.gameMode is MeadowGameMode);
     }
-	
-	//CHECK IF A PHYSICALOBJECT IS OWNED BY US OR NOT. (IF ITS NOT A MEADOW SESSION THEN YES WE OWN EVERYTHING)
-	public static bool IsObjectLocal(PhysicalObject self)
+
+    public static bool IsMeadowSandboxMode()
+    {
+        if (BellyPlus.meadowEnabled)
+            return CheckMSM();
+        else
+            return false;
+    }
+
+    //TREAT THIS SETUP AS A SANDBOX MODE FOR MEADOW ARENA
+    public static bool CheckMSM()
+    {
+        return (OnlineManager.lobby != null
+            && OnlineManager.lobby.gameMode is ArenaOnlineGameMode arenaMode 
+            && arenaMode.session.rainCycleTimeInMinutes == 10f //MAX RAIN TIMER SETTING
+            && BPOptions.extraTime.Value);
+    }
+
+    //CHECK IF A PHYSICALOBJECT IS OWNED BY US OR NOT. (IF ITS NOT A MEADOW SESSION THEN YES WE OWN EVERYTHING)
+    public static bool IsObjectLocal(PhysicalObject self)
     {
 		if (BellyPlus.isMeadowSession)
 			return CheckLocality(self);

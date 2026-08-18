@@ -20,10 +20,35 @@ public class patch_Lizard
 		On.Lizard.JawsSnapShut += Lizard_JawsSnapShut;
 		On.Lizard.ActAnimation += BP_ActAnimation;
 		On.Lizard.Collide += BP_Collide;
+        On.Lizard.Violence += Lizard_Violence;
 		On.Creature.Die += BP_Die;
 	}
 
-	private static void MainPatch(On.Lizard.orig_ctor orig, Lizard self, AbstractCreature abstractCreature, World world)
+    private static void Lizard_Violence(On.Lizard.orig_Violence orig, Lizard self, BodyChunk source, Vector2? directionAndMomentum, BodyChunk hitChunk, PhysicalObject.Appendage.Pos onAppendagePos, Creature.DamageType type, float damage, float stunBonus)
+    {
+		orig(self, source, directionAndMomentum, hitChunk, onAppendagePos, type, damage, stunBonus);
+		
+		//BASEGABE RETURNS
+        if (!self.RippleViolenceCheck(source))
+            return;
+
+        if (onAppendagePos != null && self.rotModule != null)
+            return;
+
+        //SEND US BACK THROUGH PIPES IF HIT IN THE HEAD WHILE STUCK IN A SHORTCUT
+        if (self.GetBelly().stuckInShortcut && hitChunk != null && hitChunk.index == 0 && directionAndMomentum != null)
+        {
+            if (self.HitHeadShield(directionAndMomentum.Value) && (type == Creature.DamageType.Stab || type == Creature.DamageType.Blunt))
+            {
+				self.stun = 0; //OTHERWISE SHORTCUT IS CANCELED
+				self.GetBelly().noStuck = 8;
+                self.GetBelly().isStuck = false;
+                patch_Player.GetNearestShortcut(self, 50f, false);
+            }
+        }
+    }
+
+    private static void MainPatch(On.Lizard.orig_ctor orig, Lizard self, AbstractCreature abstractCreature, World world)
 	{
 		orig(self, abstractCreature, world);
 
@@ -396,7 +421,9 @@ public class patch_Lizard
 	private static float crashVel = 0f;
 	public static void CheckStuckage(Creature self)
 	{
-		
+		if (BellyPlus.VisualsOnly())
+			return; //OOPS
+
 		bool inPipe = self.GetBelly().inPipeStatus;
 		float posMod = inPipe ? 0.5f : 0f;
 
@@ -505,11 +532,10 @@ public class patch_Lizard
 					self.bodyChunks[0].pos.x = newCoords.x;
 				}
 					
-				if (backedOut)
+				if (backedOut && !self.GetBelly().stuckInShortcut) //YOU CAN'T BACK OUT OF A SHORTCUT STUCK
 				{
 					// Debug.Log("LZ! WE JUST BACKED OUT! NOTHING SPECIAL " + self.bodyChunks[1].pos + " STUCK COORDS:" + self.GetBelly().stuckCoords + " FLIPDIR:" + self.GetBelly().myFlipValX + "," + self.GetBelly().myFlipValY + " VERTSTK:" + self.GetBelly().verticalStuck + self.bodyChunks[0].terrainSqueeze);
 					self.GetBelly().isStuck = false;
-					self.GetBelly().stuckInShortcut = false;
 					self.GetBelly().verticalStuck = false;
 					self.GetBelly().stuckCoords = new Vector2(0, 0);
 					return;
@@ -577,7 +603,7 @@ public class patch_Lizard
 
 			//SOME SPECIFICS FOR SOME VANILLAS
 			if (self.Template.type == CreatureTemplate.Type.GreenLizard)
-                sizeMod = 1.5f;
+                sizeMod = 1f;
 			else if (mySize >= 2) //HYUUUGE BOIS I GUESS
 			{
                 naturalChub = 2;
@@ -934,8 +960,6 @@ public class patch_Lizard
 		
 		self.AI.runSpeed = Mathf.Min(self.AI.runSpeed, 1f * myRunSpeed);
 		
-		//DISABLE THIS BODY CHUNK WHEN STUCK IN SHORTCUT (IDK IF THIS ACTUALLY HELPS...)
-		self.bodyChunkConnections[2].active = !self.GetBelly().stuckInShortcut;
 
         //HEY OUR AI DOESN'T RUN WHILE GRABBED! WE HAVE TO RUN THIS HERE
         if (!BellyPlus.ridableLizEnabled && self.grabbedBy.Count > 0 && (self.grabbedBy[0].grabber is Player) && (self.AI.friendTracker.friend != null && self.AI.friendTracker.friend is Player)) //IF OUR FRIEND IS A PLAYER, ASSUME ALL PLAYERS ARE CHILL
@@ -1139,18 +1163,60 @@ public class patch_Lizard
 				CheckStuckage(self);
 		}
 
-		//STRETCH OUT BASED ON STRAIN!
-		/*
+        //STRETCH OUT BASED ON STRAIN!
+        /*
 		float bodyStretch = Mathf.Min(self.GetBelly().boostStrain, 15f) * ((self.bodyMode == Player.BodyModeIndex.CorridorClimb) ? 2f : 0.7f );
 		if (self.GetBelly().beingPushed > 0 || (self.GetBelly().verticalStuck && self.GetBelly().myFlipValY > 0))
 			bodyStretch *= 0.6f;
 		self.bodyChunkConnections[0].distance += Mathf.Sqrt(bodyStretch);
 		*/
-		
-		//OKAY BUT FOR LIZARDS...
-		//HANDLE IT IN THEIR GRAPHICS MODULE
-		
-	}
+
+        //OKAY BUT FOR LIZARDS...
+        //HANDLE IT IN THEIR GRAPHICS MODULE
+        //NVM WHY WOULD I DO THAT.
+
+        //DEAL WITH THIS IN HERE, SO IT DOESN'T RUN OFF SCREEN.
+        //STRETCH OUT BASED ON STRAIN!
+        Lizard liz = self as Lizard; //self.lizard as Lizard;
+        float bodyStretch = Mathf.Min(liz.GetBelly().boostStrain, 13f) * 1.0f;
+        if (liz.GetBelly().beingPushed > 0 || (patch_Player.IsVerticalStuck(liz) && patch_Player.GetYFlipDirection(liz) > 0))
+            bodyStretch *= 0.6f;
+
+        float fatStretch = Mathf.Max(1, liz.GetBelly().myFatness - 1);
+        //self.headConnectionRad = 11 * liz.lizardParams.headSize * fatStretch;
+
+        liz.bodyChunkConnections[0].distance = (17f * liz.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch + Mathf.Sqrt(bodyStretch);
+        liz.bodyChunkConnections[1].distance = (17f * liz.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch; //FOR TAILS FOR EXTRA FATTIES
+
+        //IF WE'RE BEING PUSHED, SQUISH THE TAIL
+        
+        float tailSquish = Mathf.InverseLerp(25, 0, liz.GetBelly().boostStrain);
+        
+        //WAIT. BODYCONNECTION 2 IS PROBABLY NOT WHAT I THINK IT IS. WHY WOULD THERE BE A 3RD CONNECTION? TO KEEP FRONT AND BACK SEPERATED PROBABLY
+        float baseChunkConnSize = 17f * liz.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f) * (liz.GetBelly().stuckInShortcut ? 0.5f : 1f);
+        liz.bodyChunkConnections[1].distance = baseChunkConnSize * tailSquish; //HMM, CHANGES ARE TOO ABRUPT! LETS TRY SOMETHING SNEAKY~
+
+        if (patch_Lizard.IsStuck(liz))
+        {
+            liz.bodyChunkConnections[0].weightSymmetry = 1f;
+            liz.bodyChunkConnections[1].weightSymmetry = 0f; //OKAY THIS IS THE ONE THAT MATTERS. AND WE ONLY NEED TO SET IT ONCE I THINK
+            liz.straightenOutNeeded = 1f;
+        }
+        else
+        {
+            liz.bodyChunkConnections[0].weightSymmetry = 0.5f;
+            liz.bodyChunkConnections[1].weightSymmetry = 0.5f;
+        }
+
+        //EXTRAS
+        //DISABLE THIS BODY CHUNK WHEN STUCK IN SHORTCUT (IDK IF THIS ACTUALLY HELPS...)
+        self.bodyChunkConnections[2].active = !self.GetBelly().stuckInShortcut;
+
+		//for (int k = 0; k < 2; k++)
+        //{
+        //    this.bodyChunkConnections[k].type = ((this.movementAnimation != null && this.movementAnimation.connection.type == MovementConnection.MovementType.Standard) ? PhysicalObject.BodyChunkConnection.Type.Pull : PhysicalObject.BodyChunkConnection.Type.Normal);
+        //}
+    }
 	
 	
 	

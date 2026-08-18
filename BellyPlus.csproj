@@ -13,7 +13,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>BellyPlus</RootNamespace>
     <AssemblyName>BellyPlus</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
@@ -45,10 +45,6 @@
     <Reference Include="DressMySlugcat">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\312520\2948971756\newest\plugins\DressMySlugcat.dll</HintPath>
       <Private>False</Private>
-    </Reference>
-    <Reference Include="ExpeditionEnhanced">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\Mods(LEGACY)\ExpeditionEnhanced.dll</HintPath>
-      <Private>false</Private>
     </Reference>
     <Reference Include="HOOKS-Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\BepInEx\plugins\HOOKS-Assembly-CSharp.dll</HintPath>
@@ -83,12 +79,12 @@
       <Private>false</Private>
     </Reference>
     <Reference Include="NoirCatto">
-      <HintPath>Resources\NoirCatto.dll</HintPath>
-      <Private>false</Private>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\312520\2950268943\plugins\NoirCatto.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Pearlcat">
-      <HintPath>Resources\Pearlcat.dll</HintPath>
-      <Private>false</Private>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\312520\3013739512\newest\plugins\Pearlcat.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="PUBLIC-Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\BepInEx\utils\PUBLIC-Assembly-CSharp.dll</HintPath>

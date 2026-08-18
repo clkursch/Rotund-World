@@ -64,38 +64,13 @@ public class patch_LizardGraphics
         }
         else
         {
-            //DEAL WITH THIS IN HERE, SO IT DOESN'T RUN OFF SCREEN.
-            //STRETCH OUT BASED ON STRAIN!
-            float bodyStretch = Mathf.Min(self.lizard.GetBelly().boostStrain, 13f) * 1.0f;
-            if (self.lizard.GetBelly().beingPushed > 0 || (patch_Player.IsVerticalStuck(self.lizard) && patch_Player.GetYFlipDirection(self.lizard) > 0))
-                bodyStretch *= 0.6f;
-
-            float fatStretch = Mathf.Max(1, self.lizard.GetBelly().myFatness - 1);
-            self.headConnectionRad = 11 * self.lizard.lizardParams.headSize * fatStretch;
-
-            self.lizard.bodyChunkConnections[0].distance = (17f * self.lizard.lizardParams.bodyLengthFac * ((self.lizard.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch + Mathf.Sqrt(bodyStretch);
-            self.lizard.bodyChunkConnections[1].distance = (17f * self.lizard.lizardParams.bodyLengthFac * ((self.lizard.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch; //FOR TAILS FOR EXTRA FATTIES
-
-            //IF WE'RE BEING PUSHED, SQUISH THE TAIL
             Lizard liz = self.lizard as Lizard;
-            float tailSquish = Mathf.InverseLerp(25, 0, self.lizard.GetBelly().boostStrain);
-            float bellyBulge = (self.lizard.GetBelly().inPipeStatus || !self.lizard.GetBelly().isStuck) ? 0 : Mathf.InverseLerp(0, 60, self.lizard.GetBelly().boostStrain);
-            //WAIT. BODYCONNECTION 2 IS PROBABLY NOT WHAT I THINK IT IS. WHY WOULD THERE BE A 3RD CONNECTION? TO KEEP FRONT AND BACK SEPERATED PROBABLY
-            float baseChunkConnSize = 17f * self.lizard.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f);
-            liz.bodyChunkConnections[1].distance = baseChunkConnSize * tailSquish; //HMM, CHANGES ARE TOO ABRUPT! LETS TRY SOMETHING SNEAKY~
 
-            if (patch_Lizard.IsStuck(self.lizard))
-            {
-                liz.bodyChunkConnections[0].weightSymmetry = 1f;
-                liz.bodyChunkConnections[1].weightSymmetry = 0f; //OKAY THIS IS THE ONE THAT MATTERS. AND WE ONLY NEED TO SET IT ONCE I THINK
-                liz.straightenOutNeeded = 1f;
+            float fatStretch = Mathf.Max(1, liz.GetBelly().myFatness - 1);
+            self.headConnectionRad = 11 * liz.lizardParams.headSize * fatStretch;
+            float bellyBulge = (liz.GetBelly().inPipeStatus || !liz.GetBelly().isStuck) ? 0 : Mathf.InverseLerp(0, 60, liz.GetBelly().boostStrain);
+            if (patch_Lizard.IsStuck(liz))
                 self.breath = 0; //MAYBE TO MAKE THE BODY SQUISHING MORE VISIBLE?
-            }
-            else
-            {
-                liz.bodyChunkConnections[0].weightSymmetry = 0.5f;
-                liz.bodyChunkConnections[1].weightSymmetry = 0.5f;
-            }
 
             //MOVING THE TAIL WAGGLE STUFF IN HERE SO IT DOESN'T RUN OFFSCREEN I GUESS.
             //DON'T RAISE TAIL FOR ASSISTED SQUEEZING
