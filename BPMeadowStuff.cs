@@ -279,7 +279,7 @@ public class BPMeadowStuff
     {
         return (OnlineManager.lobby != null
             && OnlineManager.lobby.gameMode is ArenaOnlineGameMode arenaMode 
-            && arenaMode.session.rainCycleTimeInMinutes == 10f //MAX RAIN TIMER SETTING
+            && arenaMode.ArenaSession.rainCycleTimeInMinutes == 10f //MAX RAIN TIMER SETTING
             && BPOptions.extraTime.Value);
     }
 
