@@ -1177,40 +1177,44 @@ public class patch_Lizard
 
         //DEAL WITH THIS IN HERE, SO IT DOESN'T RUN OFF SCREEN.
         //STRETCH OUT BASED ON STRAIN!
-        Lizard liz = self as Lizard; //self.lizard as Lizard;
-        float bodyStretch = Mathf.Min(liz.GetBelly().boostStrain, 13f) * 1.0f;
-        if (liz.GetBelly().beingPushed > 0 || (patch_Player.IsVerticalStuck(liz) && patch_Player.GetYFlipDirection(liz) > 0))
-            bodyStretch *= 0.6f;
+		if (self is Lizard)
+		{
+            Lizard liz = self as Lizard; //self.lizard as Lizard;
+            float bodyStretch = Mathf.Min(liz.GetBelly().boostStrain, 13f) * 1.0f;
+            if (liz.GetBelly().beingPushed > 0 || (patch_Player.IsVerticalStuck(liz) && patch_Player.GetYFlipDirection(liz) > 0))
+                bodyStretch *= 0.6f;
 
-        float fatStretch = Mathf.Max(1, liz.GetBelly().myFatness - 1);
-        //self.headConnectionRad = 11 * liz.lizardParams.headSize * fatStretch;
+            float fatStretch = Mathf.Max(1, liz.GetBelly().myFatness - 1);
+            //self.headConnectionRad = 11 * liz.lizardParams.headSize * fatStretch;
 
-        liz.bodyChunkConnections[0].distance = (17f * liz.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch + Mathf.Sqrt(bodyStretch);
-        liz.bodyChunkConnections[1].distance = (17f * liz.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch; //FOR TAILS FOR EXTRA FATTIES
+            liz.bodyChunkConnections[0].distance = (17f * liz.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch + Mathf.Sqrt(bodyStretch);
+            liz.bodyChunkConnections[1].distance = (17f * liz.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f)) * fatStretch; //FOR TAILS FOR EXTRA FATTIES
 
-        //IF WE'RE BEING PUSHED, SQUISH THE TAIL
-        
-        float tailSquish = Mathf.InverseLerp(25, 0, liz.GetBelly().boostStrain);
-        
-        //WAIT. BODYCONNECTION 2 IS PROBABLY NOT WHAT I THINK IT IS. WHY WOULD THERE BE A 3RD CONNECTION? TO KEEP FRONT AND BACK SEPERATED PROBABLY
-        float baseChunkConnSize = 17f * liz.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f) * (liz.GetBelly().stuckInShortcut ? 0.5f : 1f);
-        liz.bodyChunkConnections[1].distance = baseChunkConnSize * tailSquish; //HMM, CHANGES ARE TOO ABRUPT! LETS TRY SOMETHING SNEAKY~
+            //IF WE'RE BEING PUSHED, SQUISH THE TAIL
 
-        if (patch_Lizard.IsStuck(liz))
-        {
-            liz.bodyChunkConnections[0].weightSymmetry = 1f;
-            liz.bodyChunkConnections[1].weightSymmetry = 0f; //OKAY THIS IS THE ONE THAT MATTERS. AND WE ONLY NEED TO SET IT ONCE I THINK
-            liz.straightenOutNeeded = 1f;
+            float tailSquish = Mathf.InverseLerp(25, 0, liz.GetBelly().boostStrain);
+
+            //WAIT. BODYCONNECTION 2 IS PROBABLY NOT WHAT I THINK IT IS. WHY WOULD THERE BE A 3RD CONNECTION? TO KEEP FRONT AND BACK SEPERATED PROBABLY
+            float baseChunkConnSize = 17f * liz.lizardParams.bodyLengthFac * ((liz.lizardParams.bodySizeFac + 1f) / 2f) * (liz.GetBelly().stuckInShortcut ? 0.5f : 1f);
+            liz.bodyChunkConnections[1].distance = baseChunkConnSize * tailSquish; //HMM, CHANGES ARE TOO ABRUPT! LETS TRY SOMETHING SNEAKY~
+
+            if (patch_Lizard.IsStuck(liz))
+            {
+                liz.bodyChunkConnections[0].weightSymmetry = 1f;
+                liz.bodyChunkConnections[1].weightSymmetry = 0f; //OKAY THIS IS THE ONE THAT MATTERS. AND WE ONLY NEED TO SET IT ONCE I THINK
+                liz.straightenOutNeeded = 1f;
+            }
+            else
+            {
+                liz.bodyChunkConnections[0].weightSymmetry = 0.5f;
+                liz.bodyChunkConnections[1].weightSymmetry = 0.5f;
+            }
+
+            //EXTRAS
+            //DISABLE THIS BODY CHUNK WHEN STUCK IN SHORTCUT (IDK IF THIS ACTUALLY HELPS...)
+            self.bodyChunkConnections[2].active = !self.GetBelly().stuckInShortcut;
         }
-        else
-        {
-            liz.bodyChunkConnections[0].weightSymmetry = 0.5f;
-            liz.bodyChunkConnections[1].weightSymmetry = 0.5f;
-        }
-
-        //EXTRAS
-        //DISABLE THIS BODY CHUNK WHEN STUCK IN SHORTCUT (IDK IF THIS ACTUALLY HELPS...)
-        self.bodyChunkConnections[2].active = !self.GetBelly().stuckInShortcut;
+        
 
 		//for (int k = 0; k < 2; k++)
         //{
